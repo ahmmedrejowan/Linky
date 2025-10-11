@@ -2,4 +2,12 @@
 <resources>
 
     <style name="Theme.Linky" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/backgroundColor</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/img_splash_logo</item>
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        <item name="postSplashScreenTheme">@style/Theme.Linky</item>
+    </style>
+
 </resources>
