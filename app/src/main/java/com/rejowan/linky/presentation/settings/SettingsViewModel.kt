@@ -7,6 +7,7 @@ import com.rejowan.linky.domain.repository.FolderRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
 import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.FileStorageManager
 import com.rejowan.linky.util.SettingsOperation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,8 @@ class SettingsViewModel(
     private val linkRepository: LinkRepository,
     private val folderRepository: FolderRepository,
     private val snapshotRepository: SnapshotRepository,
-    private val themePreferences: ThemePreferences
+    private val themePreferences: ThemePreferences,
+    private val fileStorageManager: FileStorageManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -53,8 +55,12 @@ class SettingsViewModel(
             try {
                 val totalLinks = linkRepository.countLinks()
                 val totalFolders = folderRepository.countFolders()
-                val storageBytes = snapshotRepository.getTotalStorageUsed()
-                val storageMB = (storageBytes / (1024.0 * 1024.0)).roundToInt()
+
+                // Calculate total storage: snapshots from DB + actual file storage
+                val snapshotStorageBytes = snapshotRepository.getTotalStorageUsed()
+                val fileStorageBytes = fileStorageManager.getTotalStorageUsed()
+                val totalStorageBytes = snapshotStorageBytes + fileStorageBytes
+                val storageMB = (totalStorageBytes / (1024.0 * 1024.0)).roundToInt()
 
                 _state.update {
                     it.copy(
@@ -98,14 +104,25 @@ class SettingsViewModel(
 
     private fun clearCache() {
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+
             try {
-                // TODO: Implement cache clearing
-                // This will clear preview images and temporary files
-                Timber.d("Cache cleared")
-                loadSettings() // Refresh to show updated storage
+                // Clear preview images cache
+                val cacheCleared = fileStorageManager.clearPreviewCache()
+
+                if (cacheCleared) {
+                    Timber.d("Cache cleared successfully")
+                    _state.update { it.copy(error = null) }
+                } else {
+                    Timber.w("Cache clearing completed with some failures")
+                    _state.update { it.copy(error = "Some files could not be deleted") }
+                }
+
+                // Refresh to show updated storage
+                loadSettings()
             } catch (e: Exception) {
                 val errorMessage = ErrorHandler.getSettingsErrorMessage(e, SettingsOperation.CLEAR_CACHE)
-                _state.update { it.copy(error = errorMessage) }
+                _state.update { it.copy(isLoading = false, error = errorMessage) }
             }
         }
     }

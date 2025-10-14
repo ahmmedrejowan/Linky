@@ -56,7 +56,8 @@ val viewModelModule = module {
             linkRepository = get(),
             folderRepository = get(),
             snapshotRepository = get(),
-            themePreferences = get()
+            themePreferences = get(),
+            fileStorageManager = get()
         )
     }
 }
