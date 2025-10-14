@@ -1,0 +1,15 @@
+package com.rejowan.linky.di
+
+import com.rejowan.linky.data.repository.FolderRepositoryImpl
+import com.rejowan.linky.data.repository.LinkRepositoryImpl
+import com.rejowan.linky.data.repository.SnapshotRepositoryImpl
+import com.rejowan.linky.domain.repository.FolderRepository
+import com.rejowan.linky.domain.repository.LinkRepository
+import com.rejowan.linky.domain.repository.SnapshotRepository
+import org.koin.dsl.module
+
+val repositoryModule = module {
+    single<LinkRepository> { LinkRepositoryImpl(get()) }
+    single<FolderRepository> { FolderRepositoryImpl(get()) }
+    single<SnapshotRepository> { SnapshotRepositoryImpl(get()) }
+}

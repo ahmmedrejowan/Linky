@@ -1,0 +1,12 @@
+package com.rejowan.linky.presentation.linkdetail
+
+import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.model.Snapshot
+
+data class LinkDetailState(
+    val link: Link? = null,
+    val snapshots: List<Snapshot> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isDeleted: Boolean = false
+)

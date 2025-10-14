@@ -4,6 +4,10 @@ import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.di.appModule
+import com.rejowan.linky.di.databaseModule
+import com.rejowan.linky.di.repositoryModule
+import com.rejowan.linky.di.useCaseModule
+import com.rejowan.linky.di.viewModelModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,7 +55,11 @@ class LinkyApp : Application() {
             androidContext(this@LinkyApp)
             modules(
                 listOf(
-                    appModule
+                    appModule,
+                    databaseModule,
+                    repositoryModule,
+                    useCaseModule,
+                    viewModelModule
                 )
             )
         }
