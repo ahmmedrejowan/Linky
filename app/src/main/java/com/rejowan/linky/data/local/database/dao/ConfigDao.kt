@@ -9,16 +9,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ConfigDao {
-    @Query("SELECT value FROM config WHERE key = :key")
+    @Query("SELECT value FROM config WHERE `key` = :key")
     suspend fun get(key: String): String?
 
-    @Query("SELECT value FROM config WHERE key = :key")
+    @Query("SELECT value FROM config WHERE `key` = :key")
     fun observe(key: String): Flow<String?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun set(config: ConfigEntity)
 
-    @Query("DELETE FROM config WHERE key = :key")
+    @Query("DELETE FROM config WHERE `key` = :key")
     suspend fun delete(key: String)
 
     @Query("DELETE FROM config")

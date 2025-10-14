@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "config")
 data class ConfigEntity(
     @PrimaryKey
+    @ColumnInfo(name = "key")
     val key: String,
 
     @ColumnInfo(name = "value")
