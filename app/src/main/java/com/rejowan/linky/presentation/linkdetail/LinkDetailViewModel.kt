@@ -8,6 +8,8 @@ import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
+import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,8 +66,8 @@ class LinkDetailViewModel(
                 )
             }
                 .catch { e ->
-                    Timber.e(e, "Failed to load link details")
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD)
+                    _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { newState ->
                     _state.value = newState
@@ -82,8 +84,8 @@ class LinkDetailViewModel(
                     Timber.d("Toggled favorite for link: ${link.id}")
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to toggle favorite")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -100,8 +102,8 @@ class LinkDetailViewModel(
                     _state.update { it.copy(isDeleted = true) }
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to delete link")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -117,8 +119,8 @@ class LinkDetailViewModel(
                     Timber.d("Toggled archive for link: ${link.id}")
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to toggle archive")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }

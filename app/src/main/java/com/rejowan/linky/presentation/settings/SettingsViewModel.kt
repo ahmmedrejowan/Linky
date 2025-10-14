@@ -6,6 +6,8 @@ import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.repository.FolderRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
+import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.SettingsOperation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,8 +66,8 @@ class SettingsViewModel(
                     )
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Failed to load settings")
-                _state.update { it.copy(isLoading = false, error = e.message) }
+                val errorMessage = ErrorHandler.getSettingsErrorMessage(e, SettingsOperation.LOAD_STATISTICS)
+                _state.update { it.copy(isLoading = false, error = errorMessage) }
             }
         }
     }
@@ -84,7 +86,13 @@ class SettingsViewModel(
 
     private fun changeTheme(theme: String) {
         viewModelScope.launch {
-            themePreferences.setTheme(theme)
+            try {
+                themePreferences.saveTheme(theme)
+                Timber.d("Theme changed to: $theme")
+            } catch (e: Exception) {
+                val errorMessage = ErrorHandler.getSettingsErrorMessage(e, SettingsOperation.CHANGE_THEME)
+                _state.update { it.copy(error = errorMessage) }
+            }
         }
     }
 
@@ -96,8 +104,8 @@ class SettingsViewModel(
                 Timber.d("Cache cleared")
                 loadSettings() // Refresh to show updated storage
             } catch (e: Exception) {
-                Timber.e(e, "Failed to clear cache")
-                _state.update { it.copy(error = e.message) }
+                val errorMessage = ErrorHandler.getSettingsErrorMessage(e, SettingsOperation.CLEAR_CACHE)
+                _state.update { it.copy(error = errorMessage) }
             }
         }
     }

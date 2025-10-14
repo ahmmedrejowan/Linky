@@ -8,7 +8,12 @@ import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
+import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.LinkOperation
+import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.Result
+import com.rejowan.linky.util.ValidationResult
+import com.rejowan.linky.util.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +27,8 @@ class AddEditLinkViewModel(
     private val saveLinkUseCase: SaveLinkUseCase,
     private val updateLinkUseCase: UpdateLinkUseCase,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
-    private val getAllFoldersUseCase: GetAllFoldersUseCase
+    private val getAllFoldersUseCase: GetAllFoldersUseCase,
+    private val linkPreviewFetcher: LinkPreviewFetcher
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddEditLinkState())
@@ -81,8 +87,8 @@ class AddEditLinkViewModel(
 
             getLinkByIdUseCase(linkId)
                 .catch { e ->
-                    Timber.e(e, "Failed to load link")
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD)
+                    _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { link ->
                     link?.let {
@@ -107,23 +113,47 @@ class AddEditLinkViewModel(
     }
 
     private fun fetchPreview() {
-        // TODO: Implement preview fetching with Jsoup
-        // This will be implemented later with LinkPreviewFetcher utility
-        _state.update { it.copy(isFetchingPreview = true) }
+        val currentUrl = _state.value.url.trim()
+
+        // Validate URL before fetching
+        if (currentUrl.isBlank()) {
+            _state.update { it.copy(error = "Please enter a URL first") }
+            return
+        }
+
+        _state.update { it.copy(isFetchingPreview = true, error = null) }
 
         viewModelScope.launch {
-            // Placeholder - actual implementation will use Jsoup
             try {
-                // Mock: Set a preview URL based on the URL
+                val preview = linkPreviewFetcher.fetchPreview(currentUrl)
+
+                if (preview != null) {
+                    _state.update { currentState ->
+                        currentState.copy(
+                            isFetchingPreview = false,
+                            // Auto-fill title if it's empty
+                            title = currentState.title.ifBlank { preview.title },
+                            previewUrl = preview.imageUrl,
+                            previewImagePath = preview.imageUrl
+                        )
+                    }
+                    Timber.d("Preview fetched successfully: ${preview.title}")
+                } else {
+                    _state.update {
+                        it.copy(
+                            isFetchingPreview = false,
+                            error = "Could not fetch preview for this URL. The website may not support previews."
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.FETCH_PREVIEW)
                 _state.update {
                     it.copy(
                         isFetchingPreview = false,
-                        previewUrl = state.value.url // Temporary
+                        error = errorMessage
                     )
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to fetch preview")
-                _state.update { it.copy(isFetchingPreview = false, error = e.message) }
             }
         }
     }
@@ -131,14 +161,15 @@ class AddEditLinkViewModel(
     private fun saveLink() {
         val currentState = _state.value
 
-        // Validation
-        if (currentState.url.isBlank()) {
-            _state.update { it.copy(error = "URL is required") }
-            return
-        }
+        // Comprehensive validation using Validator
+        val validationResult = Validator.validateLink(
+            url = currentState.url.trim(),
+            title = currentState.title.trim(),
+            note = currentState.note.trim().ifBlank { null }
+        )
 
-        if (currentState.title.isBlank()) {
-            _state.update { it.copy(error = "Title is required") }
+        if (validationResult is ValidationResult.Error) {
+            _state.update { it.copy(error = validationResult.message) }
             return
         }
 
@@ -147,9 +178,9 @@ class AddEditLinkViewModel(
 
             val link = Link(
                 id = currentState.linkId ?: java.util.UUID.randomUUID().toString(),
-                title = currentState.title,
-                url = currentState.url,
-                note = currentState.note.ifBlank { null },
+                title = currentState.title.trim(),
+                url = currentState.url.trim(),
+                note = currentState.note.trim().ifBlank { null },
                 folderId = currentState.selectedFolderId,
                 previewImagePath = currentState.previewImagePath,
                 previewUrl = currentState.previewUrl,
@@ -168,9 +199,10 @@ class AddEditLinkViewModel(
                     _state.update { it.copy(isLoading = false, isSaved = true) }
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to save link")
+                    val operation = if (currentState.isEditMode) LinkOperation.UPDATE else LinkOperation.SAVE
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, operation)
                     _state.update {
-                        it.copy(isLoading = false, error = result.exception.message)
+                        it.copy(isLoading = false, error = errorMessage)
                     }
                 }
                 is Result.Loading -> { /* No-op */ }

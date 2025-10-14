@@ -6,7 +6,7 @@ import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
 
-class SaveFolderUseCase(
+class UpdateFolderUseCase(
     private val folderRepository: FolderRepository
 ) {
     suspend operator fun invoke(folder: Folder): Result<Unit> {
@@ -24,6 +24,6 @@ class SaveFolderUseCase(
             }
         }
 
-        return folderRepository.saveFolder(folder)
+        return folderRepository.updateFolder(folder)
     }
 }

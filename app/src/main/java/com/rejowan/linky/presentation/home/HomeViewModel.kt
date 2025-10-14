@@ -9,6 +9,8 @@ import com.rejowan.linky.domain.usecase.link.GetFavoriteLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetTrashedLinksUseCase
 import com.rejowan.linky.domain.usecase.link.SearchLinksUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
+import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,8 +69,8 @@ class HomeViewModel(
             }
 
             flow.catch { e ->
-                    Timber.e(e, "Failed to load links")
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD_ALL)
+                    _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { links ->
                     _state.update { it.copy(links = links, isLoading = false, error = null) }
@@ -80,8 +82,8 @@ class HomeViewModel(
         viewModelScope.launch {
             searchLinksUseCase(query)
                 .catch { e ->
-                    Timber.e(e, "Failed to search links")
-                    _state.update { it.copy(error = e.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.SEARCH)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 .collect { links ->
                     _state.update { it.copy(links = links) }
@@ -96,8 +98,8 @@ class HomeViewModel(
                     Timber.d("Toggled favorite for link: $linkId")
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to toggle favorite")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -111,8 +113,8 @@ class HomeViewModel(
                     Timber.d("Deleted link: $linkId")
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to delete link")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }

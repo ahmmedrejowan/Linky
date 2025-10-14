@@ -6,7 +6,11 @@ import com.rejowan.linky.domain.model.Folder
 import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
 import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
 import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
+import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.FolderOperation
 import com.rejowan.linky.util.Result
+import com.rejowan.linky.util.ValidationResult
+import com.rejowan.linky.util.Validator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,8 +70,8 @@ class CollectionsViewModel(
 
             getAllFoldersUseCase()
                 .catch { e ->
-                    Timber.e(e, "Failed to load folders")
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    val errorMessage = ErrorHandler.getFolderErrorMessage(e, FolderOperation.LOAD_ALL)
+                    _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { folders ->
                     _state.update { it.copy(folders = folders, isLoading = false, error = null) }
@@ -78,14 +82,25 @@ class CollectionsViewModel(
     private fun saveFolder() {
         val currentState = _state.value
 
-        if (currentState.newFolderName.isBlank()) {
-            _state.update { it.copy(error = "Folder name is required") }
+        // Validate folder name
+        val nameValidation = Validator.validateFolderName(currentState.newFolderName.trim())
+        if (nameValidation is ValidationResult.Error) {
+            _state.update { it.copy(error = nameValidation.message) }
             return
+        }
+
+        // Validate color if provided
+        if (currentState.selectedFolderColor != null) {
+            val colorValidation = Validator.validateColor(currentState.selectedFolderColor)
+            if (colorValidation is ValidationResult.Error) {
+                _state.update { it.copy(error = colorValidation.message) }
+                return
+            }
         }
 
         viewModelScope.launch {
             val folder = Folder(
-                name = currentState.newFolderName,
+                name = currentState.newFolderName.trim(),
                 color = currentState.selectedFolderColor,
                 sortOrder = currentState.folders.size
             )
@@ -103,8 +118,8 @@ class CollectionsViewModel(
                     }
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to create folder")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getFolderErrorMessage(result.exception, FolderOperation.SAVE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -118,8 +133,8 @@ class CollectionsViewModel(
                     Timber.d("Folder deleted successfully")
                 }
                 is Result.Error -> {
-                    Timber.e(result.exception, "Failed to delete folder")
-                    _state.update { it.copy(error = result.exception.message) }
+                    val errorMessage = ErrorHandler.getFolderErrorMessage(result.exception, FolderOperation.DELETE)
+                    _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
             }

@@ -27,7 +27,8 @@ val viewModelModule = module {
             saveLinkUseCase = get(),
             updateLinkUseCase = get(),
             getLinkByIdUseCase = get(),
-            getAllFoldersUseCase = get()
+            getAllFoldersUseCase = get(),
+            linkPreviewFetcher = get()
         )
     }
 

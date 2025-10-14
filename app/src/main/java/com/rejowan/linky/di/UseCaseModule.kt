@@ -2,7 +2,9 @@ package com.rejowan.linky.di
 
 import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
 import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
+import com.rejowan.linky.domain.usecase.folder.GetFolderByIdUseCase
 import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
+import com.rejowan.linky.domain.usecase.folder.UpdateFolderUseCase
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -39,7 +41,9 @@ val useCaseModule = module {
 
     // Folder use cases
     factory { GetAllFoldersUseCase(get()) }
+    factory { GetFolderByIdUseCase(get()) }
     factory { SaveFolderUseCase(get()) }
+    factory { UpdateFolderUseCase(get()) }
     factory { DeleteFolderUseCase(get()) }
 
     // Snapshot use cases
