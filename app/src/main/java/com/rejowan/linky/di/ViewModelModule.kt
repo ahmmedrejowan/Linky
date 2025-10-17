@@ -28,7 +28,8 @@ val viewModelModule = module {
             updateLinkUseCase = get(),
             getLinkByIdUseCase = get(),
             getAllFoldersUseCase = get(),
-            linkPreviewFetcher = get()
+            linkPreviewFetcher = get(),
+            fileStorageManager = get()
         )
     }
 

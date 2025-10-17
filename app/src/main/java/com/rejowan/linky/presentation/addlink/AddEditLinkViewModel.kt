@@ -9,11 +9,13 @@ import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
 import com.rejowan.linky.util.ErrorHandler
+import com.rejowan.linky.util.FileStorageManager
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +30,8 @@ class AddEditLinkViewModel(
     private val updateLinkUseCase: UpdateLinkUseCase,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
     private val getAllFoldersUseCase: GetAllFoldersUseCase,
-    private val linkPreviewFetcher: LinkPreviewFetcher
+    private val linkPreviewFetcher: LinkPreviewFetcher,
+    private val fileStorageManager: FileStorageManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddEditLinkState())
@@ -128,13 +131,21 @@ class AddEditLinkViewModel(
                 val preview = linkPreviewFetcher.fetchPreview(currentUrl)
 
                 if (preview != null) {
-                    _state.update { currentState ->
-                        currentState.copy(
+                    val currentState = _state.value
+                    val ensuredLinkId = currentState.linkId ?: UUID.randomUUID().toString()
+
+                    val localImagePath = preview.imageUrl?.let { imageUrl ->
+                        fileStorageManager.savePreviewImageFromUrl(imageUrl, ensuredLinkId)
+                    }
+
+                    _state.update { latestState ->
+                        latestState.copy(
+                            linkId = ensuredLinkId,
                             isFetchingPreview = false,
                             // Auto-fill title if it's empty
-                            title = currentState.title.ifBlank { preview.title },
+                            title = latestState.title.ifBlank { preview.title },
                             previewUrl = preview.imageUrl,
-                            previewImagePath = preview.imageUrl
+                            previewImagePath = localImagePath ?: latestState.previewImagePath
                         )
                     }
                     Timber.d("Preview fetched successfully: ${preview.title}")
@@ -177,7 +188,7 @@ class AddEditLinkViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
 
             val link = Link(
-                id = currentState.linkId ?: java.util.UUID.randomUUID().toString(),
+                id = currentState.linkId ?: UUID.randomUUID().toString(),
                 title = currentState.title.trim(),
                 url = currentState.url.trim(),
                 note = currentState.note.trim().ifBlank { null },

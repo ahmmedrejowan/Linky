@@ -2,6 +2,7 @@ package com.rejowan.linky.util
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.rejowan.linky.domain.model.SnapshotType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -36,25 +37,31 @@ class FileStorageManager(private val context: Context) {
         try {
             Timber.d("Saving preview image from URL: $url for link: $linkId")
 
-            // Download image from URL
-            val connection = URL(url).openConnection()
-            connection.connectTimeout = 10000
-            connection.readTimeout = 10000
-            connection.connect()
-
-            val inputStream = connection.getInputStream()
-
-            // Generate filename from linkId
-            val fileName = generatePreviewFileName(linkId, url)
-            val file = File(previewDir, fileName)
-
-            // Save to file
-            FileOutputStream(file).use { outputStream ->
-                inputStream.copyTo(outputStream)
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = 10000
+                readTimeout = 10000
             }
 
-            Timber.d("Preview image saved successfully: ${file.absolutePath}")
-            file.absolutePath
+            try {
+                connection.connect()
+
+                // Generate filename from linkId
+                val fileName = generatePreviewFileName(linkId, url)
+                val file = File(previewDir, fileName)
+
+                connection.getInputStream().use { inputStream ->
+                    FileOutputStream(file).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+
+                Timber.d("Preview image saved successfully: ${file.absolutePath}")
+                file.absolutePath
+            } finally {
+                if (connection is java.net.HttpURLConnection) {
+                    connection.disconnect()
+                }
+            }
         } catch (e: Exception) {
             Timber.e(e, "Failed to save preview image from URL: $url")
             null
@@ -375,13 +382,4 @@ class FileStorageManager(private val context: Context) {
             false
         }
     }
-}
-
-/**
- * Snapshot type enum (using existing domain model)
- */
-enum class SnapshotType {
-    READER_MODE,
-    PDF,
-    SCREENSHOT
 }
