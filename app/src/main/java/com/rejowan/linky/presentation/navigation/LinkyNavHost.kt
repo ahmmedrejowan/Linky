@@ -1,5 +1,6 @@
 package com.rejowan.linky.presentation.navigation
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -17,6 +18,8 @@ import com.rejowan.linky.presentation.settings.SettingsScreen
  * Uses type-safe navigation with Kotlin Serialization
  *
  * @param navController The NavHostController for navigation
+ * @param snackbarHostState Shared SnackbarHostState from MainActivity
+ * @param onCreateFolderClick Callback to set the create folder action for FAB
  * @param modifier Modifier for the NavHost
  * @param isAuthRequired Whether authentication is required (Phase 2)
  * @param startDestination The starting route
@@ -24,6 +27,8 @@ import com.rejowan.linky.presentation.settings.SettingsScreen
 @Composable
 fun LinkyNavHost(
     navController: NavHostController,
+    snackbarHostState: SnackbarHostState,
+    onCreateFolderClick: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier,
     isAuthRequired: Boolean = false, // Phase 2: checks preferences
     startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Home
@@ -134,6 +139,8 @@ fun LinkyNavHost(
         // ============ COLLECTIONS GRAPH ============
         composable<Route.Collections> {
             CollectionsScreen(
+                snackbarHostState = snackbarHostState,
+                onCreateFolderClick = onCreateFolderClick,
                 onFolderClick = { folderId ->
                     // Phase 3: Navigate to folder detail
                     navController.navigate(Route.FolderDetail(folderId))
@@ -164,6 +171,7 @@ fun LinkyNavHost(
         // ============ SETTINGS GRAPH ============
         composable<Route.Settings> {
             SettingsScreen(
+                snackbarHostState = snackbarHostState,
                 onNavigateToAdvanced = {
                     // Phase 3/4
                     navController.navigate(Route.AdvancedSettings)
