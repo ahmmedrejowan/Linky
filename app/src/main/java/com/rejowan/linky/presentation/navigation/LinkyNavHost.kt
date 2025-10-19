@@ -7,36 +7,29 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.rejowan.linky.presentation.addlink.AddEditLinkScreen
-import com.rejowan.linky.presentation.collections.CollectionsScreen
-import com.rejowan.linky.presentation.home.HomeScreen
-import com.rejowan.linky.presentation.linkdetail.LinkDetailScreen
-import com.rejowan.linky.presentation.settings.SettingsScreen
+import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
+import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
 
 /**
- * Main navigation host for the Linky app
- * Uses type-safe navigation with Kotlin Serialization
+ * Parent navigation host for the Linky app
+ * Contains all app-level navigation EXCEPT the bottom nav screens
+ * Bottom nav screens (Home/Collections/Settings) are in BottomNavHost within MainScreen
  *
- * @param navController The NavHostController for navigation
+ * @param navController The NavHostController for app-level navigation
  * @param snackbarHostState Shared SnackbarHostState from MainActivity
- * @param onCreateFolderClick Callback to set the create folder action for FAB
  * @param modifier Modifier for the NavHost
  * @param isAuthRequired Whether authentication is required (Phase 2)
- * @param startDestination The starting route
  */
 @Composable
 fun LinkyNavHost(
     navController: NavHostController,
-    snackbarHostState: SnackbarHostState,
-    onCreateFolderClick: (() -> Unit) -> Unit,
-    modifier: Modifier = Modifier,
-    isAuthRequired: Boolean = false, // Phase 2: checks preferences
-    startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Home
+    isAuthRequired: Boolean = false // Phase 2: checks preferences
 ) {
+    val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
     ) {
         // ============ AUTH GRAPH (Phase 2) ============
         // TODO: Uncomment and implement in Phase 2
@@ -45,7 +38,7 @@ fun LinkyNavHost(
             composable<Route.Welcome> {
                 WelcomeScreen(
                     onContinueOffline = {
-                        navController.navigate(Route.Home) {
+                        navController.navigate(Route.Main) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     },
@@ -63,7 +56,7 @@ fun LinkyNavHost(
                         }
                     },
                     onSkip = {
-                        navController.navigate(Route.Home) {
+                        navController.navigate(Route.Main) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     }
@@ -73,7 +66,7 @@ fun LinkyNavHost(
             composable<Route.SyncSetup> {
                 SyncSetupScreen(
                     onComplete = {
-                        navController.navigate(Route.Home) {
+                        navController.navigate(Route.Main) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     }
@@ -82,26 +75,16 @@ fun LinkyNavHost(
         }
         */
 
-        // ============ HOME GRAPH ============
-        composable<Route.Home> {
-            HomeScreen(
-                onAddLinkClick = {
-                    navController.navigate(Route.AddEditLink())
-                },
-                onLinkClick = { linkId ->
-                    navController.navigate(Route.LinkDetail(linkId))
-                },
-                onNavigateToCollections = {
-                    navController.navigate(Route.Collections)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Route.Settings)
-                }
+        // ============ MAIN SCREEN (Container for Bottom Nav) ============
+        composable<Route.Main> {
+            MainScreen(
+                parentNavController = navController,
             )
         }
 
+        // ============ APP-LEVEL SCREENS ============
+
         composable<Route.LinkDetail> { backStackEntry ->
-            // Type-safe argument retrieval
             val linkDetail = backStackEntry.toRoute<Route.LinkDetail>()
 
             LinkDetailScreen(
@@ -126,7 +109,6 @@ fun LinkyNavHost(
             // )
         }
 
-        // ============ ADD/EDIT LINK (Global Modal) ============
         composable<Route.AddEditLink> { backStackEntry ->
             val addEditLink = backStackEntry.toRoute<Route.AddEditLink>()
 
@@ -136,26 +118,7 @@ fun LinkyNavHost(
             )
         }
 
-        // ============ COLLECTIONS GRAPH ============
-        composable<Route.Collections> {
-            CollectionsScreen(
-                snackbarHostState = snackbarHostState,
-                onCreateFolderClick = onCreateFolderClick,
-                onFolderClick = { folderId ->
-                    // Phase 3: Navigate to folder detail
-                    navController.navigate(Route.FolderDetail(folderId))
-                },
-                onNavigateToHome = {
-                    navController.navigate(Route.Home)
-                },
-                onNavigateToSettings = {
-                    navController.navigate(Route.Settings)
-                }
-            )
-        }
-
         composable<Route.FolderDetail> { backStackEntry ->
-            // Phase 3
             val folderDetail = backStackEntry.toRoute<Route.FolderDetail>()
 
             // TODO: Implement FolderDetailScreen in Phase 3
@@ -168,31 +131,7 @@ fun LinkyNavHost(
             // )
         }
 
-        // ============ SETTINGS GRAPH ============
-        composable<Route.Settings> {
-            SettingsScreen(
-                snackbarHostState = snackbarHostState,
-                onNavigateToAdvanced = {
-                    // Phase 3/4
-                    navController.navigate(Route.AdvancedSettings)
-                },
-                onNavigateToHome = {
-                    navController.navigate(Route.Home)
-                },
-                onNavigateToCollections = {
-                    navController.navigate(Route.Collections)
-                },
-                onLogout = {
-                    // Phase 2: Navigate to welcome after logout
-                    navController.navigate(Route.Welcome) {
-                        popUpTo(Route.Home) { inclusive = true }
-                    }
-                }
-            )
-        }
-
         composable<Route.AdvancedSettings> {
-            // Phase 3/4
             // TODO: Implement AdvancedSettingsScreen in Phase 3/4
             // AdvancedSettingsScreen(
             //     onNavigateBack = { navController.popBackStack() }

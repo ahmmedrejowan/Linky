@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.home
+package com.rejowan.linky.presentation.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -28,6 +27,7 @@ import com.rejowan.linky.di.databaseModule
 import com.rejowan.linky.di.repositoryModule
 import com.rejowan.linky.di.useCaseModule
 import com.rejowan.linky.di.viewModelModule
+import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
@@ -247,7 +247,7 @@ private fun EmptyContent(
  */
 @Composable
 private fun LinksList(
-    links: List<com.rejowan.linky.domain.model.Link>,
+    links: List<Link>,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier

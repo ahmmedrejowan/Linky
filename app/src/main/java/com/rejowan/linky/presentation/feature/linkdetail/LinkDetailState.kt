@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.linkdetail
+package com.rejowan.linky.presentation.feature.linkdetail
 
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.Snapshot

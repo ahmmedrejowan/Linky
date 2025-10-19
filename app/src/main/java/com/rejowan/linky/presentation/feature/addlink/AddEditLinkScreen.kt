@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.addlink
+package com.rejowan.linky.presentation.feature.addlink
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.rejowan.linky.domain.model.Folder
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -275,7 +276,7 @@ fun AddEditLinkScreen(
 @Composable
 private fun FolderDropdown(
     selectedFolderId: String?,
-    folders: List<com.rejowan.linky.domain.model.Folder>,
+    folders: List<Folder>,
     enabled: Boolean,
     onFolderSelected: (String?) -> Unit,
     modifier: Modifier = Modifier

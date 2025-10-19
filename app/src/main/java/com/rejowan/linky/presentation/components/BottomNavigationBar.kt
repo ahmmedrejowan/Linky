@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.navigation.components
+package com.rejowan.linky.presentation.components
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.rejowan.linky.presentation.navigation.BottomNavItem
 import com.rejowan.linky.presentation.navigation.Route
+import timber.log.Timber
 
 /**
  * Bottom navigation bar component
@@ -27,7 +28,8 @@ fun BottomNavigationBar(
 ) {
     NavigationBar(modifier = modifier) {
         items.forEach { item ->
-            val isSelected = currentRoute?.let { it::class } == item.route::class
+            val isSelected = currentRoute == item.route
+            Timber.d("BottomNavigationBar: item=${item.label}, isSelected=$isSelected")
 
             NavigationBarItem(
                 selected = isSelected,

@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.addlink
+package com.rejowan.linky.presentation.feature.addlink
 
 import com.rejowan.linky.domain.model.Folder
 

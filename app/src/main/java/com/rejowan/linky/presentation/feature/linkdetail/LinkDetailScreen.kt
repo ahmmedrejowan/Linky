@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.linkdetail
+package com.rejowan.linky.presentation.feature.linkdetail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -55,6 +54,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.model.Snapshot
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import org.koin.androidx.compose.koinViewModel
@@ -251,8 +252,8 @@ fun LinkDetailScreen(
  */
 @Composable
 private fun LinkContent(
-    link: com.rejowan.linky.domain.model.Link,
-    snapshots: List<com.rejowan.linky.domain.model.Snapshot>,
+    link: Link,
+    snapshots: List<Snapshot>,
     onOpenUrl: (String) -> Unit,
     onOpenSnapshot: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -463,7 +464,7 @@ private fun StatusBadge(
  */
 @Composable
 private fun SnapshotCard(
-    snapshot: com.rejowan.linky.domain.model.Snapshot,
+    snapshot: Snapshot,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

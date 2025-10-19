@@ -12,8 +12,16 @@ sealed class Route {
     // ============ MAIN APP ROUTES (Phase 1) ============
 
     /**
+     * Main screen - Container for bottom navigation
+     * This is the entry point and contains the BottomNavHost with Home/Collections/Settings
+     */
+    @Serializable
+    data object Main : Route()
+
+    /**
      * Home screen - Main entry point with all links
      * Shows search, filters, and link list
+     * NOTE: This is now nested within Main screen's BottomNavHost
      */
     @Serializable
     data object Home : Route()

@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.addlink
+package com.rejowan.linky.presentation.feature.addlink
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

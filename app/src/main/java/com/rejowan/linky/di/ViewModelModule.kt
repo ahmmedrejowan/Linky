@@ -1,9 +1,9 @@
 package com.rejowan.linky.di
 
-import com.rejowan.linky.presentation.addlink.AddEditLinkViewModel
-import com.rejowan.linky.presentation.collections.CollectionsViewModel
-import com.rejowan.linky.presentation.home.HomeViewModel
-import com.rejowan.linky.presentation.linkdetail.LinkDetailViewModel
+import com.rejowan.linky.presentation.feature.addlink.AddEditLinkViewModel
+import com.rejowan.linky.presentation.feature.collections.CollectionsViewModel
+import com.rejowan.linky.presentation.feature.home.HomeViewModel
+import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailViewModel
 import com.rejowan.linky.presentation.settings.SettingsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module

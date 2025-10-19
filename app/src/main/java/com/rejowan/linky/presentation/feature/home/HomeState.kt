@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.home
+package com.rejowan.linky.presentation.feature.home
 
 import com.rejowan.linky.domain.model.Link
 
