@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "a40549b09fb7ea245683bd2e21c2ddfe",
+    "identityHash": "57b678a094047c0d6e348610a293edf0",
     "entities": [
       {
         "tableName": "links",
@@ -162,7 +162,7 @@
       },
       {
         "tableName": "collections",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `color` TEXT, `icon` TEXT, `sortOrder` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `syncToRemote` INTEGER NOT NULL DEFAULT 0, `userId` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `color` TEXT, `icon` TEXT, `isFavorite` INTEGER NOT NULL DEFAULT 0, `sortOrder` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `syncToRemote` INTEGER NOT NULL DEFAULT 0, `userId` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -185,6 +185,13 @@
             "fieldPath": "icon",
             "columnName": "icon",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           },
           {
             "fieldPath": "sortOrder",
@@ -241,6 +248,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_updatedAt` ON `${TABLE_NAME}` (`updatedAt`)"
+          },
+          {
+            "name": "index_collections_isFavorite",
+            "unique": false,
+            "columnNames": [
+              "isFavorite"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_isFavorite` ON `${TABLE_NAME}` (`isFavorite`)"
           }
         ]
       },
@@ -352,7 +368,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a40549b09fb7ea245683bd2e21c2ddfe')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '57b678a094047c0d6e348610a293edf0')"
     ]
   }
 }

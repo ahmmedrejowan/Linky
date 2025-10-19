@@ -9,7 +9,8 @@ import androidx.room.PrimaryKey
     tableName = "collections",
     indices = [
         Index(value = ["sortOrder"]),
-        Index(value = ["updatedAt"])
+        Index(value = ["updatedAt"]),
+        Index(value = ["isFavorite"])
     ]
 )
 data class CollectionEntity(
@@ -24,6 +25,9 @@ data class CollectionEntity(
 
     @ColumnInfo(name = "icon")
     val icon: String? = null,
+
+    @ColumnInfo(name = "isFavorite", defaultValue = "0")
+    val isFavorite: Boolean = false,
 
     @ColumnInfo(name = "sortOrder")
     val sortOrder: Int = 0,

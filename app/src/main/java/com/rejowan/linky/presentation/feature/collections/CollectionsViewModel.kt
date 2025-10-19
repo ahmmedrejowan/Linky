@@ -42,7 +42,8 @@ class CollectionsViewModel(
                     it.copy(
                         showCreateDialog = false,
                         newCollectionName = "",
-                        selectedCollectionColor = null
+                        selectedCollectionColor = null,
+                        isNewCollectionFavorite = false
                     )
                 }
             }
@@ -51,6 +52,9 @@ class CollectionsViewModel(
             }
             is CollectionsEvent.OnCollectionColorChange -> {
                 _state.update { it.copy(selectedCollectionColor = event.color) }
+            }
+            is CollectionsEvent.OnToggleFavorite -> {
+                _state.update { it.copy(isNewCollectionFavorite = !it.isNewCollectionFavorite) }
             }
             is CollectionsEvent.OnSaveCollection -> {
                 saveCollection()
@@ -102,6 +106,7 @@ class CollectionsViewModel(
             val collection = Collection(
                 name = currentState.newCollectionName.trim(),
                 color = currentState.selectedCollectionColor,
+                isFavorite = currentState.isNewCollectionFavorite,
                 sortOrder = currentState.collections.size
             )
 
@@ -113,6 +118,7 @@ class CollectionsViewModel(
                             showCreateDialog = false,
                             newCollectionName = "",
                             selectedCollectionColor = null,
+                            isNewCollectionFavorite = false,
                             error = null
                         )
                     }
@@ -146,7 +152,8 @@ sealed class CollectionsEvent {
     data object OnCreateCollection : CollectionsEvent()
     data object OnDismissCreateDialog : CollectionsEvent()
     data class OnCollectionNameChange(val name: String) : CollectionsEvent()
-    data class OnCollectionColorChange(val color: String) : CollectionsEvent()
+    data class OnCollectionColorChange(val color: String?) : CollectionsEvent()
+    data object OnToggleFavorite : CollectionsEvent()
     data object OnSaveCollection : CollectionsEvent()
     data class OnDeleteCollection(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()

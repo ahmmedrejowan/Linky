@@ -8,5 +8,6 @@ data class CollectionsState(
     val error: String? = null,
     val showCreateDialog: Boolean = false,
     val newCollectionName: String = "",
-    val selectedCollectionColor: String? = null
+    val selectedCollectionColor: String? = null,
+    val isNewCollectionFavorite: Boolean = false
 )

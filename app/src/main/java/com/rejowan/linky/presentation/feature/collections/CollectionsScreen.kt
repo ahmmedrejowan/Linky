@@ -1,23 +1,38 @@
 package com.rejowan.linky.presentation.feature.collections
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -116,8 +131,10 @@ fun CollectionsScreen(
         CreateCollectionDialog(
             collectionName = state.newCollectionName,
             selectedColor = state.selectedCollectionColor,
+            isFavorite = state.isNewCollectionFavorite,
             onCollectionNameChange = { viewModel.onEvent(CollectionsEvent.OnCollectionNameChange(it)) },
             onColorChange = { viewModel.onEvent(CollectionsEvent.OnCollectionColorChange(it)) },
+            onToggleFavorite = { viewModel.onEvent(CollectionsEvent.OnToggleFavorite) },
             onSave = { viewModel.onEvent(CollectionsEvent.OnSaveCollection) },
             onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissCreateDialog) }
         )
@@ -153,14 +170,16 @@ private fun CollectionsList(
 
 /**
  * Create Collection Dialog
- * Allows users to create a new collection with name and color
+ * Allows users to create a new collection with name, color, and favorite status
  */
 @Composable
 private fun CreateCollectionDialog(
     collectionName: String,
     selectedColor: String?,
+    isFavorite: Boolean,
     onCollectionNameChange: (String) -> Unit,
-    onColorChange: (String) -> Unit,
+    onColorChange: (String?) -> Unit,
+    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -195,10 +214,28 @@ private fun CreateCollectionDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                ColorPicker(
+                ColorBlockPicker(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Favorite toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add to Favourite",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(
+                        checked = isFavorite,
+                        onCheckedChange = { onToggleFavorite() }
+                    )
+                }
             }
         },
         confirmButton = {
@@ -219,55 +256,125 @@ private fun CreateCollectionDialog(
 }
 
 /**
- * Color picker with predefined colors
+ * Color block picker with visual color rectangles
+ * 15 total: 1 no color + 14 colors, arranged in 3 rows of 5
  */
 @Composable
-private fun ColorPicker(
+private fun ColorBlockPicker(
     selectedColor: String?,
-    onColorSelected: (String) -> Unit,
+    onColorSelected: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = listOf(
-        "#FF6B6B" to "Red",
-        "#4ECDC4" to "Teal",
-        "#45B7D1" to "Blue",
-        "#FFA07A" to "Orange",
-        "#98D8C8" to "Green",
-        "#F7B731" to "Yellow",
-        "#5F27CD" to "Purple",
-        "#EE5A6F" to "Pink"
+        null,           // No Color - default
+        "#FF6B6B",      // Red
+        "#E74C3C",      // Dark Red
+        "#4ECDC4",      // Teal
+        "#45B7D1",      // Blue
+        "#3498DB",      // Strong Blue
+        "#FFA07A",      // Orange
+        "#E67E22",      // Dark Orange
+        "#98D8C8",      // Green
+        "#2ECC71",      // Emerald Green
+        "#F7B731",      // Yellow
+        "#F39C12",      // Golden Yellow
+        "#5F27CD",      // Purple
+        "#9B59B6",      // Light Purple
+        "#EE5A6F"       // Pink
     )
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Row 1: 5 colors
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            colors.take(4).forEach { (colorHex, colorName) ->
-                FilterChip(
-                    selected = selectedColor == colorHex,
+            colors.take(5).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
                     onClick = { onColorSelected(colorHex) },
-                    label = { Text(colorName) },
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
+        // Row 2: 5 colors
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            colors.drop(4).forEach { (colorHex, colorName) ->
-                FilterChip(
-                    selected = selectedColor == colorHex,
+            colors.subList(5, 10).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
                     onClick = { onColorSelected(colorHex) },
-                    label = { Text(colorName) },
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+
+        // Row 3: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.subList(10, 15).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual color block component
+ */
+@Composable
+private fun ColorBlock(
+    colorHex: String?,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                color = if (colorHex != null) {
+                    Color(android.graphics.Color.parseColor(colorHex))
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // Show checkmark for selected color
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = if (colorHex != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
