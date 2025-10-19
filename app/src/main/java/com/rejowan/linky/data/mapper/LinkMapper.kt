@@ -9,6 +9,7 @@ object LinkMapper {
         return LinkEntity(
             id = id,
             title = title,
+            description = description,
             url = url,
             note = note,
             folderId = folderId,
@@ -29,6 +30,7 @@ object LinkMapper {
         return Link(
             id = id,
             title = title,
+            description = description,
             url = url,
             note = note,
             folderId = folderId,

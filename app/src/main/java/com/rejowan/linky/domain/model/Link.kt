@@ -5,6 +5,7 @@ import java.util.UUID
 data class Link(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
+    val description: String? = null,
     val url: String,
     val note: String? = null,
     val folderId: String? = null,

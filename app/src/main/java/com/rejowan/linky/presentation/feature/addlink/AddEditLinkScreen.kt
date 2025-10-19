@@ -201,6 +201,19 @@ fun AddEditLinkScreen(
                 singleLine = true
             )
 
+            // Description Input (Multiline)
+            OutlinedTextField(
+                value = state.description,
+                onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange(it)) },
+                label = { Text("Description (Optional)") },
+                placeholder = { Text("Brief description of the link...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                enabled = !state.isLoading,
+                maxLines = 3
+            )
+
             // Note Input (Multiline)
             OutlinedTextField(
                 value = state.note,

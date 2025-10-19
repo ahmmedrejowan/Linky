@@ -58,6 +58,10 @@ class AddEditLinkViewModel(
                 Timber.d("Title changed: ${event.title.take(50)}...")
                 _state.update { it.copy(title = event.title) }
             }
+            is AddEditLinkEvent.OnDescriptionChange -> {
+                Timber.d("Description changed: ${event.description.take(100)}...")
+                _state.update { it.copy(description = event.description) }
+            }
             is AddEditLinkEvent.OnUrlChange -> {
                 Timber.d("URL changed: ${event.url}")
                 _state.update { it.copy(url = event.url) }
@@ -119,6 +123,7 @@ class AddEditLinkViewModel(
                             state.copy(
                                 linkId = it.id,
                                 title = it.title,
+                                description = it.description ?: "",
                                 url = it.url,
                                 note = it.note ?: "",
                                 selectedFolderId = it.folderId,
@@ -221,8 +226,9 @@ class AddEditLinkViewModel(
                         latestState.copy(
                             linkId = ensuredLinkId,
                             isFetchingPreview = false,
-                            // Always update title from preview
+                            // Always update title and description from preview
                             title = preview.title,
+                            description = preview.description ?: "",
                             previewUrl = previewUrlToStore,
                             previewImagePath = localImagePath,
                             error = null // Clear any previous errors
@@ -230,25 +236,26 @@ class AddEditLinkViewModel(
                     }
 
                     Timber.d("fetchPreview: State update complete")
-                    Timber.d("fetchPreview: Final state | Title: ${preview.title} | Image: ${localImagePath != null} | Error: None")
+                    Timber.d("fetchPreview: Final state | Title: ${preview.title} | Description: ${preview.description?.take(50) ?: "None"} | Image: ${localImagePath != null} | Error: None")
                     Timber.d("========================================")
                 } else {
                     // No preview found - reset preview data and show error
                     Timber.w("========================================")
                     Timber.w("fetchPreview: ✗ No preview data returned from fetcher")
                     Timber.w("fetchPreview: The website may not support previews or returned null data")
-                    Timber.w("fetchPreview: Resetting all preview state (title, image, URL)")
+                    Timber.w("fetchPreview: Resetting all preview state (title, description, image, URL)")
                     _state.update {
                         it.copy(
                             isFetchingPreview = false,
                             // Reset all preview data when not found
                             title = "", // Clear title field
+                            description = "", // Clear description field
                             previewUrl = null,
                             previewImagePath = null,
                             error = "No preview found for this URL. The website may not support previews or is unavailable."
                         )
                     }
-                    Timber.w("fetchPreview: State updated | Title cleared | Preview cleared | Error message set")
+                    Timber.w("fetchPreview: State updated | Title cleared | Description cleared | Preview cleared | Error message set")
                     Timber.w("========================================")
                 }
             } catch (e: Exception) {
@@ -259,19 +266,20 @@ class AddEditLinkViewModel(
 
                 val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.FETCH_PREVIEW)
                 Timber.e("fetchPreview: User-friendly error: $errorMessage")
-                Timber.e("fetchPreview: Resetting all preview state due to error (title, image, URL)")
+                Timber.e("fetchPreview: Resetting all preview state due to error (title, description, image, URL)")
 
                 // Reset all preview data on error
                 _state.update {
                     it.copy(
                         isFetchingPreview = false,
                         title = "", // Clear title field
+                        description = "", // Clear description field
                         previewUrl = null,
                         previewImagePath = null,
                         error = errorMessage
                     )
                 }
-                Timber.e("fetchPreview: State updated | Title cleared | Preview cleared | Error message set")
+                Timber.e("fetchPreview: State updated | Title cleared | Description cleared | Preview cleared | Error message set")
                 Timber.e("========================================")
             }
         }
@@ -307,6 +315,7 @@ class AddEditLinkViewModel(
             val link = Link(
                 id = linkId,
                 title = currentState.title.trim(),
+                description = currentState.description.trim().ifBlank { null },
                 url = currentState.url.trim(),
                 note = currentState.note.trim().ifBlank { null },
                 folderId = currentState.selectedFolderId,
@@ -353,6 +362,7 @@ class AddEditLinkViewModel(
 
 sealed class AddEditLinkEvent {
     data class OnTitleChange(val title: String) : AddEditLinkEvent()
+    data class OnDescriptionChange(val description: String) : AddEditLinkEvent()
     data class OnUrlChange(val url: String) : AddEditLinkEvent()
     data class OnNoteChange(val note: String) : AddEditLinkEvent()
     data class OnFolderSelect(val folderId: String?) : AddEditLinkEvent()

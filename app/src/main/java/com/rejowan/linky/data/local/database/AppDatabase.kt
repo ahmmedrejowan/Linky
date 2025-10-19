@@ -18,7 +18,7 @@ import com.rejowan.linky.data.local.database.entity.SnapshotEntity
         SnapshotEntity::class,
         ConfigEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -5,6 +5,7 @@ import com.rejowan.linky.domain.model.Folder
 data class AddEditLinkState(
     val linkId: String? = null,
     val title: String = "",
+    val description: String = "",
     val url: String = "",
     val note: String = "",
     val selectedFolderId: String? = null,
