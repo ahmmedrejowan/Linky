@@ -31,7 +31,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Folder
@@ -65,11 +66,14 @@ import org.koin.androidx.compose.koinViewModel
  *
  * Features:
  * - URL input with validation
- * - Fetch preview from URL (Open Graph, Twitter Card)
- * - Title and note input
- * - Folder selection
- * - Favorite toggle
- * - Preview image display
+ * - Fetch preview from URL (Open Graph, Twitter Card, meta tags)
+ * - Auto-fetch title and description from preview
+ * - Compact preview card (left: image, right: title/description)
+ * - Title, description, and note input fields
+ * - Folder selection dropdown
+ * - Favorite toggle switch
+ * - Save icon in TopAppBar (alternative to bottom button)
+ * - Focus management (tap outside to hide keyboard)
  * - Loading states for preview fetch and save
  * - Error handling with Snackbar
  *
@@ -97,10 +101,11 @@ fun AddEditLinkScreen(
         }
     }
 
-    // Show error in Snackbar
+    // Show error in Snackbar when error state changes
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+            // Note: Error is cleared automatically by ViewModel after showing
         }
     }
 
@@ -110,7 +115,9 @@ fun AddEditLinkScreen(
             title = {
             Text(
                 text = if (state.isEditMode) "Edit Link" else "Add Link",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 22.sp
+                )
             )
         }, navigationIcon = {
             IconButton(onClick = onNavigateBack) {
@@ -120,6 +127,7 @@ fun AddEditLinkScreen(
                 )
             }
         }, actions = {
+            // Save icon - Alternative to bottom save button for easier access
             IconButton(
                 onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },
                 enabled = !state.isLoading && state.url.isNotBlank() && state.title.isNotBlank()
@@ -140,11 +148,15 @@ fun AddEditLinkScreen(
             containerColor = MaterialTheme.colorScheme.surface
         )
         )
-    }, snackbarHost = { SnackbarHost(snackbarHostState) }, modifier = modifier.clickable(
-        interactionSource = remember { MutableInteractionSource() }, indication = null
-    ) {
-        focusManager.clearFocus()
-    }) { paddingValues ->
+    }, snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Focus management: Tap outside text fields to hide keyboard
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null
+        ) {
+            focusManager.clearFocus()
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -164,7 +176,7 @@ fun AddEditLinkScreen(
                 singleLine = true
             )
 
-            // Fetch Preview Button
+            // Fetch Preview Button - Auto-fetches title, description, and image from URL
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -187,7 +199,9 @@ fun AddEditLinkScreen(
                 }
             }
 
-            // Preview Card (compact) - Show if we have title, description, or image
+            // Compact Preview Card - Shows how the link will appear in home screen
+            // Layout: Left (70dp image/placeholder) | Right (title + description)
+            // Matches LinkCard design from home screen for consistency
             if (state.title.isNotBlank() || state.description.isNotBlank() ||
                 state.previewImagePath != null || state.previewUrl != null) {
                 Card(
@@ -201,7 +215,7 @@ fun AddEditLinkScreen(
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Preview Image (left side)
+                        // Preview Image (left side) - 70dp × 70dp with rounded corners
                         if (state.previewImagePath != null || state.previewUrl != null) {
                             AsyncImage(
                                 model = state.previewImagePath ?: state.previewUrl,
@@ -260,7 +274,7 @@ fun AddEditLinkScreen(
                 }
             }
 
-            // Title Input
+            // Title Input - Auto-filled by "Fetch Preview" or manually entered
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnTitleChange(it)) },
@@ -271,7 +285,8 @@ fun AddEditLinkScreen(
                 singleLine = true
             )
 
-            // Description Input (Multiline)
+            // Description Input - Auto-filled from web metadata or manually entered
+            // Brief summary of the link content (og:description, twitter:description)
             OutlinedTextField(
                 value = state.description,
                 onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange(it)) },
@@ -284,7 +299,7 @@ fun AddEditLinkScreen(
                 maxLines = 3
             )
 
-            // Note Input (Multiline)
+            // Note Input - Personal notes/comments about the link (user-entered only)
             OutlinedTextField(
                 value = state.note,
                 onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnNoteChange(it)) },
@@ -364,6 +379,12 @@ fun AddEditLinkScreen(
 /**
  * Folder Selection Dropdown
  * Allows users to select a folder or "No Folder"
+ *
+ * @param selectedFolderId Currently selected folder ID, null for "No Folder"
+ * @param folders List of available folders
+ * @param enabled Whether the dropdown is enabled
+ * @param onFolderSelected Callback when folder is selected (null for "No Folder")
+ * @param modifier Modifier for styling
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -376,11 +397,13 @@ private fun FolderDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    // Find selected folder name
-    val selectedFolderName = if (selectedFolderId == null) {
-        "No Folder"
-    } else {
-        folders.find { it.id == selectedFolderId }?.name ?: "No Folder"
+    // Find selected folder name - Optimized with remember to avoid recalculation
+    val selectedFolderName = remember(selectedFolderId, folders) {
+        if (selectedFolderId == null) {
+            "No Folder"
+        } else {
+            folders.find { it.id == selectedFolderId }?.name ?: "No Folder"
+        }
     }
 
     ExposedDropdownMenuBox(
@@ -398,7 +421,7 @@ private fun FolderDropdown(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
             enabled = enabled,
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
         )
