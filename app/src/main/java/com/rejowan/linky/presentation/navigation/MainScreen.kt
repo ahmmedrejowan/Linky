@@ -93,7 +93,7 @@ fun MainScreen(
                     Text(
                         text = topBarTitle,
                         style = MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = 20.sp
+                            fontSize = 22.sp
                         )
                     )
                 },

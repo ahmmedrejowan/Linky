@@ -1,5 +1,6 @@
 package com.rejowan.linky.presentation.feature.addlink
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -116,6 +119,23 @@ fun AddEditLinkScreen(
                     contentDescription = "Navigate back"
                 )
             }
+        }, actions = {
+            IconButton(
+                onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },
+                enabled = !state.isLoading && state.url.isNotBlank() && state.title.isNotBlank()
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Save link"
+                    )
+                }
+            }
         }, colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -167,25 +187,75 @@ fun AddEditLinkScreen(
                 }
             }
 
-            // Preview Image Card (if available)
-            if (state.previewImagePath != null || state.previewUrl != null) {
+            // Preview Card (compact) - Show if we have title, description, or image
+            if (state.title.isNotBlank() || state.description.isNotBlank() ||
+                state.previewImagePath != null || state.previewUrl != null) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        AsyncImage(
-                            model = state.previewImagePath ?: state.previewUrl,
-                            contentDescription = "Link preview image",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                        // Preview Image (left side)
+                        if (state.previewImagePath != null || state.previewUrl != null) {
+                            AsyncImage(
+                                model = state.previewImagePath ?: state.previewUrl,
+                                contentDescription = "Link preview",
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // Placeholder when no image
+                            Box(
+                                modifier = Modifier
+                                    .size(70.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "No preview",
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Content (right side)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Title
+                            if (state.title.isNotBlank()) {
+                                Text(
+                                    text = state.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            // Description
+                            if (state.description.isNotBlank()) {
+                                Text(
+                                    text = state.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
