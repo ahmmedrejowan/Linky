@@ -1,5 +1,7 @@
 package com.rejowan.linky.presentation.feature.addlink
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,6 +85,7 @@ fun AddEditLinkScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
 
     // Navigate back on successful save
     LaunchedEffect(state.isSaved) {
@@ -100,41 +103,28 @@ fun AddEditLinkScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (state.isEditMode) "Edit Link" else "Add Link",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
-                    }
-                },
-                actions = {
-                    // Favorite toggle
-                    IconButton(
-                        onClick = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) }
-                    ) {
-                        Icon(
-                            imageVector = if (state.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = if (state.isFavorite) "Remove from favorites" else "Add to favorites",
-                            tint = if (state.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+        TopAppBar(
+            title = {
+            Text(
+                text = if (state.isEditMode) "Edit Link" else "Add Link",
+                style = MaterialTheme.typography.titleLarge
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = modifier
-    ) { paddingValues ->
+        }, navigationIcon = {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Navigate back"
+                )
+            }
+        }, colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+        )
+    }, snackbarHost = { SnackbarHost(snackbarHostState) }, modifier = modifier.clickable(
+        interactionSource = remember { MutableInteractionSource() }, indication = null
+    ) {
+        focusManager.clearFocus()
+    }) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -160,14 +150,16 @@ fun AddEditLinkScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { viewModel.onEvent(AddEditLinkEvent.OnFetchPreview) },
+                    onClick = {
+                        viewModel.onEvent(AddEditLinkEvent.OnFetchPreview)
+                        focusManager.clearFocus()
+                    },
                     modifier = Modifier.weight(1f),
                     enabled = !state.isFetchingPreview && !state.isLoading && state.url.isNotBlank()
                 ) {
                     if (state.isFetchingPreview) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(20.dp), strokeWidth = 2.dp
                         )
                     } else {
                         Text("Fetch Preview")
@@ -184,8 +176,7 @@ fun AddEditLinkScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
                             model = state.previewImagePath ?: state.previewUrl,
@@ -230,8 +221,27 @@ fun AddEditLinkScreen(
                 enabled = !state.isLoading,
                 onFolderSelected = { folderId ->
                     viewModel.onEvent(AddEditLinkEvent.OnFolderSelect(folderId))
-                }
-            )
+                })
+
+            // Add to Favourite Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Add to Favourite",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Switch(
+                    checked = state.isFavorite,
+                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) },
+                    enabled = !state.isLoading
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -311,39 +321,30 @@ private fun FolderDropdown(
         )
 
         ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+            expanded = expanded, onDismissRequest = { expanded = false }) {
             // "No Folder" option
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = "No Folder",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                onClick = {
-                    onFolderSelected(null)
-                    expanded = false
-                }
-            )
+            DropdownMenuItem(text = {
+                Text(
+                    text = "No Folder", style = MaterialTheme.typography.bodyMedium
+                )
+            }, onClick = {
+                onFolderSelected(null)
+                expanded = false
+            })
 
             // Folder options
             folders.forEach { folder ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = folder.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    onClick = {
-                        onFolderSelected(folder.id)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem(text = {
+                    Text(
+                        text = folder.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }, onClick = {
+                    onFolderSelected(folder.id)
+                    expanded = false
+                })
             }
         }
     }
