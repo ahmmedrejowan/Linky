@@ -38,63 +38,83 @@ class AddEditLinkViewModel(
     val state: StateFlow<AddEditLinkState> = _state.asStateFlow()
 
     init {
+        val linkId = savedStateHandle.get<String>("linkId")
+        Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId")
+
         loadFolders()
 
         // Check if we're editing an existing link
-        savedStateHandle.get<String>("linkId")?.let { linkId ->
-            loadLink(linkId)
-        }
+        linkId?.let {
+            Timber.d("Loading existing link for editing: $it")
+            loadLink(it)
+        } ?: Timber.d("Creating new link")
     }
 
     fun onEvent(event: AddEditLinkEvent) {
+        Timber.d("onEvent: $event")
+
         when (event) {
             is AddEditLinkEvent.OnTitleChange -> {
+                Timber.d("Title changed: ${event.title.take(50)}...")
                 _state.update { it.copy(title = event.title) }
             }
             is AddEditLinkEvent.OnUrlChange -> {
+                Timber.d("URL changed: ${event.url}")
                 _state.update { it.copy(url = event.url) }
             }
             is AddEditLinkEvent.OnNoteChange -> {
+                Timber.d("Note changed: ${event.note.take(100)}...")
                 _state.update { it.copy(note = event.note) }
             }
             is AddEditLinkEvent.OnFolderSelect -> {
+                Timber.d("Folder selected: ${event.folderId}")
                 _state.update { it.copy(selectedFolderId = event.folderId) }
             }
             is AddEditLinkEvent.OnToggleFavorite -> {
-                _state.update { it.copy(isFavorite = !it.isFavorite) }
+                val newValue = !_state.value.isFavorite
+                Timber.d("Favorite toggled: $newValue")
+                _state.update { it.copy(isFavorite = newValue) }
             }
             is AddEditLinkEvent.OnFetchPreview -> {
+                Timber.d("Fetch preview requested")
                 fetchPreview()
             }
             is AddEditLinkEvent.OnSave -> {
+                Timber.d("Save link requested")
                 saveLink()
             }
         }
     }
 
     private fun loadFolders() {
+        Timber.d("loadFolders: Starting to load folders")
         viewModelScope.launch {
             getAllFoldersUseCase()
                 .catch { e ->
-                    Timber.e(e, "Failed to load folders")
+                    Timber.e(e, "loadFolders: Failed to load folders - ${e.message}")
                 }
                 .collect { folders ->
+                    Timber.d("loadFolders: Loaded ${folders.size} folders")
                     _state.update { it.copy(folders = folders) }
                 }
         }
     }
 
     private fun loadLink(linkId: String) {
+        Timber.d("loadLink: Starting to load link | LinkId: $linkId")
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, isEditMode = true) }
 
             getLinkByIdUseCase(linkId)
                 .catch { e ->
+                    Timber.e(e, "loadLink: Failed to load link - ${e.message}")
                     val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD)
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { link ->
                     link?.let {
+                        Timber.d("loadLink: Link loaded successfully | Title: ${it.title} | URL: ${it.url}")
+                        Timber.d("loadLink: Link details | Favorite: ${it.isFavorite} | FolderId: ${it.folderId} | PreviewPath: ${it.previewImagePath != null}")
                         _state.update { state ->
                             state.copy(
                                 linkId = it.id,
@@ -109,6 +129,7 @@ class AddEditLinkViewModel(
                             )
                         }
                     } ?: run {
+                        Timber.w("loadLink: Link not found | LinkId: $linkId")
                         _state.update { it.copy(isLoading = false, error = "Link not found") }
                     }
                 }
@@ -117,60 +138,150 @@ class AddEditLinkViewModel(
 
     private fun fetchPreview() {
         val currentUrl = _state.value.url.trim()
+        Timber.d("fetchPreview: Starting preview fetch | URL: $currentUrl")
 
         // Validate URL before fetching
         if (currentUrl.isBlank()) {
+            Timber.w("fetchPreview: URL is blank, cannot fetch preview")
             _state.update { it.copy(error = "Please enter a URL first") }
             return
         }
 
+        Timber.d("fetchPreview: Setting fetching state to true, clearing previous error")
         _state.update { it.copy(isFetchingPreview = true, error = null) }
 
         viewModelScope.launch {
             try {
+                Timber.d("fetchPreview: Calling linkPreviewFetcher...")
                 val preview = linkPreviewFetcher.fetchPreview(currentUrl)
 
                 if (preview != null) {
+                    Timber.d("========================================")
+                    Timber.d("fetchPreview: ✓ Preview fetched successfully")
+                    Timber.d("fetchPreview: Title: '${preview.title}'")
+                    Timber.d("fetchPreview: Description: ${preview.description?.take(50) ?: "None"}...")
+                    Timber.d("fetchPreview: Site Name: ${preview.siteName ?: "None"}")
+                    Timber.d("fetchPreview: ImageURL: ${preview.imageUrl ?: "None"}")
+                    Timber.d("fetchPreview: Favicon: ${preview.favicon ?: "None"}")
+                    Timber.d("========================================")
+
                     val currentState = _state.value
                     val ensuredLinkId = currentState.linkId ?: UUID.randomUUID().toString()
+                    Timber.d("fetchPreview: LinkId: $ensuredLinkId (${if (currentState.linkId == null) "newly generated" else "existing from state"})")
 
-                    val localImagePath = preview.imageUrl?.let { imageUrl ->
-                        fileStorageManager.savePreviewImageFromUrl(imageUrl, ensuredLinkId)
+                    // Implement fallback chain for preview image: imageUrl → favicon → placeholder (null)
+                    Timber.d("fetchPreview: Starting image fallback chain...")
+                    var localImagePath: String? = null
+                    var previewUrlToStore: String? = null
+
+                    // Try primary image (og:image, twitter:image)
+                    if (preview.imageUrl != null) {
+                        Timber.d("fetchPreview: [Fallback 1/3] Attempting primary image (og:image/twitter:image)")
+                        Timber.d("fetchPreview: Image URL: ${preview.imageUrl}")
+                        localImagePath = fileStorageManager.savePreviewImageFromUrl(preview.imageUrl, ensuredLinkId)
+                        if (localImagePath != null) {
+                            previewUrlToStore = preview.imageUrl
+                            Timber.d("fetchPreview: ✓ Primary image saved successfully")
+                            Timber.d("fetchPreview: Local path: $localImagePath")
+                        } else {
+                            Timber.w("fetchPreview: ✗ Failed to save primary image (download/save failed)")
+                        }
+                    } else {
+                        Timber.d("fetchPreview: [Fallback 1/3] ✗ No primary image URL found in preview")
                     }
+
+                    // Fallback to favicon if primary image failed
+                    if (localImagePath == null && preview.favicon != null) {
+                        Timber.d("fetchPreview: [Fallback 2/3] Primary image unavailable, trying favicon")
+                        Timber.d("fetchPreview: Favicon URL: ${preview.favicon}")
+                        localImagePath = fileStorageManager.savePreviewImageFromUrl(preview.favicon, ensuredLinkId)
+                        if (localImagePath != null) {
+                            previewUrlToStore = preview.favicon
+                            Timber.d("fetchPreview: ✓ Favicon saved successfully as preview")
+                            Timber.d("fetchPreview: Local path: $localImagePath")
+                        } else {
+                            Timber.w("fetchPreview: ✗ Failed to save favicon (download/save failed)")
+                        }
+                    } else if (localImagePath == null) {
+                        Timber.d("fetchPreview: [Fallback 2/3] ✗ No favicon URL available")
+                    }
+
+                    // If both failed, use placeholder (null)
+                    if (localImagePath == null) {
+                        Timber.d("fetchPreview: [Fallback 3/3] No image available from any source")
+                        Timber.d("fetchPreview: Using placeholder (no preview image)")
+                    }
+
+                    // Always update title with preview title (allow users to refresh title by re-fetching)
+                    val oldTitle = _state.value.title
+                    val newTitle = preview.title
+                    Timber.d("fetchPreview: Title update | Old: '${oldTitle.take(50)}${if (oldTitle.length > 50) "..." else ""}' → New: '${newTitle.take(50)}${if (newTitle.length > 50) "..." else ""}'")
 
                     _state.update { latestState ->
                         latestState.copy(
                             linkId = ensuredLinkId,
                             isFetchingPreview = false,
-                            // Auto-fill title if it's empty
-                            title = latestState.title.ifBlank { preview.title },
-                            previewUrl = preview.imageUrl,
-                            previewImagePath = localImagePath ?: latestState.previewImagePath
+                            // Always update title from preview
+                            title = preview.title,
+                            previewUrl = previewUrlToStore,
+                            previewImagePath = localImagePath,
+                            error = null // Clear any previous errors
                         )
                     }
-                    Timber.d("Preview fetched successfully: ${preview.title}")
+
+                    Timber.d("fetchPreview: State update complete")
+                    Timber.d("fetchPreview: Final state | Title: ${preview.title} | Image: ${localImagePath != null} | Error: None")
+                    Timber.d("========================================")
                 } else {
+                    // No preview found - reset preview data and show error
+                    Timber.w("========================================")
+                    Timber.w("fetchPreview: ✗ No preview data returned from fetcher")
+                    Timber.w("fetchPreview: The website may not support previews or returned null data")
+                    Timber.w("fetchPreview: Resetting all preview state (title, image, URL)")
                     _state.update {
                         it.copy(
                             isFetchingPreview = false,
-                            error = "Could not fetch preview for this URL. The website may not support previews."
+                            // Reset all preview data when not found
+                            title = "", // Clear title field
+                            previewUrl = null,
+                            previewImagePath = null,
+                            error = "No preview found for this URL. The website may not support previews or is unavailable."
                         )
                     }
+                    Timber.w("fetchPreview: State updated | Title cleared | Preview cleared | Error message set")
+                    Timber.w("========================================")
                 }
             } catch (e: Exception) {
+                Timber.e("========================================")
+                Timber.e(e, "fetchPreview: ✗ Exception occurred during preview fetch")
+                Timber.e("fetchPreview: Exception type: ${e.javaClass.simpleName}")
+                Timber.e("fetchPreview: Exception message: ${e.message}")
+
                 val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.FETCH_PREVIEW)
+                Timber.e("fetchPreview: User-friendly error: $errorMessage")
+                Timber.e("fetchPreview: Resetting all preview state due to error (title, image, URL)")
+
+                // Reset all preview data on error
                 _state.update {
                     it.copy(
                         isFetchingPreview = false,
+                        title = "", // Clear title field
+                        previewUrl = null,
+                        previewImagePath = null,
                         error = errorMessage
                     )
                 }
+                Timber.e("fetchPreview: State updated | Title cleared | Preview cleared | Error message set")
+                Timber.e("========================================")
             }
         }
     }
 
     private fun saveLink() {
         val currentState = _state.value
+        Timber.d("saveLink: Starting save process | Edit mode: ${currentState.isEditMode}")
+        Timber.d("saveLink: Current state | URL: ${currentState.url.trim()} | Title: ${currentState.title.trim()}")
+        Timber.d("saveLink: Current state | FolderId: ${currentState.selectedFolderId} | Favorite: ${currentState.isFavorite}")
 
         // Comprehensive validation using Validator
         val validationResult = Validator.validateLink(
@@ -180,15 +291,21 @@ class AddEditLinkViewModel(
         )
 
         if (validationResult is ValidationResult.Error) {
+            Timber.w("saveLink: Validation failed - ${validationResult.message}")
             _state.update { it.copy(error = validationResult.message) }
             return
         }
 
+        Timber.d("saveLink: Validation passed, proceeding to save")
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
+            val linkId = currentState.linkId ?: UUID.randomUUID().toString()
+            Timber.d("saveLink: Link ID: $linkId (${if (currentState.linkId == null) "generated" else "existing"})")
+
             val link = Link(
-                id = currentState.linkId ?: UUID.randomUUID().toString(),
+                id = linkId,
                 title = currentState.title.trim(),
                 url = currentState.url.trim(),
                 note = currentState.note.trim().ifBlank { null },
@@ -198,6 +315,13 @@ class AddEditLinkViewModel(
                 isFavorite = currentState.isFavorite
             )
 
+            Timber.d("saveLink: Link object created | ID: ${link.id} | Title: ${link.title}")
+            Timber.d("saveLink: Link details | URL: ${link.url} | Folder: ${link.folderId} | Favorite: ${link.isFavorite}")
+            Timber.d("saveLink: Link previews | ImagePath: ${link.previewImagePath != null} | PreviewURL: ${link.previewUrl != null}")
+
+            val operation = if (currentState.isEditMode) "UPDATE" else "SAVE"
+            Timber.d("saveLink: Calling ${operation} use case...")
+
             val result = if (currentState.isEditMode) {
                 updateLinkUseCase(link)
             } else {
@@ -206,17 +330,22 @@ class AddEditLinkViewModel(
 
             when (result) {
                 is Result.Success -> {
-                    Timber.d("Link saved successfully")
+                    Timber.d("saveLink: Link ${operation.lowercase()}d successfully | ID: ${link.id}")
                     _state.update { it.copy(isLoading = false, isSaved = true) }
+                    Timber.d("saveLink: State updated with isSaved = true")
                 }
                 is Result.Error -> {
-                    val operation = if (currentState.isEditMode) LinkOperation.UPDATE else LinkOperation.SAVE
-                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, operation)
+                    Timber.e(result.exception, "saveLink: Failed to ${operation.lowercase()} link - ${result.exception.message}")
+                    val operationEnum = if (currentState.isEditMode) LinkOperation.UPDATE else LinkOperation.SAVE
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, operationEnum)
+                    Timber.w("saveLink: Error message for user: $errorMessage")
                     _state.update {
                         it.copy(isLoading = false, error = errorMessage)
                     }
                 }
-                is Result.Loading -> { /* No-op */ }
+                is Result.Loading -> {
+                    Timber.d("saveLink: Result is Loading (no-op)")
+                }
             }
         }
     }
