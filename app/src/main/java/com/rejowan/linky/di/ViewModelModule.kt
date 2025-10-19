@@ -46,7 +46,7 @@ val viewModelModule = module {
 
     viewModel {
         CollectionsViewModel(
-            getAllFoldersUseCase = get(),
+            getFoldersWithLinkCountUseCase = get(),
             saveFolderUseCase = get(),
             deleteFolderUseCase = get()
         )

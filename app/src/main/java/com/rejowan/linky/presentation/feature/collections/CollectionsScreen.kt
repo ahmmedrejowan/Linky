@@ -24,7 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.FolderWithLinkCount
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.FolderCard
@@ -129,7 +129,7 @@ fun CollectionsScreen(
  */
 @Composable
 private fun FoldersList(
-    folders: List<Folder>,
+    folders: List<FolderWithLinkCount>,
     onFolderClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -140,12 +140,12 @@ private fun FoldersList(
     ) {
         items(
             items = folders,
-            key = { it.id }
-        ) { folder ->
+            key = { it.folder.id }
+        ) { folderWithCount ->
             FolderCard(
-                folder = folder,
-                linkCount = 0, // TODO: Get actual link count from ViewModel
-                onClick = { onFolderClick(folder.id) }
+                folder = folderWithCount.folder,
+                linkCount = folderWithCount.linkCount,
+                onClick = { onFolderClick(folderWithCount.folder.id) }
             )
         }
     }

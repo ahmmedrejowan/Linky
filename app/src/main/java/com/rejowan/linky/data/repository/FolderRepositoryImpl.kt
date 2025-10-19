@@ -5,6 +5,7 @@ import com.rejowan.linky.data.mapper.FolderMapper.toDomain
 import com.rejowan.linky.data.mapper.FolderMapper.toDomainList
 import com.rejowan.linky.data.mapper.FolderMapper.toEntity
 import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.FolderWithLinkCount
 import com.rejowan.linky.domain.repository.FolderRepository
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,17 @@ class FolderRepositoryImpl(
 
     override suspend fun getFolderByIdOnce(id: String): Folder? {
         return folderDao.getById(id)?.toDomain()
+    }
+
+    override fun getFoldersWithLinkCount(): Flow<List<FolderWithLinkCount>> {
+        return folderDao.getFoldersWithCount().map { folderWithCountList ->
+            folderWithCountList.map { folderWithCount ->
+                FolderWithLinkCount(
+                    folder = folderWithCount.folder.toDomain(),
+                    linkCount = folderWithCount.linkCount
+                )
+            }
+        }
     }
 
     override suspend fun saveFolder(folder: Folder): Result<Unit> {

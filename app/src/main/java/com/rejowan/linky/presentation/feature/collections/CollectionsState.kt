@@ -1,9 +1,9 @@
 package com.rejowan.linky.presentation.feature.collections
 
-import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.FolderWithLinkCount
 
 data class CollectionsState(
-    val folders: List<Folder> = emptyList(),
+    val folders: List<FolderWithLinkCount> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val showCreateDialog: Boolean = false,

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.domain.model.Folder
 import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
-import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
+import com.rejowan.linky.domain.usecase.folder.GetFoldersWithLinkCountUseCase
 import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.FolderOperation
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class CollectionsViewModel(
-    private val getAllFoldersUseCase: GetAllFoldersUseCase,
+    private val getFoldersWithLinkCountUseCase: GetFoldersWithLinkCountUseCase,
     private val saveFolderUseCase: SaveFolderUseCase,
     private val deleteFolderUseCase: DeleteFolderUseCase
 ) : ViewModel() {
@@ -68,7 +68,7 @@ class CollectionsViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            getAllFoldersUseCase()
+            getFoldersWithLinkCountUseCase()
                 .catch { e ->
                     val errorMessage = ErrorHandler.getFolderErrorMessage(e, FolderOperation.LOAD_ALL)
                     _state.update { it.copy(isLoading = false, error = errorMessage) }

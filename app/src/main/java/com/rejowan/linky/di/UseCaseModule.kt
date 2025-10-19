@@ -3,6 +3,7 @@ package com.rejowan.linky.di
 import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
 import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
 import com.rejowan.linky.domain.usecase.folder.GetFolderByIdUseCase
+import com.rejowan.linky.domain.usecase.folder.GetFoldersWithLinkCountUseCase
 import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
 import com.rejowan.linky.domain.usecase.folder.UpdateFolderUseCase
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
@@ -42,6 +43,7 @@ val useCaseModule = module {
     // Folder use cases
     factory { GetAllFoldersUseCase(get()) }
     factory { GetFolderByIdUseCase(get()) }
+    factory { GetFoldersWithLinkCountUseCase(get()) }
     factory { SaveFolderUseCase(get()) }
     factory { UpdateFolderUseCase(get()) }
     factory { DeleteFolderUseCase(get()) }

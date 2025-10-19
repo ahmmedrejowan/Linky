@@ -1,6 +1,7 @@
 package com.rejowan.linky.domain.repository
 
 import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.FolderWithLinkCount
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.flow.Flow
 
@@ -9,6 +10,7 @@ interface FolderRepository {
     fun getAllFolders(): Flow<List<Folder>>
     fun getFolderById(id: String): Flow<Folder?>
     suspend fun getFolderByIdOnce(id: String): Folder?
+    fun getFoldersWithLinkCount(): Flow<List<FolderWithLinkCount>>
 
     // Create/Update operations
     suspend fun saveFolder(folder: Folder): Result<Unit>
