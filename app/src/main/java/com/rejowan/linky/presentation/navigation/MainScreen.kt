@@ -24,19 +24,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.rejowan.linky.presentation.components.BottomNavigationBar
 
 /**
  * Main screen - Container for the bottom navigation experience
- * This screen has its own Scaffold with bottom bar and FAB
+ * This screen has its own Scaffold with TopAppBar, SnackbarHost, bottom bar, and FAB
  * It contains the BottomNavHost (nested navigation for Home/Collections/Settings)
  *
  * @param parentNavController Parent NavController for navigating outside bottom nav
- * @param snackbarHostState Shared SnackbarHostState
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,10 +51,20 @@ fun MainScreen(
     var onCreateFolderClick by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // Get current route for bottom nav selection and FAB logic
-    val currentRoute = try {
-        currentBackStackEntry?.toRoute<Route>()
-    } catch (_: Exception) {
-        null
+    // Match route by checking destination route string (contains route class name)
+    val currentRoute: Route? = when {
+        currentBackStackEntry == null -> null
+        else -> try {
+            // Match against known bottom nav routes by checking the destination route string
+            when {
+                currentBackStackEntry?.destination?.route?.contains("Home") == true -> Route.Home
+                currentBackStackEntry?.destination?.route?.contains("Collections") == true -> Route.Collections
+                currentBackStackEntry?.destination?.route?.contains("Settings") == true -> Route.Settings
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // Determine FAB icon and content description based on current route
@@ -83,7 +92,9 @@ fun MainScreen(
                 title = {
                     Text(
                         text = topBarTitle,
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = 20.sp
+                        )
                     )
                 },
                 actions = {
@@ -121,28 +132,31 @@ fun MainScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    when (currentRoute) {
-                        is Route.Home -> {
-                            // Navigate to AddEditLink using parent controller
-                            parentNavController.navigate(Route.AddEditLink())
-                        }
-                        is Route.Collections -> {
-                            // Trigger create folder dialog in CollectionsScreen
-                            onCreateFolderClick?.invoke()
-                        }
-                        else -> {
-                            // Default to Add Link (for null state on launch)
-                            parentNavController.navigate(Route.AddEditLink())
+            // Only show FAB on Home and Collections screens, not on Settings
+            if (currentRoute != Route.Settings) {
+                FloatingActionButton(
+                    onClick = {
+                        when (currentRoute) {
+                            is Route.Home -> {
+                                // Navigate to AddEditLink using parent controller
+                                parentNavController.navigate(Route.AddEditLink())
+                            }
+                            is Route.Collections -> {
+                                // Trigger create folder dialog in CollectionsScreen
+                                onCreateFolderClick?.invoke()
+                            }
+                            else -> {
+                                // Default to Add Link (for null state on launch)
+                                parentNavController.navigate(Route.AddEditLink())
+                            }
                         }
                     }
+                ) {
+                    Icon(
+                        imageVector = fabIcon,
+                        contentDescription = fabContentDescription
+                    )
                 }
-            ) {
-                Icon(
-                    imageVector = fabIcon,
-                    contentDescription = fabContentDescription
-                )
             }
         }
     ) { paddingValues ->
