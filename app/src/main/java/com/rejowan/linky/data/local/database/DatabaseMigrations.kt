@@ -1,8 +1,5 @@
 package com.rejowan.linky.data.local.database
 
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
-
 /**
  * Database Migrations
  *
@@ -12,17 +9,18 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * - Date of migration
  * - Description of changes
  * - Author
+ *
+ * Example:
+ * ```
+ * import androidx.room.migration.Migration
+ * import androidx.sqlite.db.SupportSQLiteDatabase
+ *
+ * val MIGRATION_1_2 = object : Migration(1, 2) {
+ *     override fun migrate(db: SupportSQLiteDatabase) {
+ *         db.execSQL("ALTER TABLE links ADD COLUMN newColumn TEXT DEFAULT NULL")
+ *     }
+ * }
+ * ```
  */
 
-/**
- * Migration 1 to 2
- * Date: October 19, 2025
- * Changes: Added description field to links table
- * Author: Claude Code
- */
-val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        // Add description column to links table
-        db.execSQL("ALTER TABLE links ADD COLUMN description TEXT DEFAULT NULL")
-    }
-}
+// Add future migrations here when needed

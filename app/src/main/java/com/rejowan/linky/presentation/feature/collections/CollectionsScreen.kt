@@ -24,27 +24,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rejowan.linky.domain.model.FolderWithLinkCount
+import com.rejowan.linky.domain.model.CollectionWithLinkCount
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
-import com.rejowan.linky.presentation.components.FolderCard
+import com.rejowan.linky.presentation.components.CollectionCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import org.koin.androidx.compose.koinViewModel
 
 /**
  * Collections Screen
- * Shows all folders for organizing links
+ * Shows all collections for organizing links
  *
  * Features:
- * - Folder list with FolderCard components
- * - Create folder dialog with name and color picker
+ * - Collection list with CollectionCard components
+ * - Create collection dialog with name and color picker
  * - Loading and error states
- * - Empty state when no folders
+ * - Empty state when no collections
  * - FAB handled by MainActivity
  *
  * @param snackbarHostState SnackbarHostState from MainActivity
- * @param onCreateFolderClick Callback to register create folder action for FAB
- * @param onFolderClick Callback when a folder is clicked
+ * @param onCreateCollectionClick Callback to register create collection action for FAB
+ * @param onCollectionClick Callback when a collection is clicked
  * @param onNavigateToHome Callback to navigate to home
  * @param onNavigateToSettings Callback to navigate to settings
  * @param modifier Modifier for styling
@@ -54,8 +54,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun CollectionsScreen(
     snackbarHostState: SnackbarHostState,
-    onCreateFolderClick: (() -> Unit) -> Unit,
-    onFolderClick: (String) -> Unit,
+    onCreateCollectionClick: (() -> Unit) -> Unit,
+    onCollectionClick: (String) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,10 +63,10 @@ fun CollectionsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Register create folder action for MainActivity FAB
+    // Register create collection action for MainActivity FAB
     LaunchedEffect(Unit) {
-        onCreateFolderClick {
-            viewModel.onEvent(CollectionsEvent.OnCreateFolder)
+        onCreateCollectionClick {
+            viewModel.onEvent(CollectionsEvent.OnCreateCollection)
         }
     }
 
@@ -82,12 +82,12 @@ fun CollectionsScreen(
     ) {
             when {
                 // Loading state
-                state.isLoading && state.folders.isEmpty() -> {
-                    LoadingIndicator(message = "Loading folders...")
+                state.isLoading && state.collections.isEmpty() -> {
+                    LoadingIndicator(message = "Loading collections...")
                 }
 
                 // Error state
-                state.error != null && state.folders.isEmpty() -> {
+                state.error != null && state.collections.isEmpty() -> {
                     ErrorStates.GenericError(
                         errorMessage = state.error ?: "Unknown error",
                         onRetryClick = { viewModel.onEvent(CollectionsEvent.OnRefresh) }
@@ -95,42 +95,42 @@ fun CollectionsScreen(
                 }
 
                 // Empty state
-                state.folders.isEmpty() -> {
-                    EmptyStates.NoFolders(
-                        onCreateFolderClick = { viewModel.onEvent(CollectionsEvent.OnCreateFolder) }
+                state.collections.isEmpty() -> {
+                    EmptyStates.NoCollections(
+                        onCreateCollectionClick = { viewModel.onEvent(CollectionsEvent.OnCreateCollection) }
                     )
                 }
 
-                // Folders list
+                // Collections list
                 else -> {
-                    FoldersList(
-                        folders = state.folders,
-                        onFolderClick = onFolderClick
+                    CollectionsList(
+                        collections = state.collections,
+                        onCollectionClick = onCollectionClick
                     )
                 }
             }
     }
 
-    // Create Folder Dialog
+    // Create Collection Dialog
     if (state.showCreateDialog) {
-        CreateFolderDialog(
-            folderName = state.newFolderName,
-            selectedColor = state.selectedFolderColor,
-            onFolderNameChange = { viewModel.onEvent(CollectionsEvent.OnFolderNameChange(it)) },
-            onColorChange = { viewModel.onEvent(CollectionsEvent.OnFolderColorChange(it)) },
-            onSave = { viewModel.onEvent(CollectionsEvent.OnSaveFolder) },
+        CreateCollectionDialog(
+            collectionName = state.newCollectionName,
+            selectedColor = state.selectedCollectionColor,
+            onCollectionNameChange = { viewModel.onEvent(CollectionsEvent.OnCollectionNameChange(it)) },
+            onColorChange = { viewModel.onEvent(CollectionsEvent.OnCollectionColorChange(it)) },
+            onSave = { viewModel.onEvent(CollectionsEvent.OnSaveCollection) },
             onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissCreateDialog) }
         )
     }
 }
 
 /**
- * Folders list display
+ * Collections list display
  */
 @Composable
-private fun FoldersList(
-    folders: List<FolderWithLinkCount>,
-    onFolderClick: (String) -> Unit,
+private fun CollectionsList(
+    collections: List<CollectionWithLinkCount>,
+    onCollectionClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -139,27 +139,27 @@ private fun FoldersList(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
-            items = folders,
-            key = { it.folder.id }
-        ) { folderWithCount ->
-            FolderCard(
-                folder = folderWithCount.folder,
-                linkCount = folderWithCount.linkCount,
-                onClick = { onFolderClick(folderWithCount.folder.id) }
+            items = collections,
+            key = { it.collection.id }
+        ) { collectionWithCount ->
+            CollectionCard(
+                collection = collectionWithCount.collection,
+                linkCount = collectionWithCount.linkCount,
+                onClick = { onCollectionClick(collectionWithCount.collection.id) }
             )
         }
     }
 }
 
 /**
- * Create Folder Dialog
- * Allows users to create a new folder with name and color
+ * Create Collection Dialog
+ * Allows users to create a new collection with name and color
  */
 @Composable
-private fun CreateFolderDialog(
-    folderName: String,
+private fun CreateCollectionDialog(
+    collectionName: String,
     selectedColor: String?,
-    onFolderNameChange: (String) -> Unit,
+    onCollectionNameChange: (String) -> Unit,
     onColorChange: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
@@ -169,7 +169,7 @@ private fun CreateFolderDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Create Folder",
+                text = "Create Collection",
                 style = MaterialTheme.typography.headlineSmall
             )
         },
@@ -178,12 +178,12 @@ private fun CreateFolderDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Folder name input
+                // Collection name input
                 OutlinedTextField(
-                    value = folderName,
-                    onValueChange = onFolderNameChange,
-                    label = { Text("Folder Name") },
-                    placeholder = { Text("Enter folder name") },
+                    value = collectionName,
+                    onValueChange = onCollectionNameChange,
+                    label = { Text("Collection Name") },
+                    placeholder = { Text("Enter collection name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -204,7 +204,7 @@ private fun CreateFolderDialog(
         confirmButton = {
             Button(
                 onClick = onSave,
-                enabled = folderName.isNotBlank()
+                enabled = collectionName.isNotBlank()
             ) {
                 Text("Create")
             }

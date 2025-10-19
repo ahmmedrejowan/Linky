@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.domain.model.Link
-import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
+import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
@@ -29,7 +29,7 @@ class AddEditLinkViewModel(
     private val saveLinkUseCase: SaveLinkUseCase,
     private val updateLinkUseCase: UpdateLinkUseCase,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
-    private val getAllFoldersUseCase: GetAllFoldersUseCase,
+    private val getAllCollectionsUseCase: GetAllCollectionsUseCase,
     private val linkPreviewFetcher: LinkPreviewFetcher,
     private val fileStorageManager: FileStorageManager
 ) : ViewModel() {
@@ -41,7 +41,7 @@ class AddEditLinkViewModel(
         val linkId = savedStateHandle.get<String>("linkId")
         Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId")
 
-        loadFolders()
+        loadCollections()
 
         // Check if we're editing an existing link
         linkId?.let {
@@ -70,9 +70,9 @@ class AddEditLinkViewModel(
                 Timber.d("Note changed: ${event.note.take(100)}...")
                 _state.update { it.copy(note = event.note) }
             }
-            is AddEditLinkEvent.OnFolderSelect -> {
-                Timber.d("Folder selected: ${event.folderId}")
-                _state.update { it.copy(selectedFolderId = event.folderId) }
+            is AddEditLinkEvent.OnCollectionSelect -> {
+                Timber.d("Collection selected: ${event.collectionId}")
+                _state.update { it.copy(selectedCollectionId = event.collectionId) }
             }
             is AddEditLinkEvent.OnToggleFavorite -> {
                 val newValue = !_state.value.isFavorite
@@ -90,16 +90,16 @@ class AddEditLinkViewModel(
         }
     }
 
-    private fun loadFolders() {
-        Timber.d("loadFolders: Starting to load folders")
+    private fun loadCollections() {
+        Timber.d("loadCollections: Starting to load collections")
         viewModelScope.launch {
-            getAllFoldersUseCase()
+            getAllCollectionsUseCase()
                 .catch { e ->
-                    Timber.e(e, "loadFolders: Failed to load folders - ${e.message}")
+                    Timber.e(e, "loadCollections: Failed to load collections - ${e.message}")
                 }
-                .collect { folders ->
-                    Timber.d("loadFolders: Loaded ${folders.size} folders")
-                    _state.update { it.copy(folders = folders) }
+                .collect { collections ->
+                    Timber.d("loadCollections: Loaded ${collections.size} collections")
+                    _state.update { it.copy(collections = collections) }
                 }
         }
     }
@@ -118,7 +118,7 @@ class AddEditLinkViewModel(
                 .collect { link ->
                     link?.let {
                         Timber.d("loadLink: Link loaded successfully | Title: ${it.title} | URL: ${it.url}")
-                        Timber.d("loadLink: Link details | Favorite: ${it.isFavorite} | FolderId: ${it.folderId} | PreviewPath: ${it.previewImagePath != null}")
+                        Timber.d("loadLink: Link details | Favorite: ${it.isFavorite} | CollectionId: ${it.collectionId} | PreviewPath: ${it.previewImagePath != null}")
                         _state.update { state ->
                             state.copy(
                                 linkId = it.id,
@@ -126,7 +126,7 @@ class AddEditLinkViewModel(
                                 description = it.description ?: "",
                                 url = it.url,
                                 note = it.note ?: "",
-                                selectedFolderId = it.folderId,
+                                selectedCollectionId = it.collectionId,
                                 previewImagePath = it.previewImagePath,
                                 previewUrl = it.previewUrl,
                                 isFavorite = it.isFavorite,
@@ -289,7 +289,7 @@ class AddEditLinkViewModel(
         val currentState = _state.value
         Timber.d("saveLink: Starting save process | Edit mode: ${currentState.isEditMode}")
         Timber.d("saveLink: Current state | URL: ${currentState.url.trim()} | Title: ${currentState.title.trim()}")
-        Timber.d("saveLink: Current state | FolderId: ${currentState.selectedFolderId} | Favorite: ${currentState.isFavorite}")
+        Timber.d("saveLink: Current state | CollectionId: ${currentState.selectedCollectionId} | Favorite: ${currentState.isFavorite}")
 
         // Comprehensive validation using Validator
         val validationResult = Validator.validateLink(
@@ -318,14 +318,14 @@ class AddEditLinkViewModel(
                 description = currentState.description.trim().ifBlank { null },
                 url = currentState.url.trim(),
                 note = currentState.note.trim().ifBlank { null },
-                folderId = currentState.selectedFolderId,
+                collectionId = currentState.selectedCollectionId,
                 previewImagePath = currentState.previewImagePath,
                 previewUrl = currentState.previewUrl,
                 isFavorite = currentState.isFavorite
             )
 
             Timber.d("saveLink: Link object created | ID: ${link.id} | Title: ${link.title}")
-            Timber.d("saveLink: Link details | URL: ${link.url} | Folder: ${link.folderId} | Favorite: ${link.isFavorite}")
+            Timber.d("saveLink: Link details | URL: ${link.url} | Collection: ${link.collectionId} | Favorite: ${link.isFavorite}")
             Timber.d("saveLink: Link previews | ImagePath: ${link.previewImagePath != null} | PreviewURL: ${link.previewUrl != null}")
 
             val operation = if (currentState.isEditMode) "UPDATE" else "SAVE"
@@ -365,7 +365,7 @@ sealed class AddEditLinkEvent {
     data class OnDescriptionChange(val description: String) : AddEditLinkEvent()
     data class OnUrlChange(val url: String) : AddEditLinkEvent()
     data class OnNoteChange(val note: String) : AddEditLinkEvent()
-    data class OnFolderSelect(val folderId: String?) : AddEditLinkEvent()
+    data class OnCollectionSelect(val collectionId: String?) : AddEditLinkEvent()
     data object OnToggleFavorite : AddEditLinkEvent()
     data object OnFetchPreview : AddEditLinkEvent()
     data object OnSave : AddEditLinkEvent()

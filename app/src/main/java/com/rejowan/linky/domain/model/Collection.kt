@@ -2,7 +2,7 @@ package com.rejowan.linky.domain.model
 
 import java.util.UUID
 
-data class Folder(
+data class Collection(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val color: String? = null,

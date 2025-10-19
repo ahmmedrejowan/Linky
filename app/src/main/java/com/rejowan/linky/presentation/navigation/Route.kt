@@ -48,14 +48,14 @@ sealed class Route {
     data class SnapshotViewer(val snapshotId: String) : Route()
 
     /**
-     * Collections screen - Shows all folders
+     * Collections screen - Shows all collections
      */
     @Serializable
     data object Collections : Route()
 
     /**
-     * Folder detail screen (Phase 3)
-     * @param folderId The ID of the folder to display
+     * Collection detail screen (Phase 3)
+     * @param folderId The ID of the collection to display
      */
     @Serializable
     data class FolderDetail(val folderId: String) : Route()
@@ -90,7 +90,7 @@ sealed class Route {
 
     /**
      * Sync setup screen after successful login
-     * Allows folder selection and sync frequency configuration
+     * Allows collection selection and sync frequency configuration
      */
     @Serializable
     data object SyncSetup : Route()

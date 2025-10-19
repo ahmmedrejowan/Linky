@@ -10,14 +10,14 @@ import androidx.room.PrimaryKey
     tableName = "links",
     foreignKeys = [
         ForeignKey(
-            entity = FolderEntity::class,
+            entity = CollectionEntity::class,
             parentColumns = ["id"],
-            childColumns = ["folderId"],
+            childColumns = ["collectionId"],
             onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [
-        Index(value = ["folderId"]),
+        Index(value = ["collectionId"]),
         Index(value = ["isFavorite"]),
         Index(value = ["isArchived"]),
         Index(value = ["deletedAt"]),
@@ -40,8 +40,8 @@ data class LinkEntity(
     @ColumnInfo(name = "note")
     val note: String? = null,
 
-    @ColumnInfo(name = "folderId")
-    val folderId: String? = null,
+    @ColumnInfo(name = "collectionId")
+    val collectionId: String? = null,
 
     @ColumnInfo(name = "previewImagePath")
     val previewImagePath: String? = null,

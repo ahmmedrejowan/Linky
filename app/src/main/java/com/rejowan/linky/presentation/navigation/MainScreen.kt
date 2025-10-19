@@ -48,7 +48,7 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // State for Collections screen FAB action
-    var onCreateFolderClick by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var onCreateCollectionClick by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     // Get current route for bottom nav selection and FAB logic
     // Match route by checking destination route string (contains route class name)
@@ -73,7 +73,7 @@ fun MainScreen(
         else -> Icons.Default.Add // Home or null
     }
     val fabContentDescription = when (currentRoute) {
-        is Route.Collections -> "Create folder"
+        is Route.Collections -> "Create collection"
         else -> "Add link"
     }
 
@@ -142,8 +142,8 @@ fun MainScreen(
                                 parentNavController.navigate(Route.AddEditLink())
                             }
                             is Route.Collections -> {
-                                // Trigger create folder dialog in CollectionsScreen
-                                onCreateFolderClick?.invoke()
+                                // Trigger create collection dialog in CollectionsScreen
+                                onCreateCollectionClick?.invoke()
                             }
                             else -> {
                                 // Default to Add Link (for null state on launch)
@@ -165,8 +165,8 @@ fun MainScreen(
             navController = bottomNavController,
             parentNavController = parentNavController,
             snackbarHostState = snackbarHostState,
-            onCreateFolderClick = { callback ->
-                onCreateFolderClick = callback
+            onCreateCollectionClick = { callback ->
+                onCreateCollectionClick = callback
             },
             modifier = Modifier.padding(paddingValues)
         )

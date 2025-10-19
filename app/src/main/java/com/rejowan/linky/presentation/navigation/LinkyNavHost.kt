@@ -119,11 +119,11 @@ fun LinkyNavHost(
         }
 
         composable<Route.FolderDetail> { backStackEntry ->
-            val folderDetail = backStackEntry.toRoute<Route.FolderDetail>()
+            val collectionDetail = backStackEntry.toRoute<Route.FolderDetail>()
 
-            // TODO: Implement FolderDetailScreen in Phase 3
-            // FolderDetailScreen(
-            //     folderId = folderDetail.folderId,
+            // TODO: Implement CollectionDetailScreen in Phase 3
+            // CollectionDetailScreen(
+            //     collectionId = collectionDetail.folderId,
             //     onNavigateBack = { navController.popBackStack() },
             //     onLinkClick = { linkId ->
             //         navController.navigate(Route.LinkDetail(linkId))

@@ -11,7 +11,7 @@ interface LinkRepository {
     fun getFavoriteLinks(): Flow<List<Link>>
     fun getArchivedLinks(): Flow<List<Link>>
     fun getTrashedLinks(): Flow<List<Link>>
-    fun getLinksByFolder(folderId: String): Flow<List<Link>>
+    fun getLinksByCollection(collectionId: String): Flow<List<Link>>
     fun searchLinks(query: String): Flow<List<Link>>
     fun getLinkById(id: String): Flow<Link?>
     suspend fun getLinkByIdOnce(id: String): Link?

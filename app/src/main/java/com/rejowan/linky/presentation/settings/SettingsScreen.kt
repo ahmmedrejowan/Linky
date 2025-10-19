@@ -43,7 +43,7 @@ import org.koin.androidx.compose.koinViewModel
  *
  * Features:
  * - Theme selection (Light/Dark/System)
- * - App statistics (Links, Folders, Storage)
+ * - App statistics (Links, Collections, Storage)
  * - Clear cache functionality
  * - App version display
  * - Loading and error states
@@ -154,7 +154,7 @@ private fun SettingsContent(
         SectionHeader(text = "App Statistics")
         StatisticsCard(
             totalLinks = state.totalLinks,
-            totalFolders = state.totalFolders,
+            totalCollections = state.totalCollections,
             totalStorageUsed = state.totalStorageUsed
         )
 
@@ -245,7 +245,7 @@ private fun ThemeSelector(
 @Composable
 private fun StatisticsCard(
     totalLinks: Int,
-    totalFolders: Int,
+    totalCollections: Int,
     totalStorageUsed: String,
     modifier: Modifier = Modifier
 ) {
@@ -264,8 +264,8 @@ private fun StatisticsCard(
                 value = "$totalLinks ${if (totalLinks == 1) "item" else "items"}"
             )
             StatisticRow(
-                label = "Total Folders",
-                value = "$totalFolders ${if (totalFolders == 1) "collection" else "collections"}"
+                label = "Total Collections",
+                value = "$totalCollections ${if (totalCollections == 1) "collection" else "collections"}"
             )
             StatisticRow(
                 label = "Storage Used",

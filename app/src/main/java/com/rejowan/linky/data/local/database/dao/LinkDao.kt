@@ -31,9 +31,9 @@ interface LinkDao {
     @Query("SELECT * FROM links WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC")
     fun getTrashedLinks(): Flow<List<LinkEntity>>
 
-    // Get links by folder
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND folderId = :folderId ORDER BY updatedAt DESC")
-    fun getLinksByFolder(folderId: String): Flow<List<LinkEntity>>
+    // Get links by collection
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND collectionId = :collectionId ORDER BY updatedAt DESC")
+    fun getLinksByCollection(collectionId: String): Flow<List<LinkEntity>>
 
     // Search links
     @Query("""

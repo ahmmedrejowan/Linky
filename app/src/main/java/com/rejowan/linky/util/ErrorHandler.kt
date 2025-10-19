@@ -17,7 +17,7 @@ object ErrorHandler {
     /**
      * Convert exception to user-friendly error message
      * @param exception The exception to convert
-     * @param context Additional context about what operation failed (e.g., "saving link", "loading folders")
+     * @param context Additional context about what operation failed (e.g., "saving link", "loading collections")
      * @return User-friendly error message
      */
     fun getErrorMessage(exception: Throwable, context: String? = null): String {
@@ -81,15 +81,15 @@ object ErrorHandler {
     }
 
     /**
-     * Get user-friendly error message for folder operations
+     * Get user-friendly error message for collection operations
      */
-    fun getFolderErrorMessage(exception: Throwable, operation: FolderOperation): String {
+    fun getCollectionErrorMessage(exception: Throwable, operation: CollectionOperation): String {
         val context = when (operation) {
-            FolderOperation.SAVE -> "to save folder"
-            FolderOperation.UPDATE -> "to update folder"
-            FolderOperation.DELETE -> "to delete folder"
-            FolderOperation.LOAD -> "to load folder"
-            FolderOperation.LOAD_ALL -> "to load folders"
+            CollectionOperation.SAVE -> "to save collection"
+            CollectionOperation.UPDATE -> "to update collection"
+            CollectionOperation.DELETE -> "to delete collection"
+            CollectionOperation.LOAD -> "to load collection"
+            CollectionOperation.LOAD_ALL -> "to load collections"
         }
         return getErrorMessage(exception, context)
     }
@@ -136,9 +136,9 @@ enum class LinkOperation {
 }
 
 /**
- * Folder operations enum
+ * Collection operations enum
  */
-enum class FolderOperation {
+enum class CollectionOperation {
     SAVE,
     UPDATE,
     DELETE,

@@ -27,13 +27,13 @@ object Validator {
     }
 
     /**
-     * Validates a folder name
+     * Validates a collection name
      */
-    fun validateFolderName(name: String): ValidationResult {
+    fun validateCollectionName(name: String): ValidationResult {
         return when {
-            name.isBlank() -> ValidationResult.Error("Folder name cannot be empty")
-            name.length < 2 -> ValidationResult.Error("Folder name must be at least 2 characters")
-            name.length > 50 -> ValidationResult.Error("Folder name is too long (max 50 characters)")
+            name.isBlank() -> ValidationResult.Error("Collection name cannot be empty")
+            name.length < 2 -> ValidationResult.Error("Collection name must be at least 2 characters")
+            name.length > 50 -> ValidationResult.Error("Collection name is too long (max 50 characters)")
             else -> ValidationResult.Success
         }
     }
@@ -86,7 +86,7 @@ object Validator {
     }
 
     /**
-     * Validates folder color (hex format)
+     * Validates collection color (hex format)
      */
     fun validateColor(color: String): ValidationResult {
         return when {

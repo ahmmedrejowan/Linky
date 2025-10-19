@@ -106,16 +106,16 @@ object EmptyStates {
     }
 
     @Composable
-    fun NoFolders(
-        onCreateFolderClick: () -> Unit,
+    fun NoCollections(
+        onCreateCollectionClick: () -> Unit,
         modifier: Modifier = Modifier
     ) {
         EmptyState(
             icon = Icons.Outlined.FolderOff,
-            title = "No Folders Yet",
-            message = "Create folders to organize your links",
-            actionText = "Create Folder",
-            onActionClick = onCreateFolderClick,
+            title = "No Collections Yet",
+            message = "Create collections to organize your links",
+            actionText = "Create Collection",
+            onActionClick = onCreateCollectionClick,
             modifier = modifier
         )
     }

@@ -28,19 +28,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.Collection
 
 /**
- * FolderCard component - Displays a folder with name, color, and link count
+ * CollectionCard component - Displays a collection with name, color, and link count
  *
- * @param folder The folder to display
- * @param linkCount Number of links in this folder
+ * @param collection The collection to display
+ * @param linkCount Number of links in this collection
  * @param onClick Callback when card is clicked
  * @param modifier Modifier for styling
  */
 @Composable
-fun FolderCard(
-    folder: Folder,
+fun CollectionCard(
+    collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -63,31 +63,31 @@ fun FolderCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Folder Icon with Color
+                // Collection Icon with Color
                 Box(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(folder.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
+                        .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
-                        contentDescription = "Folder icon",
+                        contentDescription = "Collection icon",
                         modifier = Modifier.size(32.dp),
-                        tint = folder.color?.toColor()?.getContrastingColor()
+                        tint = collection.color?.toColor()?.getContrastingColor()
                             ?: MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                // Folder Name and Count
+                // Collection Name and Count
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = folder.name,
+                        text = collection.name,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

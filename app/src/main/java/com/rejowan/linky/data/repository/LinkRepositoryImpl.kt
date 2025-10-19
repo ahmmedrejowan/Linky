@@ -35,8 +35,8 @@ class LinkRepositoryImpl(
         return linkDao.getTrashedLinks().map { it.toDomainList() }
     }
 
-    override fun getLinksByFolder(folderId: String): Flow<List<Link>> {
-        return linkDao.getLinksByFolder(folderId).map { it.toDomainList() }
+    override fun getLinksByCollection(collectionId: String): Flow<List<Link>> {
+        return linkDao.getLinksByCollection(collectionId).map { it.toDomainList() }
     }
 
     override fun searchLinks(query: String): Flow<List<Link>> {

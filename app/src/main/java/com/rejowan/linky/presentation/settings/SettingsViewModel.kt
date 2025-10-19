@@ -3,7 +3,7 @@ package com.rejowan.linky.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.data.local.preferences.ThemePreferences
-import com.rejowan.linky.domain.repository.FolderRepository
+import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
 import com.rejowan.linky.util.ErrorHandler
@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
 
 class SettingsViewModel(
     private val linkRepository: LinkRepository,
-    private val folderRepository: FolderRepository,
+    private val collectionRepository: CollectionRepository,
     private val snapshotRepository: SnapshotRepository,
     private val themePreferences: ThemePreferences,
     private val fileStorageManager: FileStorageManager
@@ -54,7 +54,7 @@ class SettingsViewModel(
 
             try {
                 val totalLinks = linkRepository.countLinks()
-                val totalFolders = folderRepository.countFolders()
+                val totalCollections = collectionRepository.countCollections()
 
                 // Calculate total storage: snapshots from DB + actual file storage
                 val snapshotStorageBytes = snapshotRepository.getTotalStorageUsed()
@@ -65,7 +65,7 @@ class SettingsViewModel(
                 _state.update {
                     it.copy(
                         totalLinks = totalLinks,
-                        totalFolders = totalFolders,
+                        totalCollections = totalCollections,
                         totalStorageUsed = "$storageMB MB",
                         appVersion = "1.0.0", // TODO: Get from BuildConfig
                         isLoading = false

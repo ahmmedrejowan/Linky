@@ -2,12 +2,12 @@ package com.rejowan.linky.presentation.feature.collections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rejowan.linky.domain.model.Folder
-import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
-import com.rejowan.linky.domain.usecase.folder.GetFoldersWithLinkCountUseCase
-import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
+import com.rejowan.linky.domain.model.Collection
+import com.rejowan.linky.domain.usecase.collection.DeleteCollectionUseCase
+import com.rejowan.linky.domain.usecase.collection.GetCollectionsWithLinkCountUseCase
+import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
 import com.rejowan.linky.util.ErrorHandler
-import com.rejowan.linky.util.FolderOperation
+import com.rejowan.linky.util.CollectionOperation
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
@@ -20,78 +20,78 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class CollectionsViewModel(
-    private val getFoldersWithLinkCountUseCase: GetFoldersWithLinkCountUseCase,
-    private val saveFolderUseCase: SaveFolderUseCase,
-    private val deleteFolderUseCase: DeleteFolderUseCase
+    private val getCollectionsWithLinkCountUseCase: GetCollectionsWithLinkCountUseCase,
+    private val saveCollectionUseCase: SaveCollectionUseCase,
+    private val deleteCollectionUseCase: DeleteCollectionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CollectionsState())
     val state: StateFlow<CollectionsState> = _state.asStateFlow()
 
     init {
-        loadFolders()
+        loadCollections()
     }
 
     fun onEvent(event: CollectionsEvent) {
         when (event) {
-            is CollectionsEvent.OnCreateFolder -> {
+            is CollectionsEvent.OnCreateCollection -> {
                 _state.update { it.copy(showCreateDialog = true) }
             }
             is CollectionsEvent.OnDismissCreateDialog -> {
                 _state.update {
                     it.copy(
                         showCreateDialog = false,
-                        newFolderName = "",
-                        selectedFolderColor = null
+                        newCollectionName = "",
+                        selectedCollectionColor = null
                     )
                 }
             }
-            is CollectionsEvent.OnFolderNameChange -> {
-                _state.update { it.copy(newFolderName = event.name) }
+            is CollectionsEvent.OnCollectionNameChange -> {
+                _state.update { it.copy(newCollectionName = event.name) }
             }
-            is CollectionsEvent.OnFolderColorChange -> {
-                _state.update { it.copy(selectedFolderColor = event.color) }
+            is CollectionsEvent.OnCollectionColorChange -> {
+                _state.update { it.copy(selectedCollectionColor = event.color) }
             }
-            is CollectionsEvent.OnSaveFolder -> {
-                saveFolder()
+            is CollectionsEvent.OnSaveCollection -> {
+                saveCollection()
             }
-            is CollectionsEvent.OnDeleteFolder -> {
-                deleteFolder(event.folderId)
+            is CollectionsEvent.OnDeleteCollection -> {
+                deleteCollection(event.collectionId)
             }
             is CollectionsEvent.OnRefresh -> {
-                loadFolders()
+                loadCollections()
             }
         }
     }
 
-    private fun loadFolders() {
+    private fun loadCollections() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            getFoldersWithLinkCountUseCase()
+            getCollectionsWithLinkCountUseCase()
                 .catch { e ->
-                    val errorMessage = ErrorHandler.getFolderErrorMessage(e, FolderOperation.LOAD_ALL)
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(e, CollectionOperation.LOAD_ALL)
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
-                .collect { folders ->
-                    _state.update { it.copy(folders = folders, isLoading = false, error = null) }
+                .collect { collections ->
+                    _state.update { it.copy(collections = collections, isLoading = false, error = null) }
                 }
         }
     }
 
-    private fun saveFolder() {
+    private fun saveCollection() {
         val currentState = _state.value
 
-        // Validate folder name
-        val nameValidation = Validator.validateFolderName(currentState.newFolderName.trim())
+        // Validate collection name
+        val nameValidation = Validator.validateCollectionName(currentState.newCollectionName.trim())
         if (nameValidation is ValidationResult.Error) {
             _state.update { it.copy(error = nameValidation.message) }
             return
         }
 
         // Validate color if provided
-        if (currentState.selectedFolderColor != null) {
-            val colorValidation = Validator.validateColor(currentState.selectedFolderColor)
+        if (currentState.selectedCollectionColor != null) {
+            val colorValidation = Validator.validateColor(currentState.selectedCollectionColor)
             if (colorValidation is ValidationResult.Error) {
                 _state.update { it.copy(error = colorValidation.message) }
                 return
@@ -99,26 +99,26 @@ class CollectionsViewModel(
         }
 
         viewModelScope.launch {
-            val folder = Folder(
-                name = currentState.newFolderName.trim(),
-                color = currentState.selectedFolderColor,
-                sortOrder = currentState.folders.size
+            val collection = Collection(
+                name = currentState.newCollectionName.trim(),
+                color = currentState.selectedCollectionColor,
+                sortOrder = currentState.collections.size
             )
 
-            when (val result = saveFolderUseCase(folder)) {
+            when (val result = saveCollectionUseCase(collection)) {
                 is Result.Success -> {
-                    Timber.d("Folder created successfully")
+                    Timber.d("Collection created successfully")
                     _state.update {
                         it.copy(
                             showCreateDialog = false,
-                            newFolderName = "",
-                            selectedFolderColor = null,
+                            newCollectionName = "",
+                            selectedCollectionColor = null,
                             error = null
                         )
                     }
                 }
                 is Result.Error -> {
-                    val errorMessage = ErrorHandler.getFolderErrorMessage(result.exception, FolderOperation.SAVE)
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.SAVE)
                     _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -126,14 +126,14 @@ class CollectionsViewModel(
         }
     }
 
-    private fun deleteFolder(folderId: String) {
+    private fun deleteCollection(collectionId: String) {
         viewModelScope.launch {
-            when (val result = deleteFolderUseCase(folderId)) {
+            when (val result = deleteCollectionUseCase(collectionId)) {
                 is Result.Success -> {
-                    Timber.d("Folder deleted successfully")
+                    Timber.d("Collection deleted successfully")
                 }
                 is Result.Error -> {
-                    val errorMessage = ErrorHandler.getFolderErrorMessage(result.exception, FolderOperation.DELETE)
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.DELETE)
                     _state.update { it.copy(error = errorMessage) }
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -143,11 +143,11 @@ class CollectionsViewModel(
 }
 
 sealed class CollectionsEvent {
-    data object OnCreateFolder : CollectionsEvent()
+    data object OnCreateCollection : CollectionsEvent()
     data object OnDismissCreateDialog : CollectionsEvent()
-    data class OnFolderNameChange(val name: String) : CollectionsEvent()
-    data class OnFolderColorChange(val color: String) : CollectionsEvent()
-    data object OnSaveFolder : CollectionsEvent()
-    data class OnDeleteFolder(val folderId: String) : CollectionsEvent()
+    data class OnCollectionNameChange(val name: String) : CollectionsEvent()
+    data class OnCollectionColorChange(val color: String) : CollectionsEvent()
+    data object OnSaveCollection : CollectionsEvent()
+    data class OnDeleteCollection(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
 }

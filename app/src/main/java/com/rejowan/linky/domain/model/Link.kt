@@ -8,7 +8,7 @@ data class Link(
     val description: String? = null,
     val url: String,
     val note: String? = null,
-    val folderId: String? = null,
+    val collectionId: String? = null,
     val previewImagePath: String? = null,
     val previewUrl: String? = null,
     val isFavorite: Boolean = false,

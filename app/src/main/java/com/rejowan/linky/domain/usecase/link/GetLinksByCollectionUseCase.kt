@@ -4,10 +4,10 @@ import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.LinkRepository
 import kotlinx.coroutines.flow.Flow
 
-class GetLinksByFolderUseCase(
+class GetLinksByCollectionUseCase(
     private val linkRepository: LinkRepository
 ) {
-    operator fun invoke(folderId: String): Flow<List<Link>> {
-        return linkRepository.getLinksByFolder(folderId)
+    operator fun invoke(collectionId: String): Flow<List<Link>> {
+        return linkRepository.getLinksByCollection(collectionId)
     }
 }

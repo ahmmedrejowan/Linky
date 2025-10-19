@@ -6,13 +6,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "folders",
+    tableName = "collections",
     indices = [
         Index(value = ["sortOrder"]),
         Index(value = ["updatedAt"])
     ]
 )
-data class FolderEntity(
+data class CollectionEntity(
     @PrimaryKey
     val id: String,
 

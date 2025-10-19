@@ -17,14 +17,14 @@ import com.rejowan.linky.presentation.settings.SettingsScreen
  * @param navController Nested NavController for bottom nav (local to MainScreen)
  * @param parentNavController Parent NavController for navigating outside bottom nav
  * @param snackbarHostState Shared SnackbarHostState
- * @param onCreateFolderClick Callback to set the create folder action for FAB
+ * @param onCreateCollectionClick Callback to set the create collection action for FAB
  */
 @Composable
 fun BottomNavHost(
     navController: NavHostController,
     parentNavController: NavHostController,
     snackbarHostState: SnackbarHostState,
-    onCreateFolderClick: (() -> Unit) -> Unit,
+    onCreateCollectionClick: (() -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -58,10 +58,10 @@ fun BottomNavHost(
         composable<Route.Collections> {
             CollectionsScreen(
                 snackbarHostState = snackbarHostState,
-                onCreateFolderClick = onCreateFolderClick,
-                onFolderClick = { folderId ->
-                    // Navigate using parent controller to FolderDetail
-                    parentNavController.navigate(Route.FolderDetail(folderId))
+                onCreateCollectionClick = onCreateCollectionClick,
+                onCollectionClick = { collectionId ->
+                    // Navigate using parent controller to CollectionDetail
+                    parentNavController.navigate(Route.FolderDetail(collectionId))
                 },
                 onNavigateToHome = {
                     // Navigate within bottom nav using local controller

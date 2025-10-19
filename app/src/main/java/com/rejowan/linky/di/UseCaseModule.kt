@@ -1,17 +1,17 @@
 package com.rejowan.linky.di
 
-import com.rejowan.linky.domain.usecase.folder.DeleteFolderUseCase
-import com.rejowan.linky.domain.usecase.folder.GetAllFoldersUseCase
-import com.rejowan.linky.domain.usecase.folder.GetFolderByIdUseCase
-import com.rejowan.linky.domain.usecase.folder.GetFoldersWithLinkCountUseCase
-import com.rejowan.linky.domain.usecase.folder.SaveFolderUseCase
-import com.rejowan.linky.domain.usecase.folder.UpdateFolderUseCase
+import com.rejowan.linky.domain.usecase.collection.DeleteCollectionUseCase
+import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
+import com.rejowan.linky.domain.usecase.collection.GetCollectionByIdUseCase
+import com.rejowan.linky.domain.usecase.collection.GetCollectionsWithLinkCountUseCase
+import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
+import com.rejowan.linky.domain.usecase.collection.UpdateCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetFavoriteLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
-import com.rejowan.linky.domain.usecase.link.GetLinksByFolderUseCase
+import com.rejowan.linky.domain.usecase.link.GetLinksByCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.GetTrashedLinksUseCase
 import com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
@@ -28,7 +28,7 @@ val useCaseModule = module {
     // Link use cases
     factory { GetAllLinksUseCase(get()) }
     factory { GetLinkByIdUseCase(get()) }
-    factory { GetLinksByFolderUseCase(get()) }
+    factory { GetLinksByCollectionUseCase(get()) }
     factory { GetFavoriteLinksUseCase(get()) }
     factory { GetArchivedLinksUseCase(get()) }
     factory { GetTrashedLinksUseCase(get()) }
@@ -40,13 +40,13 @@ val useCaseModule = module {
     factory { ToggleFavoriteUseCase(get()) }
     factory { ToggleArchiveUseCase(get()) }
 
-    // Folder use cases
-    factory { GetAllFoldersUseCase(get()) }
-    factory { GetFolderByIdUseCase(get()) }
-    factory { GetFoldersWithLinkCountUseCase(get()) }
-    factory { SaveFolderUseCase(get()) }
-    factory { UpdateFolderUseCase(get()) }
-    factory { DeleteFolderUseCase(get()) }
+    // Collection use cases
+    factory { GetAllCollectionsUseCase(get()) }
+    factory { GetCollectionByIdUseCase(get()) }
+    factory { GetCollectionsWithLinkCountUseCase(get()) }
+    factory { SaveCollectionUseCase(get()) }
+    factory { UpdateCollectionUseCase(get()) }
+    factory { DeleteCollectionUseCase(get()) }
 
     // Snapshot use cases
     factory { GetSnapshotsForLinkUseCase(get()) }

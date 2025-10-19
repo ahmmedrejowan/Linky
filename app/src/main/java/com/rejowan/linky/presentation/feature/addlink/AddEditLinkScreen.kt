@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.domain.model.Collection
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -70,7 +70,7 @@ import org.koin.androidx.compose.koinViewModel
  * - Auto-fetch title and description from preview
  * - Compact preview card (left: image, right: title/description)
  * - Title, description, and note input fields
- * - Folder selection dropdown
+ * - Collection selection dropdown
  * - Favorite toggle switch
  * - Save icon in TopAppBar (alternative to bottom button)
  * - Focus management (tap outside to hide keyboard)
@@ -312,13 +312,13 @@ fun AddEditLinkScreen(
                 maxLines = 5
             )
 
-            // Folder Selection Dropdown
-            FolderDropdown(
-                selectedFolderId = state.selectedFolderId,
-                folders = state.folders,
+            // Collection Selection Dropdown
+            CollectionDropdown(
+                selectedCollectionId = state.selectedCollectionId,
+                collections = state.collections,
                 enabled = !state.isLoading,
-                onFolderSelected = { folderId ->
-                    viewModel.onEvent(AddEditLinkEvent.OnFolderSelect(folderId))
+                onCollectionSelected = { collectionId ->
+                    viewModel.onEvent(AddEditLinkEvent.OnCollectionSelect(collectionId))
                 })
 
             // Add to Favourite Toggle
@@ -377,32 +377,32 @@ fun AddEditLinkScreen(
 }
 
 /**
- * Folder Selection Dropdown
- * Allows users to select a folder or "No Folder"
+ * Collection Selection Dropdown
+ * Allows users to select a collection or "No Collection"
  *
- * @param selectedFolderId Currently selected folder ID, null for "No Folder"
- * @param folders List of available folders
+ * @param selectedCollectionId Currently selected collection ID, null for "No Collection"
+ * @param collections List of available collections
  * @param enabled Whether the dropdown is enabled
- * @param onFolderSelected Callback when folder is selected (null for "No Folder")
+ * @param onCollectionSelected Callback when collection is selected (null for "No Collection")
  * @param modifier Modifier for styling
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FolderDropdown(
-    selectedFolderId: String?,
-    folders: List<Folder>,
+private fun CollectionDropdown(
+    selectedCollectionId: String?,
+    collections: List<Collection>,
     enabled: Boolean,
-    onFolderSelected: (String?) -> Unit,
+    onCollectionSelected: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    // Find selected folder name - Optimized with remember to avoid recalculation
-    val selectedFolderName = remember(selectedFolderId, folders) {
-        if (selectedFolderId == null) {
-            "No Folder"
+    // Find selected collection name - Optimized with remember to avoid recalculation
+    val selectedCollectionName = remember(selectedCollectionId, collections) {
+        if (selectedCollectionId == null) {
+            "No Collection"
         } else {
-            folders.find { it.id == selectedFolderId }?.name ?: "No Folder"
+            collections.find { it.id == selectedCollectionId }?.name ?: "No Collection"
         }
     }
 
@@ -412,10 +412,10 @@ private fun FolderDropdown(
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = selectedFolderName,
+            value = selectedCollectionName,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Folder") },
+            label = { Text("Collection") },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -428,27 +428,27 @@ private fun FolderDropdown(
 
         ExposedDropdownMenu(
             expanded = expanded, onDismissRequest = { expanded = false }) {
-            // "No Folder" option
+            // "No Collection" option
             DropdownMenuItem(text = {
                 Text(
-                    text = "No Folder", style = MaterialTheme.typography.bodyMedium
+                    text = "No Collection", style = MaterialTheme.typography.bodyMedium
                 )
             }, onClick = {
-                onFolderSelected(null)
+                onCollectionSelected(null)
                 expanded = false
             })
 
-            // Folder options
-            folders.forEach { folder ->
+            // Collection options
+            collections.forEach { collection ->
                 DropdownMenuItem(text = {
                     Text(
-                        text = folder.name,
+                        text = collection.name,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }, onClick = {
-                    onFolderSelected(folder.id)
+                    onCollectionSelected(collection.id)
                     expanded = false
                 })
             }

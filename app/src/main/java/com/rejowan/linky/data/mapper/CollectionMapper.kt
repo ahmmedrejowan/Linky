@@ -1,12 +1,12 @@
 package com.rejowan.linky.data.mapper
 
-import com.rejowan.linky.data.local.database.entity.FolderEntity
-import com.rejowan.linky.domain.model.Folder
+import com.rejowan.linky.data.local.database.entity.CollectionEntity
+import com.rejowan.linky.domain.model.Collection
 
-object FolderMapper {
+object CollectionMapper {
     // Domain to Entity
-    fun Folder.toEntity(syncToRemote: Boolean = false, userId: String? = null): FolderEntity {
-        return FolderEntity(
+    fun Collection.toEntity(syncToRemote: Boolean = false, userId: String? = null): CollectionEntity {
+        return CollectionEntity(
             id = id,
             name = name,
             color = color,
@@ -20,8 +20,8 @@ object FolderMapper {
     }
 
     // Entity to Domain
-    fun FolderEntity.toDomain(): Folder {
-        return Folder(
+    fun CollectionEntity.toDomain(): Collection {
+        return Collection(
             id = id,
             name = name,
             color = color,
@@ -33,7 +33,7 @@ object FolderMapper {
     }
 
     // List conversions
-    fun List<FolderEntity>.toDomainList(): List<Folder> = map { it.toDomain() }
-    fun List<Folder>.toEntityList(syncToRemote: Boolean = false, userId: String? = null): List<FolderEntity> =
+    fun List<CollectionEntity>.toDomainList(): List<Collection> = map { it.toDomain() }
+    fun List<Collection>.toEntityList(syncToRemote: Boolean = false, userId: String? = null): List<CollectionEntity> =
         map { it.toEntity(syncToRemote, userId) }
 }

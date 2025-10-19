@@ -69,7 +69,7 @@ import java.util.Locale
  *
  * Features:
  * - Large preview image
- * - Complete link information (title, URL, note, folder)
+ * - Complete link information (title, URL, note, collection)
  * - Timestamps (created, modified)
  * - Actions: Edit, Favorite, Archive, Delete
  * - Snapshots list
@@ -344,11 +344,11 @@ private fun LinkContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Folder (if assigned)
-                link.folderId?.let { folderId ->
+                // Collection (if assigned)
+                link.collectionId?.let { collectionId ->
                     MetadataRow(
-                        label = "Folder",
-                        value = folderId // TODO: Resolve folder name from folderId
+                        label = "Collection",
+                        value = collectionId // TODO: Resolve collection name from collectionId
                     )
                 }
 

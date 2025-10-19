@@ -27,7 +27,7 @@ val viewModelModule = module {
             saveLinkUseCase = get(),
             updateLinkUseCase = get(),
             getLinkByIdUseCase = get(),
-            getAllFoldersUseCase = get(),
+            getAllCollectionsUseCase = get(),
             linkPreviewFetcher = get(),
             fileStorageManager = get()
         )
@@ -46,16 +46,16 @@ val viewModelModule = module {
 
     viewModel {
         CollectionsViewModel(
-            getFoldersWithLinkCountUseCase = get(),
-            saveFolderUseCase = get(),
-            deleteFolderUseCase = get()
+            getCollectionsWithLinkCountUseCase = get(),
+            saveCollectionUseCase = get(),
+            deleteCollectionUseCase = get()
         )
     }
 
     viewModel {
         SettingsViewModel(
             linkRepository = get(),
-            folderRepository = get(),
+            collectionRepository = get(),
             snapshotRepository = get(),
             themePreferences = get(),
             fileStorageManager = get()

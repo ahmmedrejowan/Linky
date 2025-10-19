@@ -30,7 +30,7 @@ enum class BottomNavItem(
     ),
 
     /**
-     * Collections tab - Shows all folders for organizing links
+     * Collections tab - Shows all collections for organizing links
      */
     COLLECTIONS(
         route = Route.Collections,
