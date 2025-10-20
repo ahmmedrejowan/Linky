@@ -59,6 +59,7 @@ fun MainScreen(
             when {
                 currentBackStackEntry?.destination?.route?.contains("Home") == true -> Route.Home
                 currentBackStackEntry?.destination?.route?.contains("Collections") == true -> Route.Collections
+                currentBackStackEntry?.destination?.route?.contains("Search") == true -> Route.Search
                 currentBackStackEntry?.destination?.route?.contains("Settings") == true -> Route.Settings
                 else -> null
             }
@@ -81,6 +82,7 @@ fun MainScreen(
     val topBarTitle = when (currentRoute) {
         is Route.Home -> "Linky"
         is Route.Collections -> "Collections"
+        is Route.Search -> "Search"
         is Route.Settings -> "Settings"
         null -> "Linky" // Default on app launch
         else -> ""
@@ -132,8 +134,8 @@ fun MainScreen(
             )
         },
         floatingActionButton = {
-            // Only show FAB on Home and Collections screens, not on Settings
-            if (currentRoute != Route.Settings) {
+            // Only show FAB on Home and Collections screens, not on Settings or Search
+            if (currentRoute != Route.Settings && currentRoute != Route.Search) {
                 FloatingActionButton(
                     onClick = {
                         when (currentRoute) {

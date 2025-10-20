@@ -8,6 +8,7 @@ import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +19,7 @@ import timber.log.Timber
 
 /**
  * ViewModel for Search screen
- * Handles search functionality across all links
+ * Handles search functionality across all links with auto-search and debounce
  */
 class SearchViewModel(
     private val searchLinksUseCase: SearchLinksUseCase,
@@ -31,12 +32,34 @@ class SearchViewModel(
     // Job to track and cancel search operations
     private var searchJob: Job? = null
 
+    // Debounce delay in milliseconds
+    private val debounceDelay = 400L
+
     fun onEvent(event: SearchEvent) {
         when (event) {
             is SearchEvent.OnSearchQueryChange -> {
                 _state.update { it.copy(searchQuery = event.query) }
+                // Auto-search with debounce
+                searchJob?.cancel()
+                if (event.query.isNotBlank()) {
+                    searchJob = viewModelScope.launch {
+                        delay(debounceDelay)
+                        performSearch(event.query)
+                    }
+                } else {
+                    // Clear results when query is empty
+                    _state.update {
+                        it.copy(
+                            searchResults = emptyList(),
+                            hasSearched = false,
+                            error = null
+                        )
+                    }
+                }
             }
             is SearchEvent.OnSearch -> {
+                // Manual search trigger (from keyboard action)
+                searchJob?.cancel()
                 if (_state.value.searchQuery.isNotBlank()) {
                     performSearch(_state.value.searchQuery)
                 }
