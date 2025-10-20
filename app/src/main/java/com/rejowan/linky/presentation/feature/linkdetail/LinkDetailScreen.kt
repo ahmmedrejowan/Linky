@@ -319,6 +319,33 @@ private fun LinkContent(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        // Status Cards (Deleted/Archived)
+        if (link.isDeleted || link.isArchived) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (link.isDeleted) {
+                    StatusBanner(
+                        message = "This link has been moved to trash. You can restore it from the Trash section.",
+                        backgroundColor = MaterialTheme.colorScheme.errorContainer,
+                        textColor = MaterialTheme.colorScheme.onErrorContainer,
+                        iconColor = MaterialTheme.colorScheme.error
+                    )
+                }
+                if (link.isArchived) {
+                    StatusBanner(
+                        message = "This link has been archived. It's hidden from your main view but still accessible.",
+                        backgroundColor = Color(0xFFFFF3CD), // Yellowish background
+                        textColor = Color(0xFF856404), // Dark yellow text
+                        iconColor = Color(0xFFFFC107) // Amber icon
+                    )
+                }
+            }
+        }
+
         // Preview Image (if available)
         if (link.previewImagePath != null || link.previewUrl != null) {
             Card(
@@ -853,5 +880,49 @@ private fun parseColor(colorString: String?): Color {
         Color(colorInt or 0xFF000000) // Ensure alpha is set
     } catch (_: Exception) {
         Color(0xFF6200EE) // Default primary color on error
+    }
+}
+
+/**
+ * Status banner for archived/deleted links
+ */
+@Composable
+private fun StatusBanner(
+    message: String,
+    backgroundColor: Color,
+    textColor: Color,
+    iconColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon
+            Icon(
+                imageVector = Icons.Filled.Archive,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
+            )
+
+            // Message
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }

@@ -65,6 +65,10 @@ class CollectionsViewModel(
             is CollectionsEvent.OnRefresh -> {
                 loadCollections()
             }
+            is CollectionsEvent.OnSortTypeChange -> {
+                _state.update { it.copy(sortType = event.sortType) }
+                applySorting()
+            }
         }
     }
 
@@ -78,8 +82,37 @@ class CollectionsViewModel(
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { collections ->
-                    _state.update { it.copy(collections = collections, isLoading = false, error = null) }
+                    val sortedCollections = sortCollections(collections, _state.value.sortType)
+                    _state.update { it.copy(collections = sortedCollections, isLoading = false, error = null) }
                 }
+        }
+    }
+
+    /**
+     * Apply sorting to current collections in state
+     */
+    private fun applySorting() {
+        val currentCollections = _state.value.collections
+        val sortedCollections = sortCollections(currentCollections, _state.value.sortType)
+        _state.update { it.copy(collections = sortedCollections) }
+        Timber.d("Collections sorted by ${_state.value.sortType.displayName}")
+    }
+
+    /**
+     * Sort collections based on sort type
+     */
+    private fun sortCollections(
+        collections: List<com.rejowan.linky.domain.model.CollectionWithLinkCount>,
+        sortType: CollectionSortType
+    ): List<com.rejowan.linky.domain.model.CollectionWithLinkCount> {
+        return when (sortType) {
+            CollectionSortType.DATE_CREATED_DESC -> collections.sortedByDescending { it.collection.createdAt }
+            CollectionSortType.DATE_CREATED_ASC -> collections.sortedBy { it.collection.createdAt }
+            CollectionSortType.NAME_ASC -> collections.sortedBy { it.collection.name.lowercase() }
+            CollectionSortType.NAME_DESC -> collections.sortedByDescending { it.collection.name.lowercase() }
+            CollectionSortType.LAST_MODIFIED -> collections.sortedByDescending { it.collection.updatedAt }
+            CollectionSortType.MOST_LINKS -> collections.sortedByDescending { it.linkCount }
+            CollectionSortType.LEAST_LINKS -> collections.sortedBy { it.linkCount }
         }
     }
 
@@ -157,4 +190,5 @@ sealed class CollectionsEvent {
     data object OnSaveCollection : CollectionsEvent()
     data class OnDeleteCollection(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
+    data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
 }
