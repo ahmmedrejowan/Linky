@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
+import coil.compose.AsyncImage
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,6 +55,7 @@ fun MarkdownText(
     // Get theme colors
     val linkColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
     val codeBackgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    val imageTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(modifier = modifier) {
         RenderMarkdownNode(
@@ -60,7 +64,8 @@ fun MarkdownText(
             fontSize = fontSize,
             lineHeight = lineHeight,
             linkColor = linkColor,
-            codeBackgroundColor = codeBackgroundColor
+            codeBackgroundColor = codeBackgroundColor,
+            imageTextColor = imageTextColor
         )
     }
 }
@@ -73,22 +78,29 @@ private fun RenderMarkdownNode(
     lineHeight: Float,
     linkColor: androidx.compose.ui.graphics.Color,
     codeBackgroundColor: androidx.compose.ui.graphics.Color,
+    imageTextColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
     when (node.type) {
         MarkdownElementTypes.MARKDOWN_FILE -> {
             Column(modifier = modifier) {
                 node.children.forEach { child ->
-                    RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor)
+                    RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor, imageTextColor)
                 }
             }
         }
         MarkdownElementTypes.PARAGRAPH -> {
             val uriHandler = LocalUriHandler.current
+
+            // Collect image URLs from this paragraph
+            val imageUrls = mutableListOf<String>()
+            collectImageUrls(node, content, imageUrls)
+
             val annotatedText = buildAnnotatedString {
-                processInlineContent(node, content, this, linkColor, codeBackgroundColor)
+                processInlineContent(node, content, this, linkColor, codeBackgroundColor, imageTextColor)
             }
 
+            // Render text content
             ClickableText(
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyLarge.copy(
@@ -97,7 +109,7 @@ private fun RenderMarkdownNode(
                     lineHeight = (fontSize.value * lineHeight).sp,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                modifier = Modifier.padding(bottom = 12.dp),
+                modifier = Modifier.padding(bottom = if (imageUrls.isEmpty()) 12.dp else 4.dp),
                 onClick = { offset ->
                     // Find URL annotations at click position
                     annotatedText.getStringAnnotations(tag = "URL", start = offset, end = offset)
@@ -111,6 +123,22 @@ private fun RenderMarkdownNode(
                         }
                 }
             )
+
+            // Render images if any
+            imageUrls.forEach { imageUrl ->
+                Spacer(modifier = Modifier.height(8.dp))
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Article image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
+
+            if (imageUrls.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
         MarkdownElementTypes.ATX_1 -> {
             val text = node.getTextInNode(content).toString().removePrefix("#").trim()
@@ -165,13 +193,13 @@ private fun RenderMarkdownNode(
         MarkdownElementTypes.UNORDERED_LIST, MarkdownElementTypes.ORDERED_LIST -> {
             Column(modifier = Modifier.padding(bottom = 8.dp)) {
                 node.children.forEach { child ->
-                    RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor)
+                    RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor, imageTextColor)
                 }
             }
         }
         MarkdownElementTypes.LIST_ITEM -> {
             val text = buildAnnotatedString {
-                processInlineContent(node, content, this, linkColor, codeBackgroundColor)
+                processInlineContent(node, content, this, linkColor, codeBackgroundColor, imageTextColor)
             }
             Text(
                 text = "• $text",
@@ -193,7 +221,7 @@ private fun RenderMarkdownNode(
             ) {
                 Column {
                     node.children.forEach { child ->
-                        RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor)
+                        RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor, imageTextColor)
                     }
                 }
             }
@@ -229,7 +257,7 @@ private fun RenderMarkdownNode(
         else -> {
             // For other node types, recursively process children
             node.children.forEach { child ->
-                RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor)
+                RenderMarkdownNode(child, content, fontSize, lineHeight, linkColor, codeBackgroundColor, imageTextColor)
             }
         }
     }
@@ -240,7 +268,8 @@ private fun processInlineContent(
     content: String,
     builder: androidx.compose.ui.text.AnnotatedString.Builder,
     linkColor: androidx.compose.ui.graphics.Color,
-    codeBackgroundColor: androidx.compose.ui.graphics.Color
+    codeBackgroundColor: androidx.compose.ui.graphics.Color,
+    imageTextColor: androidx.compose.ui.graphics.Color
 ) {
     var skipUntilCloseParen = false
     var linkUrl: String? = null
@@ -286,12 +315,12 @@ private fun processInlineContent(
             }
             MarkdownElementTypes.STRONG -> {
                 builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor, imageTextColor)
                 }
             }
             MarkdownElementTypes.EMPH -> {
                 builder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor, imageTextColor)
                 }
             }
             MarkdownElementTypes.CODE_SPAN -> {
@@ -317,14 +346,8 @@ private fun processInlineContent(
 
                 if (linkLabelNode != null) {
                     Timber.d("processInlineContent: LINK_LABEL found")
-                    // Extract only TEXT nodes from LINK_LABEL (skip [ and ] brackets)
-                    val linkTextBuilder = StringBuilder()
-                    linkLabelNode.children.forEach { labelChild ->
-                        if (labelChild.type == MarkdownTokenTypes.TEXT) {
-                            linkTextBuilder.append(labelChild.getTextInNode(content))
-                        }
-                    }
-                    val linkText = linkTextBuilder.toString()
+                    // Extract text from LINK_LABEL (recursively to handle bold/italic)
+                    val linkText = extractTextRecursively(linkLabelNode, content)
                     Timber.d("processInlineContent: Extracted link text: '$linkText'")
 
                     // Look ahead to collect URL before adding link annotation
@@ -380,7 +403,7 @@ private fun processInlineContent(
                                 textDecoration = TextDecoration.Underline
                             )
                         ) {
-                            processInlineContent(linkTextNode, content, builder, linkColor, codeBackgroundColor)
+                            processInlineContent(linkTextNode, content, builder, linkColor, codeBackgroundColor, imageTextColor)
                         }
                     } else {
                         Timber.w("processInlineContent: No LINK_LABEL or LINK_TEXT found, skipping link")
@@ -389,18 +412,19 @@ private fun processInlineContent(
                 }
             }
             MarkdownElementTypes.IMAGE -> {
-                // Extract alt text and URL
-                val imageText = child.children.find { it.type == MarkdownElementTypes.LINK_TEXT }
-                val altText = if (imageText != null) {
-                    imageText.getTextInNode(content).toString()
-                } else {
-                    "[Image]"
+                Timber.d("processInlineContent: IMAGE detected")
+
+                // Look ahead to skip URL parts (similar to links)
+                var lookAheadIndex = index + 1
+                if (lookAheadIndex < node.children.size &&
+                    node.children[lookAheadIndex].type.toString() == "Markdown:(") {
+                    Timber.d("processInlineContent: Image has URL, will skip it")
+                    skipUntilCloseParen = true
+                    urlBuilder.clear()
                 }
-                builder.append("\n")
-                builder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    builder.append(altText)
-                }
-                builder.append("\n")
+
+                // Don't append [Image] placeholder since actual images are rendered separately
+                // The collectImageUrls() function handles displaying the actual images
             }
             // Skip markdown syntax tokens that are handled by parent nodes
             MarkdownElementTypes.LINK_LABEL -> {
@@ -425,9 +449,77 @@ private fun processInlineContent(
                     // Skip these tokens - they're markdown syntax
                 } else {
                     Timber.d("processInlineContent: Processing unknown type: ${child.type}")
-                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor, imageTextColor)
                 }
             }
         }
+    }
+}
+
+/**
+ * Recursively extract all text content from a node and its descendants
+ * This handles nested formatting like **bold** or *italic* within link text
+ */
+private fun extractTextRecursively(node: ASTNode, content: String): String {
+    val textBuilder = StringBuilder()
+
+    fun traverse(n: ASTNode) {
+        if (n.type == MarkdownTokenTypes.TEXT) {
+            textBuilder.append(n.getTextInNode(content))
+        } else {
+            // Recursively process children
+            n.children.forEach { child ->
+                traverse(child)
+            }
+        }
+    }
+
+    traverse(node)
+    return textBuilder.toString()
+}
+
+/**
+ * Collect all image URLs from a paragraph node
+ * Images appear as IMAGE nodes followed by (url) tokens as siblings
+ */
+private fun collectImageUrls(node: ASTNode, content: String, imageUrls: MutableList<String>) {
+    var i = 0
+    while (i < node.children.size) {
+        val child = node.children[i]
+
+        if (child.type == MarkdownElementTypes.IMAGE) {
+            Timber.d("collectImageUrls: Found IMAGE node at index $i")
+
+            // Look ahead for the URL (next sibling should be '(')
+            var lookAheadIndex = i + 1
+            if (lookAheadIndex < node.children.size &&
+                node.children[lookAheadIndex].type.toString() == "Markdown:(") {
+
+                val urlBuilder = StringBuilder()
+                lookAheadIndex++ // Skip opening paren
+
+                // Collect URL parts
+                while (lookAheadIndex < node.children.size) {
+                    val urlChild = node.children[lookAheadIndex]
+                    val tokenString = urlChild.type.toString()
+
+                    when {
+                        tokenString == "Markdown:)" -> break
+                        urlChild.type == MarkdownTokenTypes.TEXT -> {
+                            urlBuilder.append(urlChild.getTextInNode(content))
+                        }
+                        tokenString == "Markdown::" -> urlBuilder.append(":")
+                    }
+                    lookAheadIndex++
+                }
+
+                val imageUrl = urlBuilder.toString()
+                if (imageUrl.isNotBlank()) {
+                    Timber.d("collectImageUrls: Collected image URL: $imageUrl")
+                    imageUrls.add(imageUrl)
+                }
+            }
+        }
+        i++
     }
 }
