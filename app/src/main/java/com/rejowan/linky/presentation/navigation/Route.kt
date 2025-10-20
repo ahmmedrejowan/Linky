@@ -54,11 +54,12 @@ sealed class Route {
     data object Collections : Route()
 
     /**
-     * Collection detail screen (Phase 3)
-     * @param folderId The ID of the collection to display
+     * Collection detail screen
+     * Shows all links within a specific collection
+     * @param collectionId The ID of the collection to display
      */
     @Serializable
-    data class FolderDetail(val folderId: String) : Route()
+    data class CollectionDetail(val collectionId: String) : Route()
 
     /**
      * Settings screen - App settings and preferences

@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
+import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
 
 /**
@@ -118,17 +119,18 @@ fun LinkyNavHost(
             )
         }
 
-        composable<Route.FolderDetail> { backStackEntry ->
-            val collectionDetail = backStackEntry.toRoute<Route.FolderDetail>()
+        composable<Route.CollectionDetail> { backStackEntry ->
+            val collectionDetail = backStackEntry.toRoute<Route.CollectionDetail>()
 
-            // TODO: Implement CollectionDetailScreen in Phase 3
-            // CollectionDetailScreen(
-            //     collectionId = collectionDetail.folderId,
-            //     onNavigateBack = { navController.popBackStack() },
-            //     onLinkClick = { linkId ->
-            //         navController.navigate(Route.LinkDetail(linkId))
-            //     }
-            // )
+            CollectionDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLinkClick = { linkId ->
+                    navController.navigate(Route.LinkDetail(linkId))
+                },
+                onFavoriteClick = { linkId ->
+                    // TODO: Implement toggle favorite for link from collection detail
+                }
+            )
         }
 
         composable<Route.AdvancedSettings> {

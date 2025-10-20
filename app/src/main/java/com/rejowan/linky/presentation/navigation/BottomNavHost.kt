@@ -8,7 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.rejowan.linky.presentation.feature.collections.CollectionsScreen
 import com.rejowan.linky.presentation.feature.home.HomeScreen
-import com.rejowan.linky.presentation.settings.SettingsScreen
+import com.rejowan.linky.presentation.feature.settings.SettingsScreen
 
 /**
  * Bottom navigation graph - Nested NavHost for Home/Collections/Settings only
@@ -61,7 +61,7 @@ fun BottomNavHost(
                 onCreateCollectionClick = onCreateCollectionClick,
                 onCollectionClick = { collectionId ->
                     // Navigate using parent controller to CollectionDetail
-                    parentNavController.navigate(Route.FolderDetail(collectionId))
+                    parentNavController.navigate(Route.CollectionDetail(collectionId))
                 },
                 onNavigateToHome = {
                     // Navigate within bottom nav using local controller

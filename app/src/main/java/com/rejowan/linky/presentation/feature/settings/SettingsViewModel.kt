@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.settings
+package com.rejowan.linky.presentation.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

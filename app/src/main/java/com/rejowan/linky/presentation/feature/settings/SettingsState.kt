@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.settings
+package com.rejowan.linky.presentation.feature.settings
 
 data class SettingsState(
     val totalLinks: Int = 0,

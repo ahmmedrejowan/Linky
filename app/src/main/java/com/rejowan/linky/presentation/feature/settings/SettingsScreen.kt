@@ -1,4 +1,4 @@
-package com.rejowan.linky.presentation.settings
+package com.rejowan.linky.presentation.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
