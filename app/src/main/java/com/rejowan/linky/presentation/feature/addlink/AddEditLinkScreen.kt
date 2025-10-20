@@ -323,21 +323,17 @@ fun AddEditLinkScreen(
 
             // Add to Favourite Toggle
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Add to Favourite",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 Switch(
                     checked = state.isFavorite,
-                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) },
-                    enabled = !state.isLoading
+                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) }
                 )
             }
 

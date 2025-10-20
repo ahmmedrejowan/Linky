@@ -57,7 +57,11 @@ val viewModelModule = module {
         CollectionDetailViewModel(
             savedStateHandle = get(),
             getCollectionByIdUseCase = get(),
-            getLinksByCollectionUseCase = get()
+            getLinksByCollectionUseCase = get(),
+            updateCollectionUseCase = get(),
+            deleteCollectionUseCase = get(),
+            updateLinkUseCase = get(),
+            deleteLinkUseCase = get()
         )
     }
 

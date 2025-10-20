@@ -7,5 +7,13 @@ data class CollectionDetailState(
     val collection: Collection? = null,
     val links: List<Link> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Edit dialog state
+    val showEditDialog: Boolean = false,
+    val editName: String = "",
+    val editColor: String? = null,
+    val editIsFavorite: Boolean = false,
+    // Delete dialog state
+    val showDeleteDialog: Boolean = false,
+    val deleteWithLinks: Boolean = false
 )

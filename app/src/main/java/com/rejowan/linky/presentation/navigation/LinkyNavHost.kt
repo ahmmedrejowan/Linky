@@ -129,6 +129,9 @@ fun LinkyNavHost(
                 },
                 onFavoriteClick = { linkId ->
                     // TODO: Implement toggle favorite for link from collection detail
+                },
+                onAddLinkClick = { collectionId ->
+                    navController.navigate(Route.AddEditLink(collectionId = collectionId))
                 }
             )
         }
