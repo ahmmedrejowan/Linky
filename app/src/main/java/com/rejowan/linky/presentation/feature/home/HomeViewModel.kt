@@ -61,6 +61,66 @@ class HomeViewModel(
                 // Trigger a refresh by re-emitting the current filter
                 filterTypeFlow.value = _state.value.filterType
             }
+            is HomeEvent.OnClipboardUrlDetected -> {
+                Timber.tag("HomeViewModel").d("OnClipboardUrlDetected event received: ${event.url}")
+                handleClipboardUrl(event.url)
+            }
+            is HomeEvent.OnDismissClipboardPrompt -> {
+                _state.update { it.copy(showClipboardPrompt = false, clipboardUrl = null) }
+                Timber.tag("HomeViewModel").d("Clipboard prompt dismissed")
+            }
+        }
+    }
+
+    /**
+     * Handle clipboard URL detection
+     * Validates URL and shows prompt if valid and not already prompted
+     */
+    private fun handleClipboardUrl(url: String) {
+        Timber.tag("HomeViewModel").d("handleClipboardUrl called with: $url")
+        val trimmedUrl = url.trim()
+
+        // Check if we've already prompted for this URL
+        if (_state.value.promptedUrls.contains(trimmedUrl)) {
+            Timber.tag("HomeViewModel").d("✗ Already prompted for this URL: $trimmedUrl")
+            return
+        }
+
+        // Basic URL validation
+        val isValid = isValidUrl(trimmedUrl)
+        Timber.tag("HomeViewModel").d("URL validation result: $isValid for URL: $trimmedUrl")
+
+        if (isValid) {
+            _state.update {
+                it.copy(
+                    clipboardUrl = trimmedUrl,
+                    showClipboardPrompt = true,
+                    promptedUrls = it.promptedUrls + trimmedUrl // Add to prompted set
+                )
+            }
+            Timber.tag("HomeViewModel").d("✓ State updated - showClipboardPrompt=true, clipboardUrl=$trimmedUrl")
+        } else {
+            Timber.tag("HomeViewModel").d("✗ Invalid URL in clipboard: $trimmedUrl")
+        }
+    }
+
+    /**
+     * Validate if string is a valid URL
+     */
+    private fun isValidUrl(url: String): Boolean {
+        return try {
+            val urlPattern = Regex(
+                "^(https?://)" + // Protocol
+                "([a-zA-Z0-9.-]+)" + // Domain
+                "(:[0-9]{1,5})?" + // Optional port
+                "(/.*)?$" // Optional path
+            )
+            urlPattern.matches(url) ||
+            // Also accept URLs without protocol
+            Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/.*)?$").matches(url)
+        } catch (e: Exception) {
+            Timber.e(e, "Error validating URL: $url")
+            false
         }
     }
 
@@ -176,4 +236,6 @@ sealed class HomeEvent {
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()
+    data class OnClipboardUrlDetected(val url: String) : HomeEvent()
+    data object OnDismissClipboardPrompt : HomeEvent()
 }

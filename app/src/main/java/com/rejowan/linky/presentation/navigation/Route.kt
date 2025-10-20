@@ -37,9 +37,14 @@ sealed class Route {
      * Add or Edit link screen
      * @param linkId Optional link ID for edit mode. Null for add mode
      * @param collectionId Optional collection ID to preselect collection when adding
+     * @param url Optional URL to prefill when adding from clipboard/share
      */
     @Serializable
-    data class AddEditLink(val linkId: String? = null, val collectionId: String? = null) : Route()
+    data class AddEditLink(
+        val linkId: String? = null,
+        val collectionId: String? = null,
+        val url: String? = null
+    ) : Route()
 
     /**
      * Snapshot viewer screen

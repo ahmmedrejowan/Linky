@@ -10,7 +10,11 @@ data class HomeState(
     val error: String? = null,
     val allLinksCount: Int = 0,
     val favoriteLinksCount: Int = 0,
-    val archivedLinksCount: Int = 0
+    val archivedLinksCount: Int = 0,
+    // Clipboard detection
+    val clipboardUrl: String? = null,
+    val showClipboardPrompt: Boolean = false,
+    val promptedUrls: Set<String> = emptySet() // Track URLs we've already prompted for
 )
 
 enum class FilterType {

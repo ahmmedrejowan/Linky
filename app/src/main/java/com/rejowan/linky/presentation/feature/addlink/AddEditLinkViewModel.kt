@@ -44,12 +44,19 @@ class AddEditLinkViewModel(
     init {
         val linkId = savedStateHandle.get<String>("linkId")
         val collectionId = savedStateHandle.get<String>("collectionId")
-        Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId | PreselectedCollectionId: $collectionId")
+        val url = savedStateHandle.get<String>("url")
+        Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId | PreselectedCollectionId: $collectionId | PrefilledUrl: $url")
 
         // Preselect collection if provided from navigation
         collectionId?.let {
             Timber.d("Preselecting collection: $it")
             _state.update { state -> state.copy(selectedCollectionId = it) }
+        }
+
+        // Prefill URL if provided from navigation (clipboard/share)
+        url?.let {
+            Timber.d("Prefilling URL from clipboard/share: $it")
+            _state.update { state -> state.copy(url = it) }
         }
 
         loadCollections()
