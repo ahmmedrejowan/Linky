@@ -395,6 +395,7 @@ class AddEditLinkViewModel(
         val validationResult = Validator.validateLink(
             url = currentState.url.trim(),
             title = currentState.title.trim(),
+            description = currentState.description.trim().ifBlank { null },
             note = currentState.note.trim().ifBlank { null }
         )
 

@@ -39,6 +39,16 @@ object Validator {
     }
 
     /**
+     * Validates a description field (optional)
+     */
+    fun validateDescription(description: String?): ValidationResult {
+        return when {
+            description != null && description.length > 500 -> ValidationResult.Error("Description is too long (max 500 characters)")
+            else -> ValidationResult.Success
+        }
+    }
+
+    /**
      * Validates a note field (optional)
      */
     fun validateNote(note: String?): ValidationResult {
@@ -54,6 +64,7 @@ object Validator {
     fun validateLink(
         url: String,
         title: String,
+        description: String? = null,
         note: String? = null
     ): ValidationResult {
         // Check URL first
@@ -66,6 +77,12 @@ object Validator {
         val titleValidation = validateTitle(title)
         if (titleValidation is ValidationResult.Error) {
             return titleValidation
+        }
+
+        // Check description if provided
+        val descriptionValidation = validateDescription(description)
+        if (descriptionValidation is ValidationResult.Error) {
+            return descriptionValidation
         }
 
         // Check note if provided

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -98,6 +100,18 @@ fun AddEditLinkScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
+    var showBackConfirmDialog by remember { mutableStateOf(false) }
+
+    // Check if there's unsaved data
+    val hasUnsavedData = remember(state.url, state.title, state.note, state.description, state.isSaved) {
+        !state.isSaved && (state.url.isNotBlank() || state.title.isNotBlank() ||
+            state.note.isNotBlank() || state.description.isNotBlank())
+    }
+
+    // Handle back press with confirmation if there's unsaved data
+    BackHandler(enabled = hasUnsavedData) {
+        showBackConfirmDialog = true
+    }
 
     // Navigate back on successful save
     LaunchedEffect(state.isSaved) {
@@ -178,7 +192,25 @@ fun AddEditLinkScreen(
                 placeholder = { Text("https://example.com") },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isLoading,
-                singleLine = true
+                singleLine = true,
+                trailingIcon = {
+                    if (state.url.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange("")) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear URL"
+                            )
+                        }
+                    }
+                },
+                supportingText = {
+                    Text(
+                        text = "${state.url.length}/2048",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             )
 
             // Fetch Preview Button - Auto-fetches title, description, and image from URL
@@ -287,7 +319,25 @@ fun AddEditLinkScreen(
                 placeholder = { Text("Enter link title") },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isLoading,
-                singleLine = true
+                singleLine = true,
+                trailingIcon = {
+                    if (state.title.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnTitleChange("")) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear title"
+                            )
+                        }
+                    }
+                },
+                supportingText = {
+                    Text(
+                        text = "${state.title.length}/200",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             )
 
             // Description Input - Auto-filled from web metadata or manually entered
@@ -301,7 +351,25 @@ fun AddEditLinkScreen(
                     .fillMaxWidth()
                     .height(100.dp),
                 enabled = !state.isLoading,
-                maxLines = 3
+                maxLines = 3,
+                trailingIcon = {
+                    if (state.description.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange("")) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear description"
+                            )
+                        }
+                    }
+                },
+                supportingText = {
+                    Text(
+                        text = "${state.description.length}/500",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             )
 
             // Note Input - Personal notes/comments about the link (user-entered only)
@@ -314,7 +382,25 @@ fun AddEditLinkScreen(
                     .fillMaxWidth()
                     .height(120.dp),
                 enabled = !state.isLoading,
-                maxLines = 5
+                maxLines = 5,
+                trailingIcon = {
+                    if (state.note.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnNoteChange("")) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear note"
+                            )
+                        }
+                    }
+                },
+                supportingText = {
+                    Text(
+                        text = "${state.note.length}/5000",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             )
 
             // Collection Selection Dropdown
@@ -379,6 +465,42 @@ fun AddEditLinkScreen(
         }
     }
 
+    // Back Confirmation Dialog
+    if (showBackConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Discard changes?",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+            text = {
+                Text(
+                    text = "You have unsaved changes. Are you sure you want to go back?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showBackConfirmDialog = false
+                        onNavigateBack()
+                    }
+                ) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showBackConfirmDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Create Collection Dialog
     if (state.showCreateCollectionDialog) {
         CreateCollectionDialog(
@@ -419,9 +541,9 @@ private fun CollectionDropdown(
     // Find selected collection name - Optimized with remember to avoid recalculation
     val selectedCollectionName = remember(selectedCollectionId, collections) {
         if (selectedCollectionId == null) {
-            "No Collection"
+            "(No Collection)"
         } else {
-            collections.find { it.id == selectedCollectionId }?.name ?: "No Collection"
+            collections.find { it.id == selectedCollectionId }?.name ?: "(No Collection)"
         }
     }
 
@@ -450,7 +572,7 @@ private fun CollectionDropdown(
             // "No Collection" option
             DropdownMenuItem(text = {
                 Text(
-                    text = "No Collection", style = MaterialTheme.typography.bodyMedium
+                    text = "(No Collection)", style = MaterialTheme.typography.bodyMedium
                 )
             }, onClick = {
                 onCollectionSelected(null)
