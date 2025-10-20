@@ -2,6 +2,7 @@ package com.rejowan.linky.presentation.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -30,7 +31,8 @@ class HomeViewModel(
     private val getTrashedLinksUseCase: GetTrashedLinksUseCase,
     private val searchLinksUseCase: SearchLinksUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    private val deleteLinkUseCase: DeleteLinkUseCase
+    private val deleteLinkUseCase: DeleteLinkUseCase,
+    private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -41,6 +43,7 @@ class HomeViewModel(
 
     init {
         observeFilteredLinks()
+        observeCounts()
     }
 
     fun onEvent(event: HomeEvent) {
@@ -57,6 +60,11 @@ class HomeViewModel(
             is HomeEvent.OnFilterTypeChange -> {
                 _state.update { it.copy(filterType = event.filterType) }
                 filterTypeFlow.value = event.filterType
+            }
+            is HomeEvent.OnSortTypeChange -> {
+                _state.update { it.copy(sortType = event.sortType) }
+                // Re-apply sorting to current links
+                applySorting()
             }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
@@ -85,7 +93,59 @@ class HomeViewModel(
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { links ->
-                    _state.update { it.copy(links = links, isLoading = false, error = null) }
+                    val sortedLinks = sortLinks(links, _state.value.sortType)
+                    _state.update { it.copy(links = sortedLinks, isLoading = false, error = null) }
+                }
+        }
+    }
+
+    private fun applySorting() {
+        val currentLinks = _state.value.links
+        val sortedLinks = sortLinks(currentLinks, _state.value.sortType)
+        _state.update { it.copy(links = sortedLinks) }
+    }
+
+    private fun sortLinks(links: List<Link>, sortType: SortType): List<Link> {
+        return when (sortType) {
+            SortType.DATE_ADDED_DESC -> links.sortedByDescending { it.createdAt }
+            SortType.DATE_ADDED_ASC -> links.sortedBy { it.createdAt }
+            SortType.TITLE_ASC -> links.sortedBy { it.title.lowercase() }
+            SortType.TITLE_DESC -> links.sortedByDescending { it.title.lowercase() }
+            SortType.LAST_MODIFIED -> links.sortedByDescending { it.updatedAt }
+        }
+    }
+
+    private fun observeCounts() {
+        // Observe all links count
+        viewModelScope.launch {
+            linkRepository.getAllLinksCount()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe all links count")
+                }
+                .collect { count ->
+                    _state.update { it.copy(allLinksCount = count) }
+                }
+        }
+
+        // Observe favorites count
+        viewModelScope.launch {
+            linkRepository.getFavoriteLinksCount()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe favorites count")
+                }
+                .collect { count ->
+                    _state.update { it.copy(favoriteLinksCount = count) }
+                }
+        }
+
+        // Observe archived count
+        viewModelScope.launch {
+            linkRepository.getArchivedLinksCount()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe archived count")
+                }
+                .collect { count ->
+                    _state.update { it.copy(archivedLinksCount = count) }
                 }
         }
     }
@@ -137,6 +197,7 @@ class HomeViewModel(
 sealed class HomeEvent {
     data class OnSearchQueryChange(val query: String) : HomeEvent()
     data class OnFilterTypeChange(val filterType: FilterType) : HomeEvent()
+    data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()

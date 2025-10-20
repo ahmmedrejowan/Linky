@@ -131,4 +131,16 @@ class LinkRepositoryImpl(
     override suspend fun countLinks(): Int {
         return linkDao.countLinks()
     }
+
+    override fun getAllLinksCount(): Flow<Int> {
+        return linkDao.getAllLinksCount()
+    }
+
+    override fun getFavoriteLinksCount(): Flow<Int> {
+        return linkDao.getFavoriteLinksCount()
+    }
+
+    override fun getArchivedLinksCount(): Flow<Int> {
+        return linkDao.getArchivedLinksCount()
+    }
 }

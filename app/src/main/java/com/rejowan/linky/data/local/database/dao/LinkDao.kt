@@ -90,6 +90,16 @@ interface LinkDao {
     @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL")
     suspend fun countLinks(): Int
 
+    // Count queries with Flow for real-time updates
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0")
+    fun getAllLinksCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND isFavorite = 1")
+    fun getFavoriteLinksCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 1")
+    fun getArchivedLinksCount(): Flow<Int>
+
     // Phase 2: Sync queries
     @Query("SELECT * FROM links WHERE syncToRemote = 1")
     suspend fun getDirtyLinks(): List<LinkEntity>

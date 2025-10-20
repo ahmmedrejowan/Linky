@@ -31,4 +31,7 @@ interface LinkRepository {
 
     // Count operations
     suspend fun countLinks(): Int
+    fun getAllLinksCount(): Flow<Int>
+    fun getFavoriteLinksCount(): Flow<Int>
+    fun getArchivedLinksCount(): Flow<Int>
 }
