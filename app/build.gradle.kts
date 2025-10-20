@@ -115,6 +115,12 @@ dependencies {
     // Jsoup - HTML Parsing
     implementation(libs.jsoup)
 
+    // Readability4J - Reader mode parsing
+    implementation(libs.readability4j)
+
+    // JetBrains Markdown - Markdown parsing and rendering
+    implementation(libs.jetbrains.markdown)
+
     // gson
     implementation(libs.gson)
 

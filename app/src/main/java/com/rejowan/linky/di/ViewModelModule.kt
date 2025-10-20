@@ -6,6 +6,7 @@ import com.rejowan.linky.presentation.feature.collections.CollectionsViewModel
 import com.rejowan.linky.presentation.feature.home.HomeViewModel
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailViewModel
 import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
+import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -40,6 +41,8 @@ val viewModelModule = module {
             savedStateHandle = get(),
             getLinkByIdUseCase = get(),
             getSnapshotsForLinkUseCase = get(),
+            captureSnapshotUseCase = get(),
+            deleteSnapshotUseCase = get(),
             toggleFavoriteUseCase = get(),
             toggleArchiveUseCase = get(),
             deleteLinkUseCase = get()
@@ -73,6 +76,14 @@ val viewModelModule = module {
             snapshotRepository = get(),
             themePreferences = get(),
             fileStorageManager = get()
+        )
+    }
+
+    viewModel {
+        SnapshotViewerViewModel(
+            savedStateHandle = get(),
+            getSnapshotByIdUseCase = get(),
+            deleteSnapshotUseCase = get()
         )
     }
 }

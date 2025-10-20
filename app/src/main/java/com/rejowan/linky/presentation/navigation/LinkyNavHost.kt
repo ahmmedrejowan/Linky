@@ -10,6 +10,7 @@ import androidx.navigation.toRoute
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
+import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 
 /**
  * Parent navigation host for the Linky app
@@ -103,11 +104,10 @@ fun LinkyNavHost(
         composable<Route.SnapshotViewer> { backStackEntry ->
             val snapshotViewer = backStackEntry.toRoute<Route.SnapshotViewer>()
 
-            // TODO: Implement SnapshotViewerScreen in Phase 1
-            // SnapshotViewerScreen(
-            //     snapshotId = snapshotViewer.snapshotId,
-            //     onNavigateBack = { navController.popBackStack() }
-            // )
+            SnapshotViewerScreen(
+                snapshotId = snapshotViewer.snapshotId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable<Route.AddEditLink> { backStackEntry ->

@@ -7,6 +7,8 @@ data class LinkDetailState(
     val link: Link? = null,
     val snapshots: List<Snapshot> = emptyList(),
     val isLoading: Boolean = false,
+    val isCapturingSnapshot: Boolean = false,
     val error: String? = null,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val snapshotCaptured: Boolean = false
 )

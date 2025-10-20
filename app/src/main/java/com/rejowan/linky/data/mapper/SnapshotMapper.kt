@@ -13,7 +13,12 @@ object SnapshotMapper {
             type = type.name,
             filePath = filePath,
             fileSize = fileSize,
-            createdAt = createdAt
+            createdAt = createdAt,
+            title = title,
+            author = author,
+            excerpt = excerpt,
+            wordCount = wordCount,
+            estimatedReadTime = estimatedReadTime
         )
     }
 
@@ -25,7 +30,12 @@ object SnapshotMapper {
             type = SnapshotType.fromString(type),
             filePath = filePath,
             fileSize = fileSize,
-            createdAt = createdAt
+            createdAt = createdAt,
+            title = title,
+            author = author,
+            excerpt = excerpt,
+            wordCount = wordCount,
+            estimatedReadTime = estimatedReadTime
         )
     }
 

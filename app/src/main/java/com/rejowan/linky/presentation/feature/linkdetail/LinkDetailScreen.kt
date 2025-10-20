@@ -110,6 +110,13 @@ fun LinkDetailScreen(
         }
     }
 
+    // Show success message for snapshot capture
+    LaunchedEffect(state.snapshotCaptured) {
+        if (state.snapshotCaptured) {
+            snackbarHostState.showSnackbar("Snapshot captured successfully")
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -236,10 +243,15 @@ fun LinkDetailScreen(
                     LinkContent(
                         link = state.link!!,
                         snapshots = state.snapshots,
+                        isCapturingSnapshot = state.isCapturingSnapshot,
                         onOpenUrl = { url ->
                             // Open URL in browser
                         },
-                        onOpenSnapshot = onOpenSnapshot
+                        onOpenSnapshot = onOpenSnapshot,
+                        onCreateSnapshot = { viewModel.onEvent(LinkDetailEvent.OnCreateSnapshot) },
+                        onDeleteSnapshot = { snapshotId ->
+                            viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(snapshotId))
+                        }
                     )
                 }
             }
@@ -254,8 +266,11 @@ fun LinkDetailScreen(
 private fun LinkContent(
     link: Link,
     snapshots: List<Snapshot>,
+    isCapturingSnapshot: Boolean,
     onOpenUrl: (String) -> Unit,
     onOpenSnapshot: (String) -> Unit,
+    onCreateSnapshot: () -> Unit,
+    onDeleteSnapshot: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
@@ -381,19 +396,62 @@ private fun LinkContent(
         }
 
         // Snapshots section
-        if (snapshots.isNotEmpty()) {
-            HorizontalDivider()
+        HorizontalDivider()
 
+        // Snapshots header with create button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = "Snapshots (${snapshots.size})",
                 style = MaterialTheme.typography.titleMedium
             )
 
+            TextButton(
+                onClick = onCreateSnapshot,
+                enabled = !isCapturingSnapshot
+            ) {
+                if (isCapturingSnapshot) {
+                    Text("Capturing...")
+                } else {
+                    Text("+ Capture")
+                }
+            }
+        }
+
+        // Snapshots content
+        if (snapshots.isEmpty()) {
+            // Empty state
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No snapshots yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Capture a clean, readable version of this page for offline reading",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        } else {
+            // Snapshots list
             snapshots.forEach { snapshot ->
                 SnapshotCard(
                     snapshot = snapshot,
-                    onClick = { onOpenSnapshot(snapshot.id) }
+                    onClick = { onOpenSnapshot(snapshot.id) },
+                    onDeleteClick = { onDeleteSnapshot(snapshot.id) }
                 )
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
@@ -460,42 +518,111 @@ private fun StatusBadge(
 }
 
 /**
- * Snapshot card for displaying snapshot information
+ * Snapshot card for displaying snapshot information with reader mode metadata
  */
 @Composable
 private fun SnapshotCard(
     snapshot: Snapshot,
     onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+                // Title (from reader mode)
                 Text(
-                    text = snapshot.type.name.replace("_", " "),
-                    style = MaterialTheme.typography.bodyMedium
+                    text = snapshot.title ?: "Untitled Snapshot",
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Excerpt
+                if (snapshot.excerpt != null) {
+                    Text(
+                        text = snapshot.excerpt,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Metadata row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Word count & read time
+                    if (snapshot.wordCount != null && snapshot.estimatedReadTime != null) {
+                        Text(
+                            text = "${snapshot.wordCount} words · ${snapshot.estimatedReadTime} min read",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Timestamp & size
                 Text(
-                    text = formatTimestamp(snapshot.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "${formatTimestamp(snapshot.createdAt)} · ${formatFileSize(snapshot.fileSize)}",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                text = formatFileSize(snapshot.fileSize),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            // Delete button
+            IconButton(
+                onClick = { showDeleteDialog = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete snapshot",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Snapshot?") },
+            text = { Text("This will permanently delete this snapshot. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteClick()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

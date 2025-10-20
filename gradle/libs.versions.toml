@@ -5,6 +5,8 @@ coilCompose = "2.7.0"
 gson = "2.13.2"
 jsoup = "1.21.2"
 kotlin = "2.2.20"
+readability4j = "1.0.8"
+jetbrainsMarkdown = "0.7.3"
 kotlinxSerializationJson = "1.7.3"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -36,6 +38,8 @@ androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+readability4j = { module = "net.dankito.readability4j:readability4j", version.ref = "readability4j" }
+jetbrains-markdown = { module = "org.jetbrains:markdown", version.ref = "jetbrainsMarkdown" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

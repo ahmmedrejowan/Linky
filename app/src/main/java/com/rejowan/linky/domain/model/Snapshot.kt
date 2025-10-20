@@ -8,5 +8,11 @@ data class Snapshot(
     val type: SnapshotType,
     val filePath: String,
     val fileSize: Long,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    // Reader mode specific fields
+    val title: String? = null,
+    val author: String? = null,
+    val excerpt: String? = null,
+    val wordCount: Int? = null,
+    val estimatedReadTime: Int? = null  // In minutes
 )

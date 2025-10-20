@@ -38,5 +38,21 @@ data class SnapshotEntity(
     val fileSize: Long,
 
     @ColumnInfo(name = "createdAt")
-    val createdAt: Long
+    val createdAt: Long,
+
+    // Reader mode specific fields
+    @ColumnInfo(name = "title")
+    val title: String? = null,
+
+    @ColumnInfo(name = "author")
+    val author: String? = null,
+
+    @ColumnInfo(name = "excerpt")
+    val excerpt: String? = null,
+
+    @ColumnInfo(name = "wordCount")
+    val wordCount: Int? = null,
+
+    @ColumnInfo(name = "estimatedReadTime")
+    val estimatedReadTime: Int? = null
 )

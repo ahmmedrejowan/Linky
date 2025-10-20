@@ -7,6 +7,8 @@ import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
+import com.rejowan.linky.domain.usecase.snapshot.CaptureSnapshotUseCase
+import com.rejowan.linky.domain.usecase.snapshot.DeleteSnapshotUseCase
 import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
@@ -24,6 +26,8 @@ class LinkDetailViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
     private val getSnapshotsForLinkUseCase: GetSnapshotsForLinkUseCase,
+    private val captureSnapshotUseCase: CaptureSnapshotUseCase,
+    private val deleteSnapshotUseCase: DeleteSnapshotUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val toggleArchiveUseCase: ToggleArchiveUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase
@@ -47,6 +51,8 @@ class LinkDetailViewModel(
             is LinkDetailEvent.OnDeleteLink -> deleteLink()
             is LinkDetailEvent.OnArchiveLink -> archiveLink()
             is LinkDetailEvent.OnRefresh -> linkId?.let { loadLinkDetails(it) }
+            is LinkDetailEvent.OnCreateSnapshot -> captureSnapshot()
+            is LinkDetailEvent.OnDeleteSnapshot -> deleteSnapshot(event.snapshotId)
         }
     }
 
@@ -126,6 +132,48 @@ class LinkDetailViewModel(
             }
         }
     }
+
+    private fun captureSnapshot() {
+        val link = _state.value.link ?: return
+
+        Timber.d("captureSnapshot: Starting snapshot capture for link: ${link.id}")
+        _state.update { it.copy(isCapturingSnapshot = true, error = null, snapshotCaptured = false) }
+
+        viewModelScope.launch {
+            when (val result = captureSnapshotUseCase(link.url, link.id)) {
+                is Result.Success -> {
+                    Timber.d("captureSnapshot: Snapshot captured successfully | ID: ${result.data.id}")
+                    _state.update { it.copy(isCapturingSnapshot = false, snapshotCaptured = true) }
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "captureSnapshot: Failed to capture snapshot")
+                    val errorMessage = result.exception.message ?: "Failed to capture snapshot"
+                    _state.update { it.copy(isCapturingSnapshot = false, error = errorMessage) }
+                }
+                is Result.Loading -> {
+                    Timber.d("captureSnapshot: Capture in progress...")
+                }
+            }
+        }
+    }
+
+    private fun deleteSnapshot(snapshotId: String) {
+        Timber.d("deleteSnapshot: Deleting snapshot | ID: $snapshotId")
+
+        viewModelScope.launch {
+            when (val result = deleteSnapshotUseCase(snapshotId)) {
+                is Result.Success -> {
+                    Timber.d("deleteSnapshot: Snapshot deleted successfully")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "deleteSnapshot: Failed to delete snapshot")
+                    val errorMessage = result.exception.message ?: "Failed to delete snapshot"
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
 }
 
 sealed class LinkDetailEvent {
@@ -133,4 +181,6 @@ sealed class LinkDetailEvent {
     data object OnDeleteLink : LinkDetailEvent()
     data object OnArchiveLink : LinkDetailEvent()
     data object OnRefresh : LinkDetailEvent()
+    data object OnCreateSnapshot : LinkDetailEvent()
+    data class OnDeleteSnapshot(val snapshotId: String) : LinkDetailEvent()
 }

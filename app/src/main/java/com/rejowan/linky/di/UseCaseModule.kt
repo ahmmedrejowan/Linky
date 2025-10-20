@@ -19,7 +19,9 @@ import com.rejowan.linky.domain.usecase.link.SearchLinksUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
+import com.rejowan.linky.domain.usecase.snapshot.CaptureSnapshotUseCase
 import com.rejowan.linky.domain.usecase.snapshot.DeleteSnapshotUseCase
+import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotByIdUseCase
 import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
 import com.rejowan.linky.domain.usecase.snapshot.SaveSnapshotUseCase
 import org.koin.dsl.module
@@ -50,6 +52,8 @@ val useCaseModule = module {
 
     // Snapshot use cases
     factory { GetSnapshotsForLinkUseCase(get()) }
+    factory { GetSnapshotByIdUseCase(get()) }
     factory { SaveSnapshotUseCase(get()) }
-    factory { DeleteSnapshotUseCase(get()) }
+    factory { DeleteSnapshotUseCase(get(), get()) }
+    factory { CaptureSnapshotUseCase(get(), get(), get()) }
 }
