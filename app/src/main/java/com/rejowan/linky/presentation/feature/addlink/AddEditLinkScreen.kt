@@ -1,6 +1,7 @@
 package com.rejowan.linky.presentation.feature.addlink
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -18,8 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,6 +42,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
@@ -319,6 +324,9 @@ fun AddEditLinkScreen(
                 enabled = !state.isLoading,
                 onCollectionSelected = { collectionId ->
                     viewModel.onEvent(AddEditLinkEvent.OnCollectionSelect(collectionId))
+                },
+                onCreateNewClick = {
+                    viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionClick)
                 })
 
             // Add to Favourite Toggle
@@ -370,6 +378,20 @@ fun AddEditLinkScreen(
             )
         }
     }
+
+    // Create Collection Dialog
+    if (state.showCreateCollectionDialog) {
+        CreateCollectionDialog(
+            collectionName = state.newCollectionName,
+            selectedColor = state.newCollectionColor,
+            isFavorite = state.newCollectionIsFavorite,
+            onCollectionNameChange = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionNameChange(it)) },
+            onColorChange = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionColorChange(it)) },
+            onToggleFavorite = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionToggleFavorite) },
+            onSave = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionConfirm) },
+            onDismiss = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionDismiss) }
+        )
+    }
 }
 
 /**
@@ -389,6 +411,7 @@ private fun CollectionDropdown(
     collections: List<Collection>,
     enabled: Boolean,
     onCollectionSelected: (String?) -> Unit,
+    onCreateNewClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -448,6 +471,244 @@ private fun CollectionDropdown(
                     expanded = false
                 })
             }
+
+            // "Create New" option
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Create New Collection",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                onClick = {
+                    onCreateNewClick()
+                    expanded = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Create Collection Dialog
+ * Allows users to create a new collection with name, color, and favorite status
+ * Reused from CollectionsScreen
+ */
+@Composable
+private fun CreateCollectionDialog(
+    collectionName: String,
+    selectedColor: String?,
+    isFavorite: Boolean,
+    onCollectionNameChange: (String) -> Unit,
+    onColorChange: (String?) -> Unit,
+    onToggleFavorite: () -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Create Collection",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Collection name input
+                OutlinedTextField(
+                    value = collectionName,
+                    onValueChange = onCollectionNameChange,
+                    label = { Text("Collection Name") },
+                    placeholder = { Text("Enter collection name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Color picker
+                Text(
+                    text = "Color (Optional)",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                ColorBlockPicker(
+                    selectedColor = selectedColor,
+                    onColorSelected = onColorChange
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Favorite toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add to Favourite",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(
+                        checked = isFavorite,
+                        onCheckedChange = { onToggleFavorite() }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                enabled = collectionName.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * Color block picker with visual color rectangles
+ * 15 total: 1 no color + 14 colors, arranged in 3 rows of 5
+ */
+@Composable
+private fun ColorBlockPicker(
+    selectedColor: String?,
+    onColorSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = listOf(
+        null,           // No Color - default
+        "#FF6B6B",      // Red
+        "#E74C3C",      // Dark Red
+        "#4ECDC4",      // Teal
+        "#45B7D1",      // Blue
+        "#3498DB",      // Strong Blue
+        "#FFA07A",      // Orange
+        "#E67E22",      // Dark Orange
+        "#98D8C8",      // Green
+        "#2ECC71",      // Emerald Green
+        "#F7B731",      // Yellow
+        "#F39C12",      // Golden Yellow
+        "#5F27CD",      // Purple
+        "#9B59B6",      // Light Purple
+        "#EE5A6F"       // Pink
+    )
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Row 1: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.take(5).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Row 2: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.subList(5, 10).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Row 3: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.subList(10, 15).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual color block component
+ */
+@Composable
+private fun ColorBlock(
+    colorHex: String?,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                color = if (colorHex != null) {
+                    Color(android.graphics.Color.parseColor(colorHex))
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // Show checkmark for selected color
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = if (colorHex != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

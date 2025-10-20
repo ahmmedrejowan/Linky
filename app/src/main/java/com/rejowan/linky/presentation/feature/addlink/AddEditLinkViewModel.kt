@@ -3,11 +3,14 @@ package com.rejowan.linky.presentation.feature.addlink
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
+import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
+import com.rejowan.linky.util.CollectionOperation
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.FileStorageManager
 import com.rejowan.linky.util.LinkOperation
@@ -30,6 +33,7 @@ class AddEditLinkViewModel(
     private val updateLinkUseCase: UpdateLinkUseCase,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
     private val getAllCollectionsUseCase: GetAllCollectionsUseCase,
+    private val saveCollectionUseCase: SaveCollectionUseCase,
     private val linkPreviewFetcher: LinkPreviewFetcher,
     private val fileStorageManager: FileStorageManager
 ) : ViewModel() {
@@ -39,7 +43,14 @@ class AddEditLinkViewModel(
 
     init {
         val linkId = savedStateHandle.get<String>("linkId")
-        Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId")
+        val collectionId = savedStateHandle.get<String>("collectionId")
+        Timber.d("AddEditLinkViewModel initialized | Edit mode: ${linkId != null} | LinkId: $linkId | PreselectedCollectionId: $collectionId")
+
+        // Preselect collection if provided from navigation
+        collectionId?.let {
+            Timber.d("Preselecting collection: $it")
+            _state.update { state -> state.copy(selectedCollectionId = it) }
+        }
 
         loadCollections()
 
@@ -87,6 +98,38 @@ class AddEditLinkViewModel(
                 Timber.d("Save link requested")
                 saveLink()
             }
+            is AddEditLinkEvent.OnCreateCollectionClick -> {
+                Timber.d("Create collection dialog opened")
+                _state.update { it.copy(showCreateCollectionDialog = true) }
+            }
+            is AddEditLinkEvent.OnNewCollectionNameChange -> {
+                Timber.d("New collection name changed: ${event.name}")
+                _state.update { it.copy(newCollectionName = event.name) }
+            }
+            is AddEditLinkEvent.OnNewCollectionColorChange -> {
+                Timber.d("New collection color changed: ${event.color}")
+                _state.update { it.copy(newCollectionColor = event.color) }
+            }
+            is AddEditLinkEvent.OnNewCollectionToggleFavorite -> {
+                val newValue = !_state.value.newCollectionIsFavorite
+                Timber.d("New collection favorite toggled: $newValue")
+                _state.update { it.copy(newCollectionIsFavorite = newValue) }
+            }
+            is AddEditLinkEvent.OnCreateCollectionConfirm -> {
+                Timber.d("Create collection confirm")
+                createCollection()
+            }
+            is AddEditLinkEvent.OnCreateCollectionDismiss -> {
+                Timber.d("Create collection dialog dismissed")
+                _state.update {
+                    it.copy(
+                        showCreateCollectionDialog = false,
+                        newCollectionName = "",
+                        newCollectionColor = null,
+                        newCollectionIsFavorite = false
+                    )
+                }
+            }
         }
     }
 
@@ -101,6 +144,63 @@ class AddEditLinkViewModel(
                     Timber.d("loadCollections: Loaded ${collections.size} collections")
                     _state.update { it.copy(collections = collections) }
                 }
+        }
+    }
+
+    private fun createCollection() {
+        Timber.d("createCollection: Starting to create collection")
+        val name = _state.value.newCollectionName.trim()
+
+        // Validate collection name
+        when (val validationResult = Validator.validateCollectionName(name)) {
+            is ValidationResult.Success -> {
+                // Validation passed, continue
+            }
+            is ValidationResult.Error -> {
+                Timber.w("createCollection: Invalid collection name - ${validationResult.message}")
+                _state.update { it.copy(error = validationResult.message) }
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            val collection = Collection(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                color = _state.value.newCollectionColor,
+                isFavorite = _state.value.newCollectionIsFavorite,
+                sortOrder = _state.value.collections.size,
+                createdAt = System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis()
+            )
+
+            Timber.d("createCollection: Saving collection | Name: $name | Color: ${_state.value.newCollectionColor} | IsFavorite: ${_state.value.newCollectionIsFavorite}")
+
+            when (val result = saveCollectionUseCase(collection)) {
+                is Result.Success -> {
+                    Timber.d("createCollection: Collection created successfully | ID: ${collection.id}")
+                    // Close dialog, clear form, and select the new collection
+                    _state.update {
+                        it.copy(
+                            showCreateCollectionDialog = false,
+                            newCollectionName = "",
+                            newCollectionColor = null,
+                            newCollectionIsFavorite = false,
+                            selectedCollectionId = collection.id
+                        )
+                    }
+                    // Reload collections to include the new one
+                    loadCollections()
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "createCollection: Failed to create collection")
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.SAVE)
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> {
+                    // Loading state
+                }
+            }
         }
     }
 
@@ -369,4 +469,11 @@ sealed class AddEditLinkEvent {
     data object OnToggleFavorite : AddEditLinkEvent()
     data object OnFetchPreview : AddEditLinkEvent()
     data object OnSave : AddEditLinkEvent()
+    // Create collection dialog events
+    data object OnCreateCollectionClick : AddEditLinkEvent()
+    data class OnNewCollectionNameChange(val name: String) : AddEditLinkEvent()
+    data class OnNewCollectionColorChange(val color: String?) : AddEditLinkEvent()
+    data object OnNewCollectionToggleFavorite : AddEditLinkEvent()
+    data object OnCreateCollectionConfirm : AddEditLinkEvent()
+    data object OnCreateCollectionDismiss : AddEditLinkEvent()
 }
