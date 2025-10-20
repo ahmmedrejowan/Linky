@@ -5,6 +5,7 @@ import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailV
 import com.rejowan.linky.presentation.feature.collections.CollectionsViewModel
 import com.rejowan.linky.presentation.feature.home.HomeViewModel
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailViewModel
+import com.rejowan.linky.presentation.feature.search.SearchViewModel
 import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerViewModel
 import com.rejowan.linky.presentation.feature.trash.TrashViewModel
@@ -18,7 +19,6 @@ val viewModelModule = module {
             getFavoriteLinksUseCase = get(),
             getArchivedLinksUseCase = get(),
             getTrashedLinksUseCase = get(),
-            searchLinksUseCase = get(),
             toggleFavoriteUseCase = get(),
             deleteLinkUseCase = get(),
             linkRepository = get()
@@ -95,6 +95,13 @@ val viewModelModule = module {
             getTrashedLinksUseCase = get(),
             restoreLinkUseCase = get(),
             deleteLinkUseCase = get()
+        )
+    }
+
+    viewModel {
+        SearchViewModel(
+            searchLinksUseCase = get(),
+            toggleFavoriteUseCase = get()
         )
     }
 }

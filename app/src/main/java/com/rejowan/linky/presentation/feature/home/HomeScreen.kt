@@ -50,7 +50,6 @@ import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
-import com.rejowan.linky.presentation.components.SearchBar
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.KoinApplication
@@ -78,53 +77,23 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    Column(
+    // Content Area with Pull-to-Refresh
+    PullToRefreshBox(
+        isRefreshing = state.isLoading && state.links.isNotEmpty(),
+        onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
         modifier = Modifier.fillMaxSize()
     ) {
-        // Search Bar
-        SearchBar(
-            query = state.searchQuery,
-            onQueryChange = { viewModel.onEvent(HomeEvent.OnSearchQueryChange(it)) },
-            placeholder = "Search links...",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
+        HomeContent(
+            state = state,
+            onLinkClick = onLinkClick,
+            onFavoriteClick = { linkId, isFavorite ->
+                viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+            },
+            onAddLinkClick = onAddLinkClick,
+            onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
+            onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
+            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
         )
-
-        // Filter Segmented Buttons
-        FilterSegmentedButtons(
-            selectedFilter = state.filterType,
-            onFilterSelected = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 4.dp)
-        )
-
-        // Count and Sort Row
-        CountAndSortRow(
-            count = state.links.size,
-            sortType = state.sortType,
-            onSortClick = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
-        )
-
-        // Content Area with Pull-to-Refresh
-        PullToRefreshBox(
-            isRefreshing = state.isLoading && state.links.isNotEmpty(),
-            onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            HomeContent(
-                state = state,
-                onLinkClick = onLinkClick,
-                onFavoriteClick = { linkId, isFavorite ->
-                    viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
-                },
-                onAddLinkClick = onAddLinkClick,
-                onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) })
-        }
     }
 }
 
@@ -186,7 +155,7 @@ private fun FilterSegmentedButtons(
 }
 
 /**
- * Content area - Shows loading, error, empty, or links list based on state
+ * Content area - LazyColumn with header items and links
  */
 @Composable
 private fun HomeContent(
@@ -195,70 +164,102 @@ private fun HomeContent(
     onFavoriteClick: (String, Boolean) -> Unit,
     onAddLinkClick: () -> Unit,
     onRetry: () -> Unit,
+    onFilterTypeChange: (FilterType) -> Unit,
+    onSortTypeChange: (SortType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            // Loading state (initial load only)
-            state.isLoading && state.links.isEmpty() -> {
-                LoadingIndicator(message = "Loading links...")
-            }
+    when {
+        // Loading state (initial load only)
+        state.isLoading && state.links.isEmpty() -> {
+            LoadingIndicator(message = "Loading links...")
+        }
 
-            // Error state
-            state.error != null -> {
-                ErrorStates.GenericError(
-                    errorMessage = state.error, onRetryClick = onRetry
-                )
-            }
+        // Error state
+        state.error != null -> {
+            ErrorStates.GenericError(
+                errorMessage = state.error, onRetryClick = onRetry
+            )
+        }
 
-            // Empty states
-            state.links.isEmpty() -> {
-                EmptyContent(
-                    filterType = state.filterType,
-                    searchQuery = state.searchQuery,
-                    onAddLinkClick = onAddLinkClick
-                )
-            }
+        // Empty states
+        state.links.isEmpty() -> {
+            EmptyContent(
+                filterType = state.filterType,
+                onAddLinkClick = onAddLinkClick
+            )
+        }
 
-            // Links list
-            else -> {
-                LinksList(
-                    links = state.links,
-                    onLinkClick = onLinkClick,
-                    onFavoriteClick = onFavoriteClick
-                )
+        // Links list with header items
+        else -> {
+            LazyColumn(
+                modifier = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header Item 1: Filter Segmented Buttons
+                item(key = "filter_buttons") {
+                    FilterSegmentedButtons(
+                        selectedFilter = state.filterType,
+                        onFilterSelected = onFilterTypeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
+                    )
+                }
+
+                // Header Item 2: Count and Sort Row
+                item(key = "count_sort") {
+                    CountAndSortRow(
+                        count = state.links.size,
+                        sortType = state.sortType,
+                        onSortClick = onSortTypeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
+                    )
+                }
+
+                // Link Items
+                items(
+                    items = state.links,
+                    key = { it.id }
+                ) { link ->
+                    LinkCard(
+                        link = link,
+                        onClick = { onLinkClick(link.id) },
+                        onFavoriteClick = {
+                            onFavoriteClick(link.id, !link.isFavorite)
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .animateItem()
+                    )
+                }
             }
         }
     }
 }
 
 /**
- * Empty state content - Context-aware based on filter and search
+ * Empty state content - Context-aware based on filter
  */
 @Composable
 private fun EmptyContent(
     filterType: FilterType,
-    searchQuery: String,
     onAddLinkClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            // Search returned no results
-            searchQuery.isNotBlank() -> {
-                EmptyStates.NoSearchResults(searchQuery = searchQuery)
-            }
-
-            // Filter-specific empty states
-            filterType == FilterType.ALL -> {
+        when (filterType) {
+            FilterType.ALL -> {
                 EmptyStates.NoLinks(onAddLinkClick = onAddLinkClick)
             }
 
-            filterType == FilterType.FAVORITES -> {
+            FilterType.FAVORITES -> {
                 EmptyStates.NoFavorites()
             }
 
-            filterType == FilterType.ARCHIVED -> {
+            FilterType.ARCHIVED -> {
                 EmptyStates.NoArchivedLinks()
             }
 
@@ -270,36 +271,6 @@ private fun EmptyContent(
     }
 }
 
-/**
- * Links list - LazyColumn with LinkCards
- */
-@Composable
-private fun LinksList(
-    links: List<Link>,
-    onLinkClick: (String) -> Unit,
-    onFavoriteClick: (String, Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(
-            items = links,
-            key = { it.id }
-        ) { link ->
-            LinkCard(
-                link = link,
-                onClick = { onLinkClick(link.id) },
-                onFavoriteClick = {
-                    onFavoriteClick(link.id, !link.isFavorite)
-                },
-                modifier = Modifier.animateItem()
-            )
-        }
-    }
-}
 
 /**
  * Count and Sort Row - Shows total count and sort dropdown

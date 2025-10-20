@@ -63,6 +63,13 @@ sealed class Route {
     data class CollectionDetail(val collectionId: String) : Route()
 
     /**
+     * Search screen - Dedicated search functionality
+     * Searches across all links regardless of filter/collection
+     */
+    @Serializable
+    data object Search : Route()
+
+    /**
      * Settings screen - App settings and preferences
      */
     @Serializable

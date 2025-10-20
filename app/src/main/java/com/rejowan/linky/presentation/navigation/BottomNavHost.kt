@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.rejowan.linky.presentation.feature.collections.CollectionsScreen
 import com.rejowan.linky.presentation.feature.home.HomeScreen
+import com.rejowan.linky.presentation.feature.search.SearchScreen
 import com.rejowan.linky.presentation.feature.settings.SettingsScreen
 
 /**
@@ -70,6 +71,16 @@ fun BottomNavHost(
                 onNavigateToSettings = {
                     // Navigate within bottom nav using local controller
                     navController.navigate(Route.Settings)
+                }
+            )
+        }
+
+        // ============ SEARCH SCREEN ============
+        composable<Route.Search> {
+            SearchScreen(
+                onLinkClick = { linkId ->
+                    // Navigate using parent controller to LinkDetail
+                    parentNavController.navigate(Route.LinkDetail(linkId))
                 }
             )
         }

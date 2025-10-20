@@ -4,7 +4,6 @@ import com.rejowan.linky.domain.model.Link
 
 data class HomeState(
     val links: List<Link> = emptyList(),
-    val searchQuery: String = "",
     val filterType: FilterType = FilterType.ALL,
     val sortType: SortType = SortType.DATE_ADDED_DESC,
     val isLoading: Boolean = false,

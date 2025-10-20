@@ -8,7 +8,6 @@ import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetFavoriteLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetTrashedLinksUseCase
-import com.rejowan.linky.domain.usecase.link.SearchLinksUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
@@ -29,7 +28,6 @@ class HomeViewModel(
     private val getFavoriteLinksUseCase: GetFavoriteLinksUseCase,
     private val getArchivedLinksUseCase: GetArchivedLinksUseCase,
     private val getTrashedLinksUseCase: GetTrashedLinksUseCase,
-    private val searchLinksUseCase: SearchLinksUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository
@@ -48,15 +46,6 @@ class HomeViewModel(
 
     fun onEvent(event: HomeEvent) {
         when (event) {
-            is HomeEvent.OnSearchQueryChange -> {
-                _state.update { it.copy(searchQuery = event.query) }
-                if (event.query.isBlank()) {
-                    // Reset to filtered view
-                    filterTypeFlow.value = _state.value.filterType
-                } else {
-                    searchLinks(event.query)
-                }
-            }
             is HomeEvent.OnFilterTypeChange -> {
                 _state.update { it.copy(filterType = event.filterType) }
                 filterTypeFlow.value = event.filterType
@@ -150,19 +139,6 @@ class HomeViewModel(
         }
     }
 
-    private fun searchLinks(query: String) {
-        viewModelScope.launch {
-            searchLinksUseCase(query)
-                .catch { e ->
-                    val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.SEARCH)
-                    _state.update { it.copy(error = errorMessage) }
-                }
-                .collect { links ->
-                    _state.update { it.copy(links = links) }
-                }
-        }
-    }
-
     private fun toggleFavorite(linkId: String, isFavorite: Boolean) {
         viewModelScope.launch {
             when (val result = toggleFavoriteUseCase(linkId, isFavorite)) {
@@ -195,7 +171,6 @@ class HomeViewModel(
 }
 
 sealed class HomeEvent {
-    data class OnSearchQueryChange(val query: String) : HomeEvent()
     data class OnFilterTypeChange(val filterType: FilterType) : HomeEvent()
     data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()

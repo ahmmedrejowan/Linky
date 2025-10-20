@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
  * @param modifier Modifier for styling
  * @param placeholder Placeholder text
  * @param onSearch Optional callback when search is submitted
+ * @param onClear Optional callback when clear button is clicked
  */
 @Composable
 fun SearchBar(
@@ -34,7 +35,8 @@ fun SearchBar(
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Search...",
-    onSearch: ((String) -> Unit)? = null
+    onSearch: ((String) -> Unit)? = null,
+    onClear: (() -> Unit)? = null
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -57,7 +59,15 @@ fun SearchBar(
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(
+                    onClick = {
+                        if (onClear != null) {
+                            onClear()
+                        } else {
+                            onQueryChange("")
+                        }
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear search",
