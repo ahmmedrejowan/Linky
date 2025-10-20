@@ -1,5 +1,7 @@
 package com.rejowan.linky.presentation.feature.search
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +47,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val focusManager = LocalFocusManager.current
 
     PullToRefreshBox(
         isRefreshing = state.isSearching,
@@ -51,7 +56,15 @@ fun SearchScreen(
                 viewModel.onEvent(SearchEvent.OnSearch)
             }
         },
-        modifier = modifier.fillMaxSize()
+        // Focus management: Tap outside search bar to hide keyboard
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -60,7 +73,10 @@ fun SearchScreen(
             SearchBar(
                 query = state.searchQuery,
                 onQueryChange = { viewModel.onEvent(SearchEvent.OnSearchQueryChange(it)) },
-                onSearch = { viewModel.onEvent(SearchEvent.OnSearch) },
+                onSearch = {
+                    viewModel.onEvent(SearchEvent.OnSearch)
+                    focusManager.clearFocus()
+                },
                 onClear = { viewModel.onEvent(SearchEvent.OnClearSearch) },
                 placeholder = "Search all links...",
                 modifier = Modifier

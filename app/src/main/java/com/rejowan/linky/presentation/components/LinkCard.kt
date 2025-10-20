@@ -1,6 +1,7 @@
 package com.rejowan.linky.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -88,11 +91,33 @@ fun LinkCard(
                 )
             }
 
-            // Content (Title, URL, Timestamp)
+            // Content (Title, URL, Timestamp, Status Tags)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // Status Tags (Archived/Deleted)
+                if (link.isArchived || link.isDeleted) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (link.isDeleted) {
+                            StatusChip(
+                                text = "Deleted",
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                labelColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                        if (link.isArchived) {
+                            StatusChip(
+                                text = "Archived",
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+
                 // Title
                 Text(
                     text = link.title,
@@ -163,4 +188,27 @@ private fun Long.toRelativeTime(): String {
             sdf.format(Date(this))
         }
     }
+}
+
+/**
+ * Status chip for archived/deleted indicators
+ */
+@Composable
+private fun StatusChip(
+    text: String,
+    containerColor: androidx.compose.ui.graphics.Color,
+    labelColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = labelColor,
+        modifier = modifier
+            .background(
+                color = containerColor,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
 }
