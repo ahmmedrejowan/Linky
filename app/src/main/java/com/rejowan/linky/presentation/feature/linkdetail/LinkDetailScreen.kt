@@ -126,10 +126,18 @@ fun LinkDetailScreen(
         }
     }
 
-    // Show success message for snapshot capture
-    LaunchedEffect(state.snapshotCaptured) {
-        if (state.snapshotCaptured) {
-            snackbarHostState.showSnackbar("Snapshot captured successfully")
+    // Show success messages in Snackbar
+    LaunchedEffect(state.successMessage) {
+        timber.log.Timber.d("LinkDetailScreen: LaunchedEffect triggered with successMessage: ${state.successMessage}")
+        state.successMessage?.let { message ->
+            timber.log.Timber.d("LinkDetailScreen: About to show snackbar with message: $message")
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                duration = androidx.compose.material3.SnackbarDuration.Short
+            )
+            timber.log.Timber.d("LinkDetailScreen: Snackbar dismissed with result: $result")
+            timber.log.Timber.d("LinkDetailScreen: Calling OnClearSuccessMessage")
+            viewModel.onEvent(LinkDetailEvent.OnClearSuccessMessage)
         }
     }
 

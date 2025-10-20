@@ -59,7 +59,14 @@ class LinkDetailViewModel(
             is LinkDetailEvent.OnRefresh -> linkId?.let { loadLinkDetails(it) }
             is LinkDetailEvent.OnCreateSnapshot -> captureSnapshot()
             is LinkDetailEvent.OnDeleteSnapshot -> deleteSnapshot(event.snapshotId)
+            is LinkDetailEvent.OnClearSuccessMessage -> clearSuccessMessage()
         }
+    }
+
+    private fun clearSuccessMessage() {
+        Timber.d("clearSuccessMessage: Clearing success message")
+        _state.update { it.copy(successMessage = null) }
+        Timber.d("clearSuccessMessage: Success message cleared from state")
     }
 
     private fun loadLinkDetails(linkId: String) {
@@ -83,24 +90,34 @@ class LinkDetailViewModel(
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { (link, collection, snapshots) ->
-                    _state.value = LinkDetailState(
-                        link = link,
-                        collection = collection,
-                        snapshots = snapshots,
-                        isLoading = false,
-                        error = if (link == null) "Link not found" else null
-                    )
+                    Timber.d("loadLinkDetails: Flow collector received update - link: ${link?.id}, snapshots: ${snapshots.size}")
+                    Timber.d("loadLinkDetails: Current state successMessage before update: ${_state.value.successMessage}")
+                    _state.update { currentState ->
+                        currentState.copy(
+                            link = link,
+                            collection = collection,
+                            snapshots = snapshots,
+                            isLoading = false,
+                            error = if (link == null) "Link not found" else null
+                        )
+                    }
+                    Timber.d("loadLinkDetails: State updated, successMessage is now: ${_state.value.successMessage}")
                 }
         }
     }
 
     private fun toggleFavorite() {
         val link = _state.value.link ?: return
+        val isFavoriting = !link.isFavorite
 
         viewModelScope.launch {
-            when (val result = toggleFavoriteUseCase(link.id, !link.isFavorite)) {
+            when (val result = toggleFavoriteUseCase(link.id, isFavoriting)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: ${link.id}")
+                    val message = if (isFavoriting) "Added to favorites" else "Removed from favorites"
+                    Timber.d("toggleFavorite: Setting success message: $message")
+                    _state.update { it.copy(successMessage = message) }
+                    Timber.d("toggleFavorite: Success message set in state")
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
@@ -118,6 +135,9 @@ class LinkDetailViewModel(
             when (val result = deleteLinkUseCase(link.id, softDelete = true)) {
                 is Result.Success -> {
                     Timber.d("Deleted link: ${link.id}")
+                    Timber.d("deleteLink: Setting success message: Link moved to trash")
+                    _state.update { it.copy(successMessage = "Link moved to trash") }
+                    Timber.d("deleteLink: Success message set in state")
                     // Add small delay to allow database changes to propagate through Flows
                     kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isDeleted = true) }
@@ -133,11 +153,16 @@ class LinkDetailViewModel(
 
     private fun archiveLink() {
         val link = _state.value.link ?: return
+        val isArchiving = !link.isArchived
 
         viewModelScope.launch {
-            when (val result = toggleArchiveUseCase(link.id, !link.isArchived)) {
+            when (val result = toggleArchiveUseCase(link.id, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("Toggled archive for link: ${link.id}")
+                    val message = if (isArchiving) "Link archived" else "Link unarchived"
+                    Timber.d("archiveLink: Setting success message: $message")
+                    _state.update { it.copy(successMessage = message) }
+                    Timber.d("archiveLink: Success message set in state")
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
@@ -152,13 +177,20 @@ class LinkDetailViewModel(
         val link = _state.value.link ?: return
 
         Timber.d("captureSnapshot: Starting snapshot capture for link: ${link.id}")
-        _state.update { it.copy(isCapturingSnapshot = true, error = null, snapshotCaptured = false) }
+        _state.update { it.copy(isCapturingSnapshot = true, error = null) }
 
         viewModelScope.launch {
             when (val result = captureSnapshotUseCase(link.url, link.id)) {
                 is Result.Success -> {
                     Timber.d("captureSnapshot: Snapshot captured successfully | ID: ${result.data.id}")
-                    _state.update { it.copy(isCapturingSnapshot = false, snapshotCaptured = true) }
+                    Timber.d("captureSnapshot: Setting success message: Snapshot captured successfully")
+                    _state.update {
+                        it.copy(
+                            isCapturingSnapshot = false,
+                            successMessage = "Snapshot captured successfully"
+                        )
+                    }
+                    Timber.d("captureSnapshot: Success message set in state")
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "captureSnapshot: Failed to capture snapshot")
@@ -179,6 +211,9 @@ class LinkDetailViewModel(
             when (val result = deleteSnapshotUseCase(snapshotId)) {
                 is Result.Success -> {
                     Timber.d("deleteSnapshot: Snapshot deleted successfully")
+                    Timber.d("deleteSnapshot: Setting success message: Snapshot deleted")
+                    _state.update { it.copy(successMessage = "Snapshot deleted") }
+                    Timber.d("deleteSnapshot: Success message set in state")
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "deleteSnapshot: Failed to delete snapshot")
@@ -198,4 +233,5 @@ sealed class LinkDetailEvent {
     data object OnRefresh : LinkDetailEvent()
     data object OnCreateSnapshot : LinkDetailEvent()
     data class OnDeleteSnapshot(val snapshotId: String) : LinkDetailEvent()
+    data object OnClearSuccessMessage : LinkDetailEvent()
 }

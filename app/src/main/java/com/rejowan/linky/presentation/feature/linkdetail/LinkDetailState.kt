@@ -12,5 +12,6 @@ data class LinkDetailState(
     val isCapturingSnapshot: Boolean = false,
     val error: String? = null,
     val isDeleted: Boolean = false,
-    val snapshotCaptured: Boolean = false
+    val snapshotCaptured: Boolean = false,
+    val successMessage: String? = null
 )
