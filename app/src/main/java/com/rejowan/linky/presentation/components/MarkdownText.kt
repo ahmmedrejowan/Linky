@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import timber.log.Timber
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
@@ -81,17 +84,32 @@ private fun RenderMarkdownNode(
             }
         }
         MarkdownElementTypes.PARAGRAPH -> {
-            val text = buildAnnotatedString {
+            val uriHandler = LocalUriHandler.current
+            val annotatedText = buildAnnotatedString {
                 processInlineContent(node, content, this, linkColor, codeBackgroundColor)
             }
-            Text(
-                text = text,
+
+            ClickableText(
+                text = annotatedText,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = fontSize,
                     fontFamily = FontFamily.Serif,
-                    lineHeight = (fontSize.value * lineHeight).sp
+                    lineHeight = (fontSize.value * lineHeight).sp,
+                    color = MaterialTheme.colorScheme.onSurface
                 ),
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                onClick = { offset ->
+                    // Find URL annotations at click position
+                    annotatedText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                        .firstOrNull()?.let { annotation ->
+                            try {
+                                Timber.d("MarkdownText: Opening URL: ${annotation.item}")
+                                uriHandler.openUri(annotation.item)
+                            } catch (e: Exception) {
+                                Timber.e(e, "MarkdownText: Failed to open URL: ${annotation.item}")
+                            }
+                        }
+                }
             )
         }
         MarkdownElementTypes.ATX_1 -> {
@@ -224,10 +242,47 @@ private fun processInlineContent(
     linkColor: androidx.compose.ui.graphics.Color,
     codeBackgroundColor: androidx.compose.ui.graphics.Color
 ) {
-    node.children.forEach { child ->
+    var skipUntilCloseParen = false
+    var linkUrl: String? = null
+    val urlBuilder = StringBuilder()
+
+    node.children.forEachIndexed { index, child ->
+        Timber.d("processInlineContent: Processing child type: ${child.type}, skipMode: $skipUntilCloseParen")
+
+        // If we're in skip mode (collecting URL), check if we hit the closing paren
+        if (skipUntilCloseParen) {
+            val tokenString = child.type.toString()
+            when {
+                tokenString == "Markdown:)" -> {
+                    linkUrl = urlBuilder.toString()
+                    Timber.d("processInlineContent: Collected URL: $linkUrl")
+                    skipUntilCloseParen = false
+                    urlBuilder.clear()
+                    return@forEachIndexed // Skip the closing paren
+                }
+                child.type == MarkdownTokenTypes.TEXT -> {
+                    urlBuilder.append(child.getTextInNode(content))
+                    return@forEachIndexed // Skip URL text
+                }
+                else -> {
+                    // Skip other URL parts like : and whitespace
+                    if (tokenString == "Markdown::") {
+                        urlBuilder.append(":")
+                    }
+                    return@forEachIndexed
+                }
+            }
+        }
+
         when (child.type) {
             MarkdownTokenTypes.TEXT -> {
-                builder.append(child.getTextInNode(content).toString())
+                val text = child.getTextInNode(content).toString()
+                Timber.d("processInlineContent: TEXT node content: '$text'")
+                builder.append(text)
+            }
+            MarkdownTokenTypes.WHITE_SPACE -> {
+                // Preserve whitespace - it's needed for spacing between words
+                builder.append(" ")
             }
             MarkdownElementTypes.STRONG -> {
                 builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
@@ -252,27 +307,84 @@ private fun processInlineContent(
                     builder.append(codeText)
                 }
             }
-            MarkdownElementTypes.INLINE_LINK -> {
-                // Extract link text (first child is usually the text)
-                val linkTextNode = child.children.find { it.type == MarkdownElementTypes.LINK_TEXT }
-                if (linkTextNode != null) {
-                    builder.withStyle(
-                        SpanStyle(
-                            color = linkColor,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        processInlineContent(linkTextNode, content, builder, linkColor, codeBackgroundColor)
+            MarkdownElementTypes.INLINE_LINK, MarkdownElementTypes.SHORT_REFERENCE_LINK -> {
+                Timber.d("processInlineContent: LINK detected (${child.type})")
+                Timber.d("processInlineContent: Link full text: '${child.getTextInNode(content)}'")
+
+                // For SHORT_REFERENCE_LINK format: [text](url) or [text]
+                // Structure: LINK_LABEL contains [text], followed by url parts as SIBLINGS
+                val linkLabelNode = child.children.find { it.type == MarkdownElementTypes.LINK_LABEL }
+
+                if (linkLabelNode != null) {
+                    Timber.d("processInlineContent: LINK_LABEL found")
+                    // Extract only TEXT nodes from LINK_LABEL (skip [ and ] brackets)
+                    val linkTextBuilder = StringBuilder()
+                    linkLabelNode.children.forEach { labelChild ->
+                        if (labelChild.type == MarkdownTokenTypes.TEXT) {
+                            linkTextBuilder.append(labelChild.getTextInNode(content))
+                        }
                     }
-                } else {
-                    // Fallback if structure is different
+                    val linkText = linkTextBuilder.toString()
+                    Timber.d("processInlineContent: Extracted link text: '$linkText'")
+
+                    // Look ahead to collect URL before adding link annotation
+                    var collectedUrl = ""
+                    var lookAheadIndex = index + 1
+                    if (lookAheadIndex < node.children.size &&
+                        node.children[lookAheadIndex].type.toString() == "Markdown:(") {
+                        Timber.d("processInlineContent: Looking ahead to collect URL")
+                        val tempUrlBuilder = StringBuilder()
+                        lookAheadIndex++ // Skip the opening paren
+
+                        while (lookAheadIndex < node.children.size) {
+                            val lookAheadChild = node.children[lookAheadIndex]
+                            val tokenString = lookAheadChild.type.toString()
+
+                            if (tokenString == "Markdown:)") {
+                                break // Found closing paren
+                            } else if (lookAheadChild.type == MarkdownTokenTypes.TEXT) {
+                                tempUrlBuilder.append(lookAheadChild.getTextInNode(content))
+                            } else if (tokenString == "Markdown::") {
+                                tempUrlBuilder.append(":")
+                            }
+                            lookAheadIndex++
+                        }
+                        collectedUrl = tempUrlBuilder.toString()
+                        Timber.d("processInlineContent: Collected URL via lookahead: $collectedUrl")
+
+                        // Set flag to skip these nodes when we encounter them in the main loop
+                        skipUntilCloseParen = true
+                        urlBuilder.clear()
+                    }
+
+                    // Add clickable link with URL annotation
+                    builder.pushStringAnnotation(tag = "URL", annotation = collectedUrl)
                     builder.withStyle(
                         SpanStyle(
                             color = linkColor,
                             textDecoration = TextDecoration.Underline
                         )
                     ) {
-                        processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                        builder.append(linkText)
+                    }
+                    builder.pop()
+                } else {
+                    // Fallback: try LINK_TEXT for INLINE_LINK format
+                    val linkTextNode = child.children.find { it.type == MarkdownElementTypes.LINK_TEXT }
+                    Timber.d("processInlineContent: LINK_TEXT found: ${linkTextNode != null}")
+
+                    if (linkTextNode != null) {
+                        builder.withStyle(
+                            SpanStyle(
+                                color = linkColor,
+                                textDecoration = TextDecoration.Underline
+                            )
+                        ) {
+                            processInlineContent(linkTextNode, content, builder, linkColor, codeBackgroundColor)
+                        }
+                    } else {
+                        Timber.w("processInlineContent: No LINK_LABEL or LINK_TEXT found, skipping link")
+                        // Don't render anything to avoid showing markdown syntax
                     }
                 }
             }
@@ -290,8 +402,31 @@ private fun processInlineContent(
                 }
                 builder.append("\n")
             }
+            // Skip markdown syntax tokens that are handled by parent nodes
+            MarkdownElementTypes.LINK_LABEL -> {
+                Timber.d("processInlineContent: Skipping LINK_LABEL (handled by parent)")
+                // Skip - already handled in SHORT_REFERENCE_LINK
+            }
             else -> {
-                processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                // Skip markdown syntax characters
+                val tokenString = child.type.toString()
+
+                // Check if this is the opening paren after a link (start of URL)
+                if (tokenString == "Markdown:(") {
+                    // This will be caught by the skipUntilCloseParen logic if it follows a link
+                    // If we reach here and skipUntilCloseParen is false, it might be a standalone paren
+                    Timber.d("processInlineContent: Skipping opening paren (start of URL or syntax)")
+                    return@forEachIndexed
+                }
+
+                // Skip markdown syntax tokens (but NOT whitespace - that's handled above)
+                if (tokenString.matches(Regex("Markdown:[\\[\\]().]"))) {
+                    Timber.d("processInlineContent: Skipping syntax token: ${child.type}")
+                    // Skip these tokens - they're markdown syntax
+                } else {
+                    Timber.d("processInlineContent: Processing unknown type: ${child.type}")
+                    processInlineContent(child, content, builder, linkColor, codeBackgroundColor)
+                }
             }
         }
     }
