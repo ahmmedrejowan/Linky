@@ -90,6 +90,10 @@ fun BottomNavHost(
                     // Navigate within bottom nav using local controller
                     navController.navigate(Route.Collections)
                 },
+                onNavigateToTrash = {
+                    // Navigate using parent controller to Trash
+                    parentNavController.navigate(Route.Trash)
+                },
                 onLogout = {
                     // Navigate using parent controller to Welcome (Phase 2)
                     parentNavController.navigate(Route.Welcome) {

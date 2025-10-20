@@ -843,7 +843,7 @@ private fun parseColor(colorString: String?): Color {
         val cleanColor = colorString.removePrefix("#")
         val colorInt = cleanColor.toLong(16)
         Color(colorInt or 0xFF000000) // Ensure alpha is set
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Color(0xFF6200EE) // Default primary color on error
     }
 }

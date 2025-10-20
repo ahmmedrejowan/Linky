@@ -11,20 +11,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LinkDao {
-    // Get all active links (not deleted, not archived)
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY updatedAt DESC")
+    // Get all active links (not deleted, not archived) - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllActiveLinks(): Flow<List<LinkEntity>>
 
-    // Get all links (including archived, excluding deleted)
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL ORDER BY updatedAt DESC")
+    // Get all links (excluding archived and deleted) - used for "All" filter - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllLinks(): Flow<List<LinkEntity>>
 
-    // Get favorites
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isFavorite = 1 ORDER BY updatedAt DESC")
+    // Get favorites (excluding archived and deleted)
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND isFavorite = 1 ORDER BY updatedAt DESC")
     fun getFavoriteLinks(): Flow<List<LinkEntity>>
 
-    // Get archived
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 1 ORDER BY updatedAt DESC")
+    // Get archived - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 1 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getArchivedLinks(): Flow<List<LinkEntity>>
 
     // Get trashed (soft deleted)

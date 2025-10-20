@@ -69,6 +69,12 @@ sealed class Route {
     data object Settings : Route()
 
     /**
+     * Trash screen - Shows all trashed links with restore/delete options
+     */
+    @Serializable
+    data object Trash : Route()
+
+    /**
      * Advanced settings screen (Phase 3/4)
      */
     @Serializable

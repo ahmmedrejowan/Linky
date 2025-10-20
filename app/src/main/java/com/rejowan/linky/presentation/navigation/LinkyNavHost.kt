@@ -11,6 +11,7 @@ import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
+import com.rejowan.linky.presentation.feature.trash.TrashScreen
 
 /**
  * Parent navigation host for the Linky app
@@ -135,6 +136,15 @@ fun LinkyNavHost(
                 },
                 onAddLinkClick = { collectionId ->
                     navController.navigate(Route.AddEditLink(collectionId = collectionId))
+                }
+            )
+        }
+
+        composable<Route.Trash> {
+            TrashScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLinkClick = { linkId ->
+                    navController.navigate(Route.LinkDetail(linkId))
                 }
             )
         }

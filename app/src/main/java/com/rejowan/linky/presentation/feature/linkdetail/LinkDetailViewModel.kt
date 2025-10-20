@@ -118,6 +118,8 @@ class LinkDetailViewModel(
             when (val result = deleteLinkUseCase(link.id, softDelete = true)) {
                 is Result.Success -> {
                     Timber.d("Deleted link: ${link.id}")
+                    // Add small delay to allow database changes to propagate through Flows
+                    kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isDeleted = true) }
                 }
                 is Result.Error -> {

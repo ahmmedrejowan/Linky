@@ -44,6 +44,7 @@ import org.koin.androidx.compose.koinViewModel
  * Features:
  * - Theme selection (Light/Dark/System)
  * - App statistics (Links, Collections, Storage)
+ * - Trash management
  * - Clear cache functionality
  * - App version display
  * - Loading and error states
@@ -52,6 +53,7 @@ import org.koin.androidx.compose.koinViewModel
  * @param onNavigateToAdvanced Callback to navigate to advanced settings (Phase 3/4)
  * @param onNavigateToHome Callback to navigate to home
  * @param onNavigateToCollections Callback to navigate to collections
+ * @param onNavigateToTrash Callback to navigate to trash screen
  * @param onLogout Callback when logout is clicked (Phase 2)
  * @param modifier Modifier for styling
  * @param viewModel SettingsViewModel injected via Koin
@@ -63,6 +65,7 @@ fun SettingsScreen(
     onNavigateToAdvanced: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToCollections: () -> Unit,
+    onNavigateToTrash: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
@@ -99,7 +102,8 @@ fun SettingsScreen(
                     SettingsContent(
                         state = state,
                         onThemeChange = { viewModel.onEvent(SettingsEvent.OnThemeChange(it)) },
-                        onClearCacheClick = { showClearCacheDialog = true }
+                        onClearCacheClick = { showClearCacheDialog = true },
+                        onNavigateToTrash = onNavigateToTrash
                     )
                 }
             }
@@ -125,6 +129,7 @@ private fun SettingsContent(
     state: SettingsState,
     onThemeChange: (String) -> Unit,
     onClearCacheClick: () -> Unit,
+    onNavigateToTrash: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -156,6 +161,15 @@ private fun SettingsContent(
             totalLinks = state.totalLinks,
             totalCollections = state.totalCollections,
             totalStorageUsed = state.totalStorageUsed
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        // Trash Section
+        SectionHeader(text = "Trash")
+        TrashSection(
+            totalTrashedLinks = state.totalTrashedLinks,
+            onViewTrashClick = onNavigateToTrash
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -333,6 +347,59 @@ private fun StorageSection(
                 enabled = !isLoading
             ) {
                 Text("Clear Cache")
+            }
+        }
+    }
+}
+
+/**
+ * Trash management section
+ */
+@Composable
+private fun TrashSection(
+    totalTrashedLinks: Int,
+    onViewTrashClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Trashed Items",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$totalTrashedLinks ${if (totalTrashedLinks == 1) "item" else "items"}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Text(
+                text = "Deleted links can be restored or permanently removed from trash",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedButton(
+                onClick = onViewTrashClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = totalTrashedLinks > 0
+            ) {
+                Text("View Trash")
             }
         }
     }

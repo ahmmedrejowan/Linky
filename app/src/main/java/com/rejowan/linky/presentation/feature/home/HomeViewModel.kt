@@ -12,14 +12,17 @@ import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val getAllLinksUseCase: GetAllLinksUseCase,
     private val getFavoriteLinksUseCase: GetFavoriteLinksUseCase,
@@ -33,8 +36,11 @@ class HomeViewModel(
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
+    // Flow that tracks the current filter type
+    private val filterTypeFlow = MutableStateFlow(FilterType.ALL)
+
     init {
-        loadLinks()
+        observeFilteredLinks()
     }
 
     fun onEvent(event: HomeEvent) {
@@ -42,33 +48,39 @@ class HomeViewModel(
             is HomeEvent.OnSearchQueryChange -> {
                 _state.update { it.copy(searchQuery = event.query) }
                 if (event.query.isBlank()) {
-                    loadLinks()
+                    // Reset to filtered view
+                    filterTypeFlow.value = _state.value.filterType
                 } else {
                     searchLinks(event.query)
                 }
             }
             is HomeEvent.OnFilterTypeChange -> {
                 _state.update { it.copy(filterType = event.filterType) }
-                loadLinks()
+                filterTypeFlow.value = event.filterType
             }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
-            is HomeEvent.OnRefresh -> loadLinks()
+            is HomeEvent.OnRefresh -> {
+                // Trigger a refresh by re-emitting the current filter
+                filterTypeFlow.value = _state.value.filterType
+            }
         }
     }
 
-    private fun loadLinks() {
+    private fun observeFilteredLinks() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            filterTypeFlow
+                .flatMapLatest { filterType ->
+                    _state.update { it.copy(isLoading = true, error = null) }
 
-            val flow = when (_state.value.filterType) {
-                FilterType.ALL -> getAllLinksUseCase()
-                FilterType.FAVORITES -> getFavoriteLinksUseCase()
-                FilterType.ARCHIVED -> getArchivedLinksUseCase()
-                FilterType.TRASH -> getTrashedLinksUseCase()
-            }
-
-            flow.catch { e ->
+                    when (filterType) {
+                        FilterType.ALL -> getAllLinksUseCase()
+                        FilterType.FAVORITES -> getFavoriteLinksUseCase()
+                        FilterType.ARCHIVED -> getArchivedLinksUseCase()
+                        FilterType.TRASH -> getTrashedLinksUseCase()
+                    }
+                }
+                .catch { e ->
                     val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD_ALL)
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }

@@ -51,17 +51,17 @@ fun LinkCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Preview Image
             if (link.previewImagePath != null || link.previewUrl != null) {
@@ -69,7 +69,7 @@ fun LinkCard(
                     model = link.previewImagePath ?: link.previewUrl,
                     contentDescription = "Preview for ${link.title}",
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(72.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop
@@ -80,22 +80,18 @@ fun LinkCard(
                     imageVector = Icons.Default.Image,
                     contentDescription = "No preview",
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(72.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(20.dp),
+                        .padding(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Content (Title, URL, Note, Timestamp)
+            // Content (Title, URL, Timestamp)
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Title
                 Text(
@@ -106,8 +102,6 @@ fun LinkCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
-
                 // URL
                 Text(
                     text = link.url.shortenUrl(),
@@ -116,20 +110,6 @@ fun LinkCard(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                // Note (if available)
-                if (!link.note.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = link.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 // Timestamp
                 Text(
@@ -141,8 +121,7 @@ fun LinkCard(
 
             // Favorite Icon
             IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier.align(Alignment.Top)
+                onClick = onFavoriteClick
             ) {
                 Icon(
                     imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,

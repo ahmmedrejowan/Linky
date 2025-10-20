@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -70,14 +70,16 @@ fun HomeScreen(
             placeholder = "Search links...",
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         )
 
-        // Filter Chips
-        FilterChipRow(
+        // Filter Segmented Buttons
+        FilterSegmentedButtons(
             selectedFilter = state.filterType,
             onFilterSelected = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            modifier = Modifier.padding(vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
         // Content Area with Pull-to-Refresh
@@ -123,37 +125,34 @@ private fun HomeScreenPreview() {
 
 
 /**
- * Filter Chip Row - Horizontal scrollable filter tabs
+ * Filter Segmented Buttons - Material 3 segmented button row for filters
  */
 @Composable
-private fun FilterChipRow(
+private fun FilterSegmentedButtons(
     selectedFilter: FilterType,
     onFilterSelected: (FilterType) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val filters = listOf(
         FilterType.ALL to "All",
-        FilterType.FAVORITES to "⭐ Favorites",
-        FilterType.ARCHIVED to "📦 Archived",
-        FilterType.TRASH to "🗑️ Trash"
+        FilterType.FAVORITES to "Favorites",
+        FilterType.ARCHIVED to "Archive"
     )
 
-    ScrollableTabRow(
-        selectedTabIndex = filters.indexOfFirst { it.first == selectedFilter },
-        modifier = modifier.fillMaxWidth(),
-        edgePadding = 16.dp,
-        divider = {},
-        indicator = {}) {
-        filters.forEach { (filterType, label) ->
-            Tab(
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier
+    ) {
+        filters.forEachIndexed { index, (filterType, label) ->
+            SegmentedButton(
                 selected = selectedFilter == filterType,
                 onClick = { onFilterSelected(filterType) },
-                text = {
-                    FilterChip(
-                        selected = selectedFilter == filterType,
-                        onClick = { onFilterSelected(filterType) },
-                        label = { Text(label) })
-                })
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = filters.size
+                )
+            ) {
+                Text(text = label)
+            }
         }
     }
 }
@@ -235,8 +234,9 @@ private fun EmptyContent(
                 EmptyStates.NoArchivedLinks()
             }
 
-            filterType == FilterType.TRASH -> {
-                EmptyStates.NoTrashedLinks()
+            else -> {
+                // Default empty state for any other filter types
+                EmptyStates.NoLinks(onAddLinkClick = onAddLinkClick)
             }
         }
     }
@@ -254,14 +254,21 @@ private fun LinksList(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(
-            items = links, key = { it.id }) { link ->
-            LinkCard(link = link, onClick = { onLinkClick(link.id) }, onFavoriteClick = {
-                onFavoriteClick(link.id, !link.isFavorite)
-            })
+            items = links,
+            key = { it.id }
+        ) { link ->
+            LinkCard(
+                link = link,
+                onClick = { onLinkClick(link.id) },
+                onFavoriteClick = {
+                    onFavoriteClick(link.id, !link.isFavorite)
+                },
+                modifier = Modifier.animateItem()
+            )
         }
     }
 }

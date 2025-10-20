@@ -32,6 +32,7 @@ class SettingsViewModel(
     init {
         loadSettings()
         observeTheme()
+        observeTrashedLinksCount()
     }
 
     fun onEvent(event: SettingsEvent) {
@@ -86,6 +87,18 @@ class SettingsViewModel(
                 }
                 .collect { theme ->
                     _state.update { it.copy(theme = theme) }
+                }
+        }
+    }
+
+    private fun observeTrashedLinksCount() {
+        viewModelScope.launch {
+            linkRepository.getTrashedLinks()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe trashed links count")
+                }
+                .collect { trashedLinks ->
+                    _state.update { it.copy(totalTrashedLinks = trashedLinks.size) }
                 }
         }
     }

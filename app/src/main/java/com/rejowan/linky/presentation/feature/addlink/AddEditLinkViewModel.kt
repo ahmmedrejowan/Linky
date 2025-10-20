@@ -441,6 +441,8 @@ class AddEditLinkViewModel(
             when (result) {
                 is Result.Success -> {
                     Timber.d("saveLink: Link ${operation.lowercase()}d successfully | ID: ${link.id}")
+                    // Add small delay to allow database changes to propagate through Flows
+                    kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isLoading = false, isSaved = true) }
                     Timber.d("saveLink: State updated with isSaved = true")
                 }
