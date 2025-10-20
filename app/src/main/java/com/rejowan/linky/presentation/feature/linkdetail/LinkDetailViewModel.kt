@@ -3,6 +3,7 @@ package com.rejowan.linky.presentation.feature.linkdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.domain.usecase.collection.GetCollectionByIdUseCase
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase
@@ -13,19 +14,24 @@ import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LinkDetailViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val getLinkByIdUseCase: GetLinkByIdUseCase,
     private val getSnapshotsForLinkUseCase: GetSnapshotsForLinkUseCase,
+    private val getCollectionByIdUseCase: GetCollectionByIdUseCase,
     private val captureSnapshotUseCase: CaptureSnapshotUseCase,
     private val deleteSnapshotUseCase: DeleteSnapshotUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
@@ -60,23 +66,30 @@ class LinkDetailViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            val linkFlow = getLinkByIdUseCase(linkId)
-            val snapshotsFlow = getSnapshotsForLinkUseCase(linkId)
+            getLinkByIdUseCase(linkId)
+                .flatMapLatest { link ->
+                    val collectionFlow = link?.collectionId?.let { collectionId ->
+                        getCollectionByIdUseCase(collectionId).catch { emit(null) }
+                    } ?: flowOf(null)
 
-            combine(linkFlow, snapshotsFlow) { link, snapshots ->
-                LinkDetailState(
-                    link = link,
-                    snapshots = snapshots,
-                    isLoading = false,
-                    error = if (link == null) "Link not found" else null
-                )
-            }
+                    val snapshotsFlow = getSnapshotsForLinkUseCase(linkId)
+
+                    combine(flowOf(link), collectionFlow, snapshotsFlow) { l, c, s ->
+                        Triple(l, c, s)
+                    }
+                }
                 .catch { e ->
                     val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.LOAD)
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
-                .collect { newState ->
-                    _state.value = newState
+                .collect { (link, collection, snapshots) ->
+                    _state.value = LinkDetailState(
+                        link = link,
+                        collection = collection,
+                        snapshots = snapshots,
+                        isLoading = false,
+                        error = if (link == null) "Link not found" else null
+                    )
                 }
         }
     }

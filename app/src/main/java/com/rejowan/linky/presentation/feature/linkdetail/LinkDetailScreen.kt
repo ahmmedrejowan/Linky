@@ -1,5 +1,7 @@
 package com.rejowan.linky.presentation.feature.linkdetail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,18 +11,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Unarchive
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,8 +56,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +71,7 @@ import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.Snapshot
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LoadingIndicator
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -79,6 +93,7 @@ import java.util.Locale
  * @param onNavigateBack Callback to navigate back
  * @param onEditClick Callback when edit button is clicked
  * @param onOpenSnapshot Callback when a snapshot is clicked
+ * @param onNavigateToCollection Callback when collection is clicked
  * @param modifier Modifier for styling
  * @param viewModel LinkDetailViewModel injected via Koin
  */
@@ -89,6 +104,7 @@ fun LinkDetailScreen(
     onNavigateBack: () -> Unit,
     onEditClick: (String) -> Unit,
     onOpenSnapshot: (String) -> Unit,
+    onNavigateToCollection: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: LinkDetailViewModel = koinViewModel()
 ) {
@@ -152,9 +168,9 @@ fun LinkDetailScreen(
                         enabled = state.link != null
                     ) {
                         Icon(
-                            imageVector = if (state.link?.isFavorite == true) Icons.Filled.Star else Icons.Outlined.Star,
+                            imageVector = if (state.link?.isFavorite == true) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = if (state.link?.isFavorite == true) "Remove from favorites" else "Add to favorites",
-                            tint = if (state.link?.isFavorite == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (state.link?.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -242,16 +258,19 @@ fun LinkDetailScreen(
                 state.link != null -> {
                     LinkContent(
                         link = state.link!!,
+                        collection = state.collection,
                         snapshots = state.snapshots,
                         isCapturingSnapshot = state.isCapturingSnapshot,
                         onOpenUrl = { url ->
                             // Open URL in browser
                         },
                         onOpenSnapshot = onOpenSnapshot,
+                        onNavigateToCollection = onNavigateToCollection,
                         onCreateSnapshot = { viewModel.onEvent(LinkDetailEvent.OnCreateSnapshot) },
                         onDeleteSnapshot = { snapshotId ->
                             viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(snapshotId))
-                        }
+                        },
+                        snackbarHostState = snackbarHostState
                     )
                 }
             }
@@ -260,27 +279,38 @@ fun LinkDetailScreen(
 }
 
 /**
- * Link content display
+ * Link content display with new layout
  */
 @Composable
 private fun LinkContent(
     link: Link,
+    collection: com.rejowan.linky.domain.model.Collection?,
     snapshots: List<Snapshot>,
     isCapturingSnapshot: Boolean,
     onOpenUrl: (String) -> Unit,
     onOpenSnapshot: (String) -> Unit,
+    onNavigateToCollection: (String) -> Unit,
     onCreateSnapshot: () -> Unit,
     onDeleteSnapshot: (String) -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    var descriptionExpanded by remember { mutableStateOf(false) }
+    var noteExpanded by remember { mutableStateOf(false) }
+    var snapshotsExpanded by remember { mutableStateOf(false) }
+
+    // Launch coroutine scope for snackbar
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Preview Image (if available)
         if (link.previewImagePath != null || link.previewUrl != null) {
@@ -301,111 +331,184 @@ private fun LinkContent(
             }
         }
 
-        // Title
+        // Title (smaller size)
         Text(
             text = link.title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleLarge,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
 
-        // URL (clickable)
-        TextButton(
-            onClick = { uriHandler.openUri(link.url) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = link.url,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        // URL (larger text size, not clickable button - just text)
+        Text(
+            text = link.url,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
 
-        // Note (if available)
-        if (!link.note.isNullOrBlank()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+        // Action Buttons Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Share button (small circular)
+            IconButton(
+                onClick = {
+                    val shareIntent = android.content.Intent().apply {
+                        action = android.content.Intent.ACTION_SEND
+                        putExtra(android.content.Intent.EXTRA_TEXT, link.url)
+                        type = "text/plain"
+                    }
+                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share link"))
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
+                    )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Note",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Copy button (small circular)
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(link.url))
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Link copied to clipboard")
+                    }
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = link.note,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copy",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Open in Browser button (rounded rect, fills remaining space)
+            Button(
+                onClick = { uriHandler.openUri(link.url) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.OpenInBrowser,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Open in Browser",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
 
-        // Metadata Card
-        Card(
+        // Metadata Section
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Collection (if assigned)
-                link.collectionId?.let { collectionId ->
-                    MetadataRow(
-                        label = "Collection",
-                        value = collectionId // TODO: Resolve collection name from collectionId
-                    )
-                }
+            // Created date
+            Text(
+                text = "📅 Created: ${formatTimestamp(link.createdAt)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-                // Created date
-                MetadataRow(
-                    label = "Created",
-                    value = formatTimestamp(link.createdAt)
+            // Updated date (if different from created)
+            if (link.updatedAt != link.createdAt) {
+                Text(
+                    text = "🔄 Updated: ${formatTimestamp(link.updatedAt)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
 
-                // Modified date (if different from created)
-                if (link.updatedAt != link.createdAt) {
-                    MetadataRow(
-                        label = "Modified",
-                        value = formatTimestamp(link.updatedAt)
-                    )
-                }
-
-                // Status badges
+            // Collection (if assigned)
+            collection?.let { coll ->
                 Row(
+                    modifier = Modifier
+                        .clickable { onNavigateToCollection(coll.id) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (link.isFavorite) {
-                        StatusBadge(text = "⭐ Favorite")
-                    }
-                    if (link.isArchived) {
-                        StatusBadge(text = "📦 Archived")
-                    }
+                    Text(
+                        text = "📁 Collection:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Color chip
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(
+                                color = parseColor(coll.color),
+                                shape = CircleShape
+                            )
+                    )
+                    Text(
+                        text = coll.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                    )
                 }
             }
         }
 
-        // Snapshots section
         HorizontalDivider()
 
-        // Snapshots header with create button
+        // Description Section (max 2 lines with See More/Hide)
+        if (!link.description.isNullOrBlank()) {
+            ExpandableTextSection(
+                title = "📝 Description",
+                text = link.description,
+                maxLines = 2,
+                isExpanded = descriptionExpanded,
+                onToggleExpand = { descriptionExpanded = !descriptionExpanded }
+            )
+            HorizontalDivider()
+        }
+
+        // Note Section (max 4 lines with See More/Hide)
+        if (!link.note.isNullOrBlank()) {
+            ExpandableTextSection(
+                title = "📄 Note",
+                text = link.note,
+                maxLines = 4,
+                isExpanded = noteExpanded,
+                onToggleExpand = { noteExpanded = !noteExpanded }
+            )
+            HorizontalDivider()
+        }
+
+        // Snapshots Section (max 3 with See More/Hide)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Snapshots (${snapshots.size})",
+                text = "📸 Snapshots (${snapshots.size})",
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -440,12 +543,13 @@ private fun LinkContent(
                     text = "Capture a clean, readable version of this page for offline reading",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
             }
         } else {
-            // Snapshots list
-            snapshots.forEach { snapshot ->
+            // Show max 3 snapshots, or all if expanded
+            val displaySnapshots = if (snapshotsExpanded) snapshots else snapshots.take(3)
+            displaySnapshots.forEach { snapshot ->
                 SnapshotCard(
                     snapshot = snapshot,
                     onClick = { onOpenSnapshot(snapshot.id) },
@@ -453,67 +557,20 @@ private fun LinkContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
+
+            // See More / Hide button
+            if (snapshots.size > 3) {
+                TextButton(
+                    onClick = { snapshotsExpanded = !snapshotsExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (snapshotsExpanded) "Hide" else "See More (${snapshots.size - 3} more)",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
         }
-
-        // Open URL button
-        Button(
-            onClick = { uriHandler.openUri(link.url) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text(
-                text = "Open in Browser",
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
-    }
-}
-
-/**
- * Metadata row for displaying label-value pairs
- */
-@Composable
-private fun MetadataRow(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-}
-
-/**
- * Status badge (Favorite, Archived, etc.)
- */
-@Composable
-private fun StatusBadge(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
     }
 }
 
@@ -646,4 +703,79 @@ private fun formatFileSize(bytes: Long): String {
     if (mb < 1024) return "%.1f MB".format(mb)
     val gb = mb / 1024.0
     return "%.1f GB".format(gb)
+}
+
+/**
+ * Expandable text section with See More/Hide functionality
+ */
+@Composable
+private fun ExpandableTextSection(
+    title: String,
+    text: String,
+    maxLines: Int,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        if (isExpanded) {
+            // Show full text
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            // Hide button
+            Text(
+                text = "Hide",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onToggleExpand() }
+            )
+        } else {
+            // Show truncated text
+            var showSeeMore by remember { mutableStateOf(false) }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { textLayoutResult ->
+                    showSeeMore = textLayoutResult.hasVisualOverflow
+                }
+            )
+            // See More button (only if text is truncated)
+            if (showSeeMore) {
+                Text(
+                    text = "See More",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { onToggleExpand() }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Parse color string to Color
+ * Supports hex colors (#RRGGBB) and falls back to primary color
+ */
+private fun parseColor(colorString: String?): Color {
+    if (colorString == null) return Color(0xFF6200EE) // Default primary color
+
+    return try {
+        val cleanColor = colorString.removePrefix("#")
+        val colorInt = cleanColor.toLong(16)
+        Color(colorInt or 0xFF000000) // Ensure alpha is set
+    } catch (e: Exception) {
+        Color(0xFF6200EE) // Default primary color on error
+    }
 }

@@ -41,6 +41,7 @@ val viewModelModule = module {
             savedStateHandle = get(),
             getLinkByIdUseCase = get(),
             getSnapshotsForLinkUseCase = get(),
+            getCollectionByIdUseCase = get(),
             captureSnapshotUseCase = get(),
             deleteSnapshotUseCase = get(),
             toggleFavoriteUseCase = get(),
