@@ -308,54 +308,60 @@ private fun LinkContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Preview Image (if available)
         if (link.previewImagePath != null || link.previewUrl != null) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp),
+                    .padding(horizontal = 16.dp)
+                    .height(200.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 AsyncImage(
                     model = link.previewImagePath ?: link.previewUrl,
                     contentDescription = "Link preview image",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
         }
 
-        // Title (smaller size)
-        Text(
-            text = link.title,
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
+        // Title and URL Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = link.title,
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
 
-        // URL (larger text size, not clickable button - just text)
-        Text(
-            text = link.url,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+            Text(
+                text = link.url,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         // Action Buttons Row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Share button (small circular)
-            IconButton(
+            // Share button
+            OutlinedButton(
                 onClick = {
                     val shareIntent = android.content.Intent().apply {
                         action = android.content.Intent.ACTION_SEND
@@ -364,210 +370,269 @@ private fun LinkContent(
                     }
                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Share link"))
                 },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = CircleShape
-                    )
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Share")
             }
 
-            // Copy button (small circular)
-            IconButton(
+            // Copy button
+            OutlinedButton(
                 onClick = {
                     clipboardManager.setText(AnnotatedString(link.url))
                     scope.launch {
-                        snackbarHostState.showSnackbar("Link copied to clipboard")
+                        snackbarHostState.showSnackbar("Link copied")
                     }
                 },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = CircleShape
-                    )
+                modifier = Modifier.weight(1f)
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Open in Browser button (rounded rect, fills remaining space)
-            Button(
-                onClick = { uriHandler.openUri(link.url) },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.OpenInBrowser,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Open in Browser",
-                    style = MaterialTheme.typography.labelLarge
-                )
+                Text("Copy")
             }
         }
 
-        // Metadata Section
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        // Open in Browser button
+        Button(
+            onClick = { uriHandler.openUri(link.url) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
         ) {
-            // Created date
-            Text(
-                text = "📅 Created: ${formatTimestamp(link.createdAt)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Icon(
+                imageVector = Icons.Default.OpenInBrowser,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
             )
-
-            // Updated date (if different from created)
-            if (link.updatedAt != link.createdAt) {
-                Text(
-                    text = "🔄 Updated: ${formatTimestamp(link.updatedAt)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Collection (if assigned)
-            collection?.let { coll ->
-                Row(
-                    modifier = Modifier
-                        .clickable { onNavigateToCollection(coll.id) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "📁 Collection:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // Color chip
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .background(
-                                color = parseColor(coll.color),
-                                shape = CircleShape
-                            )
-                    )
-                    Text(
-                        text = coll.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Open in Browser")
         }
 
-        HorizontalDivider()
-
-        // Description Section (max 2 lines with See More/Hide)
-        if (!link.description.isNullOrBlank()) {
-            ExpandableTextSection(
-                title = "📝 Description",
-                text = link.description,
-                maxLines = 2,
-                isExpanded = descriptionExpanded,
-                onToggleExpand = { descriptionExpanded = !descriptionExpanded }
+        // Metadata Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
-            HorizontalDivider()
-        }
-
-        // Note Section (max 4 lines with See More/Hide)
-        if (!link.note.isNullOrBlank()) {
-            ExpandableTextSection(
-                title = "📄 Note",
-                text = link.note,
-                maxLines = 4,
-                isExpanded = noteExpanded,
-                onToggleExpand = { noteExpanded = !noteExpanded }
-            )
-            HorizontalDivider()
-        }
-
-        // Snapshots Section (max 3 with See More/Hide)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "📸 Snapshots (${snapshots.size})",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            TextButton(
-                onClick = onCreateSnapshot,
-                enabled = !isCapturingSnapshot
-            ) {
-                if (isCapturingSnapshot) {
-                    Text("Capturing...")
-                } else {
-                    Text("+ Capture")
-                }
-            }
-        }
-
-        // Snapshots content
-        if (snapshots.isEmpty()) {
-            // Empty state
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Collection (if assigned)
+                collection?.let { coll ->
+                    Card(
+                        onClick = { onNavigateToCollection(coll.id) },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(
+                                        color = parseColor(coll.color),
+                                        shape = CircleShape
+                                    )
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Collection",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = coll.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Timestamps
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Created",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatTimestamp(link.createdAt),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    if (link.updatedAt != link.createdAt) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Updated",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = formatTimestamp(link.updatedAt),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Description Section
+        if (!link.description.isNullOrBlank()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "No snapshots yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Description",
+                    style = MaterialTheme.typography.titleLarge
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Capture a clean, readable version of this page for offline reading",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                ExpandableTextSection(
+                    text = link.description,
+                    maxLines = 2,
+                    isExpanded = descriptionExpanded,
+                    onToggleExpand = { descriptionExpanded = !descriptionExpanded }
                 )
             }
-        } else {
-            // Show max 3 snapshots, or all if expanded
-            val displaySnapshots = if (snapshotsExpanded) snapshots else snapshots.take(3)
-            displaySnapshots.forEach { snapshot ->
-                SnapshotCard(
-                    snapshot = snapshot,
-                    onClick = { onOpenSnapshot(snapshot.id) },
-                    onDeleteClick = { onDeleteSnapshot(snapshot.id) }
+        }
+
+        // Note Section
+        if (!link.note.isNullOrBlank()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Note",
+                    style = MaterialTheme.typography.titleLarge
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                ExpandableTextSection(
+                    text = link.note,
+                    maxLines = 4,
+                    isExpanded = noteExpanded,
+                    onToggleExpand = { noteExpanded = !noteExpanded }
+                )
+            }
+        }
+
+        // Snapshots Section
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Snapshots (${snapshots.size})",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                TextButton(
+                    onClick = onCreateSnapshot,
+                    enabled = !isCapturingSnapshot
+                ) {
+                    if (isCapturingSnapshot) {
+                        Text("Capturing...")
+                    } else {
+                        Text("Capture")
+                    }
+                }
             }
 
-            // See More / Hide button
-            if (snapshots.size > 3) {
-                TextButton(
-                    onClick = { snapshotsExpanded = !snapshotsExpanded },
-                    modifier = Modifier.fillMaxWidth()
+            // Content
+            if (snapshots.isEmpty()) {
+                // Empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = if (snapshotsExpanded) "Hide" else "See More (${snapshots.size - 3} more)",
-                        style = MaterialTheme.typography.labelLarge
+                        text = "No snapshots yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Capture a clean, readable version of this page for offline reading",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                // Show max 3 snapshots, or all if expanded
+                val displaySnapshots = if (snapshotsExpanded) snapshots else snapshots.take(3)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    displaySnapshots.forEach { snapshot ->
+                        SnapshotCard(
+                            snapshot = snapshot,
+                            onClick = { onOpenSnapshot(snapshot.id) },
+                            onDeleteClick = { onDeleteSnapshot(snapshot.id) }
+                        )
+                    }
+                }
+
+                // See More / Hide button
+                if (snapshots.size > 3) {
+                    TextButton(
+                        onClick = { snapshotsExpanded = !snapshotsExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (snapshotsExpanded) "Show Less" else "See More (${snapshots.size - 3} more)",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
         }
@@ -710,55 +775,58 @@ private fun formatFileSize(bytes: Long): String {
  */
 @Composable
 private fun ExpandableTextSection(
-    title: String,
     text: String,
     maxLines: Int,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Card(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
-
-        if (isExpanded) {
-            // Show full text
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            // Hide button
-            Text(
-                text = "Hide",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { onToggleExpand() }
-            )
-        } else {
-            // Show truncated text
-            var showSeeMore by remember { mutableStateOf(false) }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = maxLines,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { textLayoutResult ->
-                    showSeeMore = textLayoutResult.hasVisualOverflow
-                }
-            )
-            // See More button (only if text is truncated)
-            if (showSeeMore) {
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (isExpanded) {
+                // Show full text
                 Text(
-                    text = "See More",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { onToggleExpand() }
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                // Hide button
+                TextButton(
+                    onClick = onToggleExpand,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Show Less")
+                }
+            } else {
+                // Show truncated text
+                var showSeeMore by remember { mutableStateOf(false) }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = maxLines,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult ->
+                        showSeeMore = textLayoutResult.hasVisualOverflow
+                    }
+                )
+                // See More button (only if text is truncated)
+                if (showSeeMore) {
+                    TextButton(
+                        onClick = onToggleExpand,
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("See More")
+                    }
+                }
             }
         }
     }

@@ -97,6 +97,9 @@ fun LinkyNavHost(
                 },
                 onOpenSnapshot = { snapshotId ->
                     navController.navigate(Route.SnapshotViewer(snapshotId))
+                },
+                onNavigateToCollection = { collectionId ->
+                    navController.navigate(Route.CollectionDetail(collectionId))
                 }
             )
         }
