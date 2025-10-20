@@ -57,6 +57,9 @@ class AddEditLinkViewModel(
         url?.let {
             Timber.d("Prefilling URL from clipboard/share: $it")
             _state.update { state -> state.copy(url = it) }
+            // Automatically fetch preview for pre-filled URLs
+            Timber.d("Auto-fetching preview for pre-filled URL")
+            fetchPreview()
         }
 
         loadCollections()
