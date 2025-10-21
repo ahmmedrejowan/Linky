@@ -145,11 +145,16 @@ fun LinkCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Timestamp
+                // Timestamp or Deletion Countdown
                 Text(
-                    text = link.createdAt.toRelativeTime(),
+                    text = if (link.isDeleted) {
+                        val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
+                        "$daysLeft days until auto-deletion"
+                    } else {
+                        link.createdAt.toRelativeTime()
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = if (link.isDeleted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
                 )
             }
 
@@ -220,4 +225,15 @@ private fun StatusBanner(
             .background(color = containerColor.copy(alpha = 0.92f))
             .padding(horizontal = 6.dp, vertical = 3.dp)
     )
+}
+
+/**
+ * Calculate days remaining until auto-deletion (30 days from deletedAt)
+ */
+private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
+    val now = System.currentTimeMillis()
+    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L) // 30 days in milliseconds
+    val remainingTime = deletionTime - now
+    val daysLeft = (remainingTime / (24 * 60 * 60 * 1000L)).toInt()
+    return maxOf(0, daysLeft) // Ensure it's never negative
 }

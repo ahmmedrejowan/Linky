@@ -236,6 +236,7 @@ private fun TrashLinkItem(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showRestoreDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
@@ -260,7 +261,7 @@ private fun TrashLinkItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = onRestoreClick,
+                    onClick = { showRestoreDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -292,22 +293,48 @@ private fun TrashLinkItem(
         }
     }
 
+    // Restore confirmation dialog
+    if (showRestoreDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreDialog = false },
+            title = { Text("Restore Link?") },
+            text = {
+                Text("This link will be restored from trash and moved back to your active links.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRestoreClick()
+                        showRestoreDialog = false
+                    }
+                ) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Permanently?") },
             text = {
-                Text("This link will be permanently deleted. This action cannot be undone.")
+                Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.")
             },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         onDeleteClick()
                         showDeleteDialog = false
                     }
                 ) {
-                    Text("Delete")
+                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -338,8 +365,8 @@ private fun EmptyTrashDialog(
             )
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Empty Trash")
+            TextButton(onClick = onConfirm) {
+                Text("Empty Trash", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {

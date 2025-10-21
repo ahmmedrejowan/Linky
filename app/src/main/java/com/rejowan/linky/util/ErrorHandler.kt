@@ -75,6 +75,7 @@ object ErrorHandler {
             LinkOperation.TOGGLE_FAVORITE -> "to toggle favorite"
             LinkOperation.TOGGLE_ARCHIVE -> "to toggle archive"
             LinkOperation.RESTORE -> "to restore link"
+            LinkOperation.PERMANENT_DELETE -> "to permanently delete link"
             LinkOperation.FETCH_PREVIEW -> "to fetch link preview"
         }
         return getErrorMessage(exception, context)
@@ -132,6 +133,7 @@ enum class LinkOperation {
     TOGGLE_FAVORITE,
     TOGGLE_ARCHIVE,
     RESTORE,
+    PERMANENT_DELETE,
     FETCH_PREVIEW
 }
 

@@ -48,7 +48,8 @@ val viewModelModule = module {
             deleteSnapshotUseCase = get(),
             toggleFavoriteUseCase = get(),
             toggleArchiveUseCase = get(),
-            deleteLinkUseCase = get()
+            deleteLinkUseCase = get(),
+            restoreLinkUseCase = get()
         )
     }
 

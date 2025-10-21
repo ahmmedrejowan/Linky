@@ -26,10 +26,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -111,6 +114,8 @@ fun LinkDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var showRestoreDialogFromMenu by remember { mutableStateOf(false) }
+    var showPermanentDeleteDialogFromMenu by remember { mutableStateOf(false) }
 
     // Navigate back on delete
     LaunchedEffect(state.isDeleted) {
@@ -159,27 +164,30 @@ fun LinkDetailScreen(
                     }
                 },
                 actions = {
-                    // Edit button
-                    IconButton(
-                        onClick = { state.link?.let { onEditClick(it.id) } },
-                        enabled = state.link != null
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = "Edit link"
-                        )
-                    }
+                    // Only show Edit and Favorite actions if link is NOT deleted
+                    if (state.link?.isDeleted != true) {
+                        // Edit button
+                        IconButton(
+                            onClick = { state.link?.let { onEditClick(it.id) } },
+                            enabled = state.link != null
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = "Edit link"
+                            )
+                        }
 
-                    // Favorite toggle
-                    IconButton(
-                        onClick = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite) },
-                        enabled = state.link != null
-                    ) {
-                        Icon(
-                            imageVector = if (state.link?.isFavorite == true) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = if (state.link?.isFavorite == true) "Remove from favorites" else "Add to favorites",
-                            tint = if (state.link?.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // Favorite toggle
+                        IconButton(
+                            onClick = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite) },
+                            enabled = state.link != null
+                        ) {
+                            Icon(
+                                imageVector = if (state.link?.isFavorite == true) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = if (state.link?.isFavorite == true) "Remove from favorites" else "Add to favorites",
+                                tint = if (state.link?.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // More options menu
@@ -198,40 +206,75 @@ fun LinkDetailScreen(
                             expanded = showMoreMenu,
                             onDismissRequest = { showMoreMenu = false }
                         ) {
-                            // Archive/Unarchive
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        if (state.link?.isArchived == true) "Unarchive" else "Archive"
-                                    )
-                                },
-                                onClick = {
-                                    viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
-                                    showMoreMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (state.link?.isArchived == true) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                                        contentDescription = null
-                                    )
-                                }
-                            )
+                            // Show different options based on deletion state
+                            if (state.link?.isDeleted == true) {
+                                // Restore option for deleted links
+                                DropdownMenuItem(
+                                    text = { Text("Restore") },
+                                    onClick = {
+                                        showRestoreDialogFromMenu = true
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Filled.RestoreFromTrash,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
 
-                            // Delete
-                            DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    viewModel.onEvent(LinkDetailEvent.OnDeleteLink)
-                                    showMoreMenu = false
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            )
+                                // Permanent Delete option for deleted links
+                                DropdownMenuItem(
+                                    text = { Text("Delete Permanently", color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        showPermanentDeleteDialogFromMenu = true
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                )
+                            } else {
+                                // Normal options for non-deleted links
+                                // Archive/Unarchive
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (state.link?.isArchived == true) "Unarchive" else "Archive"
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (state.link?.isArchived == true) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+
+                                // Delete (soft delete)
+                                DropdownMenuItem(
+                                    text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink)
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 },
@@ -278,11 +321,61 @@ fun LinkDetailScreen(
                         onDeleteSnapshot = { snapshotId ->
                             viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(snapshotId))
                         },
+                        onRestoreLink = { viewModel.onEvent(LinkDetailEvent.OnRestoreLink) },
+                        onPermanentlyDeleteLink = { viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink) },
                         snackbarHostState = snackbarHostState
                     )
                 }
             }
         }
+    }
+
+    // Restore confirmation dialog (from menu)
+    if (showRestoreDialogFromMenu) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRestoreDialogFromMenu = false },
+            title = { Text("Restore Link?") },
+            text = { Text("This link will be restored from trash and moved back to your active links.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink)
+                        showRestoreDialogFromMenu = false
+                    }
+                ) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDialogFromMenu = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Permanent delete confirmation dialog (from menu)
+    if (showPermanentDeleteDialogFromMenu) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPermanentDeleteDialogFromMenu = false },
+            title = { Text("Delete Permanently?") },
+            text = { Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink)
+                        showPermanentDeleteDialogFromMenu = false
+                    }
+                ) {
+                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermanentDeleteDialogFromMenu = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -300,6 +393,8 @@ private fun LinkContent(
     onNavigateToCollection: (String) -> Unit,
     onCreateSnapshot: () -> Unit,
     onDeleteSnapshot: (String) -> Unit,
+    onRestoreLink: () -> Unit,
+    onPermanentlyDeleteLink: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -309,6 +404,8 @@ private fun LinkContent(
     var descriptionExpanded by remember { mutableStateOf(false) }
     var noteExpanded by remember { mutableStateOf(false) }
     var snapshotsExpanded by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var showPermanentDeleteDialog by remember { mutableStateOf(false) }
 
     // Launch coroutine scope for snackbar
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -328,12 +425,56 @@ private fun LinkContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (link.isDeleted) {
+                    val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
                     StatusBanner(
-                        message = "This link has been moved to trash. You can restore it from the Trash section.",
+                        message = "This link has been moved to trash. You can restore it or it'll be automatically deleted after $daysLeft days.",
                         backgroundColor = MaterialTheme.colorScheme.errorContainer,
                         textColor = MaterialTheme.colorScheme.onErrorContainer,
                         iconColor = MaterialTheme.colorScheme.error
                     )
+
+                    // Restore and Delete buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Restore button
+                        OutlinedButton(
+                            onClick = { showRestoreDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.RestoreFromTrash,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Restore")
+                        }
+
+                        // Delete permanently button
+                        OutlinedButton(
+                            onClick = { showPermanentDeleteDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete")
+                        }
+                    }
                 }
                 if (link.isArchived) {
                     StatusBanner(
@@ -609,7 +750,7 @@ private fun LinkContent(
 
                 TextButton(
                     onClick = onCreateSnapshot,
-                    enabled = !isCapturingSnapshot
+                    enabled = !isCapturingSnapshot && !link.isDeleted
                 ) {
                     if (isCapturingSnapshot) {
                         Text("Capturing...")
@@ -671,6 +812,54 @@ private fun LinkContent(
                 }
             }
         }
+    }
+
+    // Restore confirmation dialog
+    if (showRestoreDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRestoreDialog = false },
+            title = { Text("Restore Link?") },
+            text = { Text("This link will be restored from trash and moved back to your active links.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRestoreLink()
+                        showRestoreDialog = false
+                    }
+                ) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Permanent delete confirmation dialog
+    if (showPermanentDeleteDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPermanentDeleteDialog = false },
+            title = { Text("Delete Permanently?") },
+            text = { Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onPermanentlyDeleteLink()
+                        showPermanentDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermanentDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -925,4 +1114,15 @@ private fun StatusBanner(
             )
         }
     }
+}
+
+/**
+ * Calculate days remaining until auto-deletion (30 days from deletedAt)
+ */
+private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
+    val now = System.currentTimeMillis()
+    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L) // 30 days in milliseconds
+    val remainingTime = deletionTime - now
+    val daysLeft = (remainingTime / (24 * 60 * 60 * 1000L)).toInt()
+    return maxOf(0, daysLeft) // Ensure it's never negative
 }

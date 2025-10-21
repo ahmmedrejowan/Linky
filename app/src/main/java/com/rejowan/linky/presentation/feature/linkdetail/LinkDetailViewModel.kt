@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.domain.usecase.collection.GetCollectionByIdUseCase
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
+import com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.domain.usecase.snapshot.CaptureSnapshotUseCase
@@ -36,7 +37,8 @@ class LinkDetailViewModel(
     private val deleteSnapshotUseCase: DeleteSnapshotUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val toggleArchiveUseCase: ToggleArchiveUseCase,
-    private val deleteLinkUseCase: DeleteLinkUseCase
+    private val deleteLinkUseCase: DeleteLinkUseCase,
+    private val restoreLinkUseCase: RestoreLinkUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LinkDetailState())
@@ -56,6 +58,8 @@ class LinkDetailViewModel(
             is LinkDetailEvent.OnToggleFavorite -> toggleFavorite()
             is LinkDetailEvent.OnDeleteLink -> deleteLink()
             is LinkDetailEvent.OnArchiveLink -> archiveLink()
+            is LinkDetailEvent.OnRestoreLink -> restoreLink()
+            is LinkDetailEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink()
             is LinkDetailEvent.OnRefresh -> linkId?.let { loadLinkDetails(it) }
             is LinkDetailEvent.OnCreateSnapshot -> captureSnapshot()
             is LinkDetailEvent.OnDeleteSnapshot -> deleteSnapshot(event.snapshotId)
@@ -173,6 +177,46 @@ class LinkDetailViewModel(
         }
     }
 
+    private fun restoreLink() {
+        val link = _state.value.link ?: return
+
+        viewModelScope.launch {
+            when (val result = restoreLinkUseCase(link.id)) {
+                is Result.Success -> {
+                    Timber.d("Restored link: ${link.id}")
+                    _state.update { it.copy(successMessage = "Link restored") }
+                    kotlinx.coroutines.delay(150)
+                    _state.update { it.copy(isDeleted = true) } // Navigate back
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
+    private fun permanentlyDeleteLink() {
+        val link = _state.value.link ?: return
+
+        viewModelScope.launch {
+            when (val result = deleteLinkUseCase(link.id, softDelete = false)) {
+                is Result.Success -> {
+                    Timber.d("Permanently deleted link: ${link.id}")
+                    _state.update { it.copy(successMessage = "Link permanently deleted") }
+                    kotlinx.coroutines.delay(150)
+                    _state.update { it.copy(isDeleted = true) } // Navigate back
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.PERMANENT_DELETE)
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
     private fun captureSnapshot() {
         val link = _state.value.link ?: return
 
@@ -230,6 +274,8 @@ sealed class LinkDetailEvent {
     data object OnToggleFavorite : LinkDetailEvent()
     data object OnDeleteLink : LinkDetailEvent()
     data object OnArchiveLink : LinkDetailEvent()
+    data object OnRestoreLink : LinkDetailEvent()
+    data object OnPermanentlyDeleteLink : LinkDetailEvent()
     data object OnRefresh : LinkDetailEvent()
     data object OnCreateSnapshot : LinkDetailEvent()
     data class OnDeleteSnapshot(val snapshotId: String) : LinkDetailEvent()
