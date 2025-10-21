@@ -66,7 +66,7 @@ interface CollectionDao {
         ORDER BY createdAt DESC
         LIMIT 3
     """)
-    suspend fun getPreviewsForCollection(collectionId: String): List<String?>
+    suspend fun getPreviewsForCollection(collectionId: String): List<String>
 
     // Count collections
     @Query("SELECT COUNT(*) FROM collections")
