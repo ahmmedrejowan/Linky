@@ -19,6 +19,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rejowan.linky.presentation.components.BottomNavigationBar
+import timber.log.Timber
 
 /**
  * Main screen - Container for the bottom navigation experience
@@ -36,11 +38,15 @@ import com.rejowan.linky.presentation.components.BottomNavigationBar
  * It contains the BottomNavHost (nested navigation for Home/Collections/Settings)
  *
  * @param parentNavController Parent NavController for navigating outside bottom nav
+ * @param sharedUrl URL shared from another app via ACTION_SEND intent
+ * @param onSharedUrlHandled Callback when shared URL has been handled
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     parentNavController: NavHostController,
+    sharedUrl: String? = null,
+    onSharedUrlHandled: () -> Unit = {}
 ) {
     // Local nav controller for bottom nav (nested navigation)
     val bottomNavController = rememberNavController()
@@ -49,6 +55,15 @@ fun MainScreen(
 
     // State for Collections screen FAB action
     var onCreateCollectionClick by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // Handle shared URL from other apps
+    LaunchedEffect(sharedUrl) {
+        if (!sharedUrl.isNullOrBlank()) {
+            Timber.d("Handling shared URL: $sharedUrl")
+            parentNavController.navigate(Route.AddEditLink(url = sharedUrl))
+            onSharedUrlHandled()
+        }
+    }
 
     // Get current route for bottom nav selection and FAB logic
     // Match route by checking destination route string (contains route class name)

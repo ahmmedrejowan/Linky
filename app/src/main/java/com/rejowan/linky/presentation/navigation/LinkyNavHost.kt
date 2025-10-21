@@ -24,14 +24,16 @@ import com.rejowan.linky.presentation.feature.trash.TrashScreen
  * Bottom nav screens (Home/Collections/Settings) are in BottomNavHost within MainScreen
  *
  * @param navController The NavHostController for app-level navigation
- * @param snackbarHostState Shared SnackbarHostState from MainActivity
- * @param modifier Modifier for the NavHost
  * @param isAuthRequired Whether authentication is required (Phase 2)
+ * @param sharedUrl URL shared from another app via ACTION_SEND intent
+ * @param onSharedUrlHandled Callback when shared URL has been handled
  */
 @Composable
 fun LinkyNavHost(
     navController: NavHostController,
-    isAuthRequired: Boolean = false // Phase 2: checks preferences
+    isAuthRequired: Boolean = false, // Phase 2: checks preferences
+    sharedUrl: String? = null,
+    onSharedUrlHandled: () -> Unit = {}
 ) {
     val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main
 
@@ -87,6 +89,8 @@ fun LinkyNavHost(
         composable<Route.Main> {
             MainScreen(
                 parentNavController = navController,
+                sharedUrl = sharedUrl,
+                onSharedUrlHandled = onSharedUrlHandled
             )
         }
 
