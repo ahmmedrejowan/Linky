@@ -142,7 +142,7 @@ class HomeViewModel(
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { links ->
-                    val sortedLinks = sortLinks(links, _state.value.sortType)
+                    val sortedLinks = sortLinks(links, _state.value.sortType, _state.value.filterType)
                     _state.update { it.copy(links = sortedLinks, isLoading = false, error = null) }
                 }
         }
@@ -150,17 +150,27 @@ class HomeViewModel(
 
     private fun applySorting() {
         val currentLinks = _state.value.links
-        val sortedLinks = sortLinks(currentLinks, _state.value.sortType)
+        val sortedLinks = sortLinks(currentLinks, _state.value.sortType, _state.value.filterType)
         _state.update { it.copy(links = sortedLinks) }
     }
 
-    private fun sortLinks(links: List<Link>, sortType: SortType): List<Link> {
-        return when (sortType) {
+    private fun sortLinks(links: List<Link>, sortType: SortType, filterType: FilterType): List<Link> {
+        // Apply the selected sort to all links
+        val sorted = when (sortType) {
             SortType.DATE_ADDED_DESC -> links.sortedByDescending { it.createdAt }
             SortType.DATE_ADDED_ASC -> links.sortedBy { it.createdAt }
             SortType.TITLE_ASC -> links.sortedBy { it.title.lowercase() }
             SortType.TITLE_DESC -> links.sortedByDescending { it.title.lowercase() }
             SortType.LAST_MODIFIED -> links.sortedByDescending { it.updatedAt }
+        }
+
+        // Prioritize favorites at top only for ALL and ARCHIVED filters
+        return if (filterType == FilterType.ALL || filterType == FilterType.ARCHIVED) {
+            val favorites = sorted.filter { it.isFavorite }
+            val nonFavorites = sorted.filter { !it.isFavorite }
+            favorites + nonFavorites
+        } else {
+            sorted
         }
     }
 

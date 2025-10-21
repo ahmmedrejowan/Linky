@@ -100,12 +100,14 @@ class CollectionsViewModel(
 
     /**
      * Sort collections based on sort type
+     * Favorites are always prioritized at the top
      */
     private fun sortCollections(
         collections: List<com.rejowan.linky.domain.model.CollectionWithLinkCount>,
         sortType: CollectionSortType
     ): List<com.rejowan.linky.domain.model.CollectionWithLinkCount> {
-        return when (sortType) {
+        // Apply the selected sort to all collections
+        val sorted = when (sortType) {
             CollectionSortType.DATE_CREATED_DESC -> collections.sortedByDescending { it.collection.createdAt }
             CollectionSortType.DATE_CREATED_ASC -> collections.sortedBy { it.collection.createdAt }
             CollectionSortType.NAME_ASC -> collections.sortedBy { it.collection.name.lowercase() }
@@ -114,6 +116,11 @@ class CollectionsViewModel(
             CollectionSortType.MOST_LINKS -> collections.sortedByDescending { it.linkCount }
             CollectionSortType.LEAST_LINKS -> collections.sortedBy { it.linkCount }
         }
+
+        // Always prioritize favorite collections at the top
+        val favorites = sorted.filter { it.collection.isFavorite }
+        val nonFavorites = sorted.filter { !it.collection.isFavorite }
+        return favorites + nonFavorites
     }
 
     private fun saveCollection() {
