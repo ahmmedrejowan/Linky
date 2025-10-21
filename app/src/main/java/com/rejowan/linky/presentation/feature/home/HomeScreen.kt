@@ -205,6 +205,7 @@ private fun FilterSegmentedButtons(
 
 /**
  * Content area - LazyColumn with header items and links
+ * Filter tabs are always visible, even when list is empty
  */
 @Composable
 private fun HomeContent(
@@ -217,72 +218,73 @@ private fun HomeContent(
     onSortTypeChange: (SortType) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    when {
-        // Loading state (initial load only)
-        state.isLoading && state.links.isEmpty() -> {
-            LoadingIndicator(message = "Loading links...")
-        }
+    Column(modifier = modifier.fillMaxSize()) {
+        // Filter Segmented Buttons - ALWAYS VISIBLE
+        FilterSegmentedButtons(
+            selectedFilter = state.filterType,
+            onFilterSelected = onFilterTypeChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+        )
 
-        // Error state
-        state.error != null -> {
-            ErrorStates.GenericError(
-                errorMessage = state.error, onRetryClick = onRetry
-            )
-        }
+        // Content area - changes based on state
+        when {
+            // Loading state (initial load only)
+            state.isLoading && state.links.isEmpty() -> {
+                LoadingIndicator(message = "Loading links...")
+            }
 
-        // Empty states
-        state.links.isEmpty() -> {
-            EmptyContent(
-                filterType = state.filterType,
-                onAddLinkClick = onAddLinkClick
-            )
-        }
+            // Error state
+            state.error != null -> {
+                ErrorStates.GenericError(
+                    errorMessage = state.error, onRetryClick = onRetry
+                )
+            }
 
-        // Links list with header items
-        else -> {
-            LazyColumn(
-                modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Header Item 1: Filter Segmented Buttons
-                item(key = "filter_buttons") {
-                    FilterSegmentedButtons(
-                        selectedFilter = state.filterType,
-                        onFilterSelected = onFilterTypeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
-                    )
-                }
+            // Empty states
+            state.links.isEmpty() -> {
+                EmptyContent(
+                    filterType = state.filterType,
+                    onAddLinkClick = onAddLinkClick
+                )
+            }
 
-                // Header Item 2: Count and Sort Row
-                item(key = "count_sort") {
-                    CountAndSortRow(
-                        count = state.links.size,
-                        sortType = state.sortType,
-                        onSortClick = onSortTypeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
-                    )
-                }
+            // Links list with count/sort header
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Header: Count and Sort Row
+                    item(key = "count_sort") {
+                        CountAndSortRow(
+                            count = state.links.size,
+                            sortType = state.sortType,
+                            onSortClick = onSortTypeChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 0.dp)
+                        )
+                    }
 
-                // Link Items
-                items(
-                    items = state.links,
-                    key = { it.id }
-                ) { link ->
-                    LinkCard(
-                        link = link,
-                        onClick = { onLinkClick(link.id) },
-                        onFavoriteClick = {
-                            onFavoriteClick(link.id, !link.isFavorite)
-                        },
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .animateItem()
-                    )
+                    // Link Items
+                    items(
+                        items = state.links,
+                        key = { it.id }
+                    ) { link ->
+                        LinkCard(
+                            link = link,
+                            onClick = { onLinkClick(link.id) },
+                            onFavoriteClick = {
+                                onFavoriteClick(link.id, !link.isFavorite)
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .animateItem()
+                        )
+                    }
                 }
             }
         }
