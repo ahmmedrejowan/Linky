@@ -171,7 +171,8 @@ fun MainScreen(
                 ) {
                     Icon(
                         imageVector = fabIcon,
-                        contentDescription = fabContentDescription
+                        contentDescription = fabContentDescription,
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
