@@ -17,6 +17,7 @@ object LinkMapper {
             previewUrl = previewUrl,
             isFavorite = isFavorite,
             isArchived = isArchived,
+            hideFromHome = hideFromHome,
             deletedAt = deletedAt,
             createdAt = createdAt,
             updatedAt = updatedAt,
@@ -38,6 +39,7 @@ object LinkMapper {
             previewUrl = previewUrl,
             isFavorite = isFavorite,
             isArchived = isArchived,
+            hideFromHome = hideFromHome,
             deletedAt = deletedAt,
             createdAt = createdAt,
             updatedAt = updatedAt

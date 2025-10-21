@@ -93,12 +93,23 @@ class AddEditLinkViewModel(
             }
             is AddEditLinkEvent.OnCollectionSelect -> {
                 Timber.d("Collection selected: ${event.collectionId}")
-                _state.update { it.copy(selectedCollectionId = event.collectionId) }
+                // When collection is deselected (null), automatically set hideFromHome to false
+                if (event.collectionId == null) {
+                    Timber.d("Collection deselected, resetting hideFromHome to false")
+                    _state.update { it.copy(selectedCollectionId = null, hideFromHome = false) }
+                } else {
+                    _state.update { it.copy(selectedCollectionId = event.collectionId) }
+                }
             }
             is AddEditLinkEvent.OnToggleFavorite -> {
                 val newValue = !_state.value.isFavorite
                 Timber.d("Favorite toggled: $newValue")
                 _state.update { it.copy(isFavorite = newValue) }
+            }
+            is AddEditLinkEvent.OnToggleHideFromHome -> {
+                val newValue = !_state.value.hideFromHome
+                Timber.d("HideFromHome toggled: $newValue")
+                _state.update { it.copy(hideFromHome = newValue) }
             }
             is AddEditLinkEvent.OnFetchPreview -> {
                 Timber.d("Fetch preview requested")
@@ -228,7 +239,7 @@ class AddEditLinkViewModel(
                 .collect { link ->
                     link?.let {
                         Timber.d("loadLink: Link loaded successfully | Title: ${it.title} | URL: ${it.url}")
-                        Timber.d("loadLink: Link details | Favorite: ${it.isFavorite} | CollectionId: ${it.collectionId} | PreviewPath: ${it.previewImagePath != null}")
+                        Timber.d("loadLink: Link details | Favorite: ${it.isFavorite} | CollectionId: ${it.collectionId} | HideFromHome: ${it.hideFromHome} | PreviewPath: ${it.previewImagePath != null}")
                         _state.update { state ->
                             state.copy(
                                 linkId = it.id,
@@ -240,6 +251,7 @@ class AddEditLinkViewModel(
                                 previewImagePath = it.previewImagePath,
                                 previewUrl = it.previewUrl,
                                 isFavorite = it.isFavorite,
+                                hideFromHome = it.hideFromHome,
                                 isLoading = false
                             )
                         }
@@ -432,11 +444,12 @@ class AddEditLinkViewModel(
                 collectionId = currentState.selectedCollectionId,
                 previewImagePath = currentState.previewImagePath,
                 previewUrl = currentState.previewUrl,
-                isFavorite = currentState.isFavorite
+                isFavorite = currentState.isFavorite,
+                hideFromHome = currentState.hideFromHome
             )
 
             Timber.d("saveLink: Link object created | ID: ${link.id} | Title: ${link.title}")
-            Timber.d("saveLink: Link details | URL: ${link.url} | Collection: ${link.collectionId} | Favorite: ${link.isFavorite}")
+            Timber.d("saveLink: Link details | URL: ${link.url} | Collection: ${link.collectionId} | Favorite: ${link.isFavorite} | HideFromHome: ${link.hideFromHome}")
             Timber.d("saveLink: Link previews | ImagePath: ${link.previewImagePath != null} | PreviewURL: ${link.previewUrl != null}")
 
             val operation = if (currentState.isEditMode) "UPDATE" else "SAVE"
@@ -480,6 +493,7 @@ sealed class AddEditLinkEvent {
     data class OnNoteChange(val note: String) : AddEditLinkEvent()
     data class OnCollectionSelect(val collectionId: String?) : AddEditLinkEvent()
     data object OnToggleFavorite : AddEditLinkEvent()
+    data object OnToggleHideFromHome : AddEditLinkEvent()
     data object OnFetchPreview : AddEditLinkEvent()
     data object OnSave : AddEditLinkEvent()
     // Create collection dialog events

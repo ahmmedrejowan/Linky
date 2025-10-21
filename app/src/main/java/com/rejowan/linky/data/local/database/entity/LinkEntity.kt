@@ -55,6 +55,9 @@ data class LinkEntity(
     @ColumnInfo(name = "isArchived")
     val isArchived: Boolean = false,
 
+    @ColumnInfo(name = "hideFromHome", defaultValue = "0")
+    val hideFromHome: Boolean = false,
+
     @ColumnInfo(name = "deletedAt")
     val deletedAt: Long? = null,
 

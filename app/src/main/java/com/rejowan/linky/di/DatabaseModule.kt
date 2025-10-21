@@ -2,6 +2,7 @@ package com.rejowan.linky.di
 
 import androidx.room.Room
 import com.rejowan.linky.data.local.database.AppDatabase
+import com.rejowan.linky.data.local.database.MIGRATION_4_5
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -12,6 +13,7 @@ val databaseModule = module {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
+            .addMigrations(MIGRATION_4_5)
             // DEV MODE: Allow destructive migration (drops and recreates tables on schema changes)
             // TODO: Before production, add migrations and set fallbackToDestructiveMigration(false)
             .fallbackToDestructiveMigration(true)

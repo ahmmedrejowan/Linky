@@ -433,6 +433,32 @@ fun AddEditLinkScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Hide from Home toggle (only enabled when collection is selected)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Hide from Home",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "Only show in collection",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = state.hideFromHome,
+                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleHideFromHome) },
+                    enabled = state.selectedCollectionId != null
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Save Button
             Button(
                 onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },

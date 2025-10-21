@@ -20,7 +20,13 @@ class UpdateLinkUseCase(
         return if (validationResult is ValidationResult.Error) {
             Result.Error(IllegalArgumentException(validationResult.message))
         } else {
-            linkRepository.updateLink(link)
+            // Enforce business rule: hideFromHome must be false when collectionId is null
+            val sanitizedLink = if (link.collectionId == null) {
+                link.copy(hideFromHome = false)
+            } else {
+                link
+            }
+            linkRepository.updateLink(sanitizedLink)
         }
     }
 }

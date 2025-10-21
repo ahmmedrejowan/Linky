@@ -11,20 +11,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LinkDao {
-    // Get all active links (not deleted, not archived) - favorites first, then by date
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY isFavorite DESC, updatedAt DESC")
+    // Get all active links (not deleted, not archived, not hidden from home) - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllActiveLinks(): Flow<List<LinkEntity>>
 
-    // Get all links (excluding archived and deleted) - used for "All" filter - favorites first, then by date
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY isFavorite DESC, updatedAt DESC")
+    // Get all links (excluding archived, deleted, and hidden from home) - used for "All" filter - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllLinks(): Flow<List<LinkEntity>>
 
-    // Get favorites (excluding archived and deleted)
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND isFavorite = 1 ORDER BY updatedAt DESC")
+    // Get favorites (excluding archived, deleted, and hidden from home)
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 AND isFavorite = 1 ORDER BY updatedAt DESC")
     fun getFavoriteLinks(): Flow<List<LinkEntity>>
 
-    // Get archived - favorites first, then by date
-    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 1 ORDER BY isFavorite DESC, updatedAt DESC")
+    // Get archived (excluding hidden from home) - favorites first, then by date
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 1 AND hideFromHome = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getArchivedLinks(): Flow<List<LinkEntity>>
 
     // Get trashed (soft deleted)
@@ -90,14 +90,14 @@ interface LinkDao {
     @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL")
     suspend fun countLinks(): Int
 
-    // Count queries with Flow for real-time updates
-    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0")
+    // Count queries with Flow for real-time updates (excluding hidden from home)
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0")
     fun getAllLinksCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND isFavorite = 1")
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 AND isFavorite = 1")
     fun getFavoriteLinksCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 1")
+    @Query("SELECT COUNT(*) FROM links WHERE deletedAt IS NULL AND isArchived = 1 AND hideFromHome = 0")
     fun getArchivedLinksCount(): Flow<Int>
 
     // Phase 2: Sync queries

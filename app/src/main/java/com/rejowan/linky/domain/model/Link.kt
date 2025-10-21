@@ -13,6 +13,7 @@ data class Link(
     val previewUrl: String? = null,
     val isFavorite: Boolean = false,
     val isArchived: Boolean = false,
+    val hideFromHome: Boolean = false,
     val deletedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()

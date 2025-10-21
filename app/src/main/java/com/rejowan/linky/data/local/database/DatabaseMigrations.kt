@@ -1,5 +1,8 @@
 package com.rejowan.linky.data.local.database
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 /**
  * Database Migrations
  *
@@ -23,4 +26,14 @@ package com.rejowan.linky.data.local.database
  * ```
  */
 
-// Add future migrations here when needed
+/**
+ * Migration from version 4 to 5
+ * Date: 2025-01-22
+ * Description: Add hideFromHome column to links table
+ * - hideFromHome: Boolean field to hide links from home screen when in collections
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE links ADD COLUMN hideFromHome INTEGER NOT NULL DEFAULT 0")
+    }
+}

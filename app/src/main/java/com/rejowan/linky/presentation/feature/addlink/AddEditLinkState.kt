@@ -13,6 +13,7 @@ data class AddEditLinkState(
     val previewImagePath: String? = null,
     val previewUrl: String? = null,
     val isFavorite: Boolean = false,
+    val hideFromHome: Boolean = false,
     val isLoading: Boolean = false,
     val isFetchingPreview: Boolean = false,
     val error: String? = null,
