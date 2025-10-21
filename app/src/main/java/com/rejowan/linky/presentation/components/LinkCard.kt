@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -66,50 +68,51 @@ fun LinkCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Preview Image
-            if (link.previewImagePath != null || link.previewUrl != null) {
-                AsyncImage(
-                    model = link.previewImagePath ?: link.previewUrl,
-                    contentDescription = "Preview for ${link.title}",
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                // Placeholder when no preview
-                Icon(
-                    imageVector = Icons.Default.Image,
-                    contentDescription = "No preview",
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Content (Title, URL, Timestamp, Status Tags)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+            // Preview Image with Status Badge Overlay
+            Box(
+                modifier = Modifier.size(72.dp)
             ) {
-                // Status Tags (Archived/Deleted)
+                if (link.previewImagePath != null || link.previewUrl != null) {
+                    AsyncImage(
+                        model = link.previewImagePath ?: link.previewUrl,
+                        contentDescription = "Preview for ${link.title}",
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Placeholder when no preview
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = "No preview",
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Status Banner Overlay (Archived/Deleted)
                 if (link.isArchived || link.isDeleted) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                     ) {
                         if (link.isDeleted) {
-                            StatusChip(
+                            StatusBanner(
                                 text = "Deleted",
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                                 labelColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                         if (link.isArchived) {
-                            StatusChip(
+                            StatusBanner(
                                 text = "Archived",
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 labelColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -117,7 +120,13 @@ fun LinkCard(
                         }
                     }
                 }
+            }
 
+            // Content (Title, URL, Timestamp)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 // Title
                 Text(
                     text = link.title,
@@ -191,10 +200,11 @@ private fun Long.toRelativeTime(): String {
 }
 
 /**
- * Status chip for archived/deleted indicators
+ * Status banner for overlay on preview image
+ * Full-width banner at the top of the image with centered text
  */
 @Composable
-private fun StatusChip(
+private fun StatusBanner(
     text: String,
     containerColor: androidx.compose.ui.graphics.Color,
     labelColor: androidx.compose.ui.graphics.Color,
@@ -204,11 +214,10 @@ private fun StatusChip(
         text = text,
         style = MaterialTheme.typography.labelSmall,
         color = labelColor,
+        textAlign = TextAlign.Center,
         modifier = modifier
-            .background(
-                color = containerColor,
-                shape = RoundedCornerShape(4.dp)
-            )
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .fillMaxWidth()
+            .background(color = containerColor.copy(alpha = 0.92f))
+            .padding(horizontal = 6.dp, vertical = 3.dp)
     )
 }
