@@ -1,5 +1,7 @@
 package com.rejowan.linky.presentation.feature.home
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -93,6 +96,12 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Handle back press - show exit confirmation
+    BackHandler {
+        showExitDialog = true
+    }
 
     // Check clipboard when screen resumes
     DisposableEffect(lifecycleOwner) {
@@ -140,6 +149,18 @@ fun HomeScreen(
             },
             onDismiss = {
                 viewModel.onEvent(HomeEvent.OnDismissClipboardPrompt)
+            }
+        )
+    }
+
+    // Exit Confirmation Bottom Sheet
+    if (showExitDialog) {
+        ExitConfirmationBottomSheet(
+            onConfirm = {
+                (context as? Activity)?.finish()
+            },
+            onDismiss = {
+                showExitDialog = false
             }
         )
     }
@@ -504,6 +525,81 @@ private fun ClipboardUrlBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Add Link")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Exit Confirmation Bottom Sheet
+ * Asks user to confirm before exiting the app
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExitConfirmationBottomSheet(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Header with icon and title
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Text(
+                    text = "Exit Linky?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Message
+            Text(
+                text = "Are you sure you want to exit the app?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Cancel button
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Cancel")
+                }
+
+                // Exit button
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Exit")
                 }
             }
         }
