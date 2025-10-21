@@ -10,8 +10,6 @@ data class LinkDetailState(
     val snapshots: List<Snapshot> = emptyList(),
     val isLoading: Boolean = false,
     val isCapturingSnapshot: Boolean = false,
-    val error: String? = null,
     val isDeleted: Boolean = false,
-    val snapshotCaptured: Boolean = false,
-    val successMessage: String? = null
+    val snapshotCaptured: Boolean = false
 )

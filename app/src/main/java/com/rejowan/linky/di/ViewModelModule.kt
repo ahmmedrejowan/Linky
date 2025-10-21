@@ -34,7 +34,8 @@ val viewModelModule = module {
             getAllCollectionsUseCase = get(),
             saveCollectionUseCase = get(),
             linkPreviewFetcher = get(),
-            fileStorageManager = get()
+            fileStorageManager = get(),
+            preferencesManager = get()
         )
     }
 

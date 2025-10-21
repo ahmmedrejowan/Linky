@@ -26,6 +26,7 @@ fun BottomNavHost(
     parentNavController: NavHostController,
     snackbarHostState: SnackbarHostState,
     onCreateCollectionClick: (() -> Unit) -> Unit,
+    onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -51,7 +52,8 @@ fun BottomNavHost(
                 onNavigateToSettings = {
                     // Navigate within bottom nav using local controller
                     navController.navigate(Route.Settings)
-                }
+                },
+                onExitRequest = onExitRequest
             )
         }
 

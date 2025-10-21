@@ -13,8 +13,11 @@ import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
@@ -35,6 +38,9 @@ class HomeViewModel(
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<HomeUiEvent>()
+    val uiEvents: SharedFlow<HomeUiEvent> = _uiEvents.asSharedFlow()
 
     // Flow that tracks the current filter type
     private val filterTypeFlow = MutableStateFlow(FilterType.ALL)
@@ -217,7 +223,7 @@ class HomeViewModel(
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -232,12 +238,16 @@ class HomeViewModel(
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
         }
     }
+}
+
+sealed class HomeUiEvent {
+    data class ShowError(val message: String) : HomeUiEvent()
 }
 
 sealed class HomeEvent {

@@ -7,7 +7,7 @@ data class HomeState(
     val filterType: FilterType = FilterType.ALL,
     val sortType: SortType = SortType.DATE_ADDED_DESC,
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: String? = null, // For critical load failures (full-screen error state)
     val allLinksCount: Int = 0,
     val favoriteLinksCount: Int = 0,
     val archivedLinksCount: Int = 0,

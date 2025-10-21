@@ -1,6 +1,5 @@
 package com.rejowan.linky.presentation.feature.home
 
-import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,11 +35,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,17 +93,32 @@ fun HomeScreen(
     onLinkClick: (String) -> Unit,
     onNavigateToCollections: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var showExitDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Handle back press - show exit confirmation
+    // Collect and handle UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is HomeUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
+        }
+    }
+
+    // Handle back press - delegate to parent
     BackHandler {
-        showExitDialog = true
+        onExitRequest()
     }
 
     // Check clipboard when screen resumes
@@ -119,22 +137,30 @@ fun HomeScreen(
         }
     }
 
-    // Content Area with Pull-to-Refresh
-    PullToRefreshBox(
-        isRefreshing = state.isLoading && state.links.isNotEmpty(),
-        onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        HomeContent(
-            state = state,
-            onLinkClick = onLinkClick,
-            onFavoriteClick = { linkId, isFavorite ->
-                viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
-            },
-            onAddLinkClick = { onAddLinkClick(null) },
-            onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
-            onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
+    // Content Area with Pull-to-Refresh and Snackbar
+    Box(modifier = Modifier.fillMaxSize()) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.links.isNotEmpty(),
+            onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            HomeContent(
+                state = state,
+                onLinkClick = onLinkClick,
+                onFavoriteClick = { linkId, isFavorite ->
+                    viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+                },
+                onAddLinkClick = { onAddLinkClick(null) },
+                onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
+                onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
+                onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
+            )
+        }
+
+        // Snackbar host at bottom
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 
@@ -149,18 +175,6 @@ fun HomeScreen(
             },
             onDismiss = {
                 viewModel.onEvent(HomeEvent.OnDismissClipboardPrompt)
-            }
-        )
-    }
-
-    // Exit Confirmation Bottom Sheet
-    if (showExitDialog) {
-        ExitConfirmationBottomSheet(
-            onConfirm = {
-                (context as? Activity)?.finish()
-            },
-            onDismiss = {
-                showExitDialog = false
             }
         )
     }
@@ -378,7 +392,7 @@ private fun CountAndSortRow(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Sort,
-                    contentDescription = null,
+                    contentDescription = "Sort",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -389,7 +403,7 @@ private fun CountAndSortRow(
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = null,
+                    contentDescription = "Expand sort options",
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -415,7 +429,7 @@ private fun CountAndSortRow(
                             {
                                 Icon(
                                     imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
+                                    contentDescription = "Selected",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -460,7 +474,7 @@ private fun ClipboardUrlBottomSheet(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentPaste,
-                    contentDescription = null,
+                    contentDescription = "Link detected",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
                 )
@@ -520,7 +534,7 @@ private fun ClipboardUrlBottomSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null,
+                        contentDescription = "Add link",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -563,7 +577,7 @@ private fun ExitConfirmationBottomSheet(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = null,
+                    contentDescription = "Exit app",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
                 )

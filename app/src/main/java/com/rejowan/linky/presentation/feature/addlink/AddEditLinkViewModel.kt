@@ -19,8 +19,11 @@ import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
 import java.util.UUID
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -35,11 +38,15 @@ class AddEditLinkViewModel(
     private val getAllCollectionsUseCase: GetAllCollectionsUseCase,
     private val saveCollectionUseCase: SaveCollectionUseCase,
     private val linkPreviewFetcher: LinkPreviewFetcher,
-    private val fileStorageManager: FileStorageManager
+    private val fileStorageManager: FileStorageManager,
+    private val preferencesManager: com.rejowan.linky.util.PreferencesManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddEditLinkState())
     val state: StateFlow<AddEditLinkState> = _state.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<AddEditLinkUiEvent>()
+    val uiEvents: SharedFlow<AddEditLinkUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         val linkId = savedStateHandle.get<String>("linkId")
@@ -63,6 +70,9 @@ class AddEditLinkViewModel(
         }
 
         loadCollections()
+
+        // Initialize suggestion card visibility based on preferences
+        _state.update { it.copy(showPreviewFetchSuggestion = preferencesManager.shouldShowPreviewFetchSuggestion()) }
 
         // Check if we're editing an existing link
         linkId?.let {
@@ -114,6 +124,11 @@ class AddEditLinkViewModel(
             is AddEditLinkEvent.OnFetchPreview -> {
                 Timber.d("Fetch preview requested")
                 fetchPreview()
+            }
+            is AddEditLinkEvent.OnDismissPreviewSuggestion -> {
+                Timber.d("Preview suggestion dismissed")
+                preferencesManager.dismissPreviewFetchSuggestion()
+                _state.update { it.copy(showPreviewFetchSuggestion = false) }
             }
             is AddEditLinkEvent.OnSave -> {
                 Timber.d("Save link requested")
@@ -466,8 +481,9 @@ class AddEditLinkViewModel(
                     Timber.d("saveLink: Link ${operation.lowercase()}d successfully | ID: ${link.id}")
                     // Add small delay to allow database changes to propagate through Flows
                     kotlinx.coroutines.delay(150)
-                    _state.update { it.copy(isLoading = false, isSaved = true) }
-                    Timber.d("saveLink: State updated with isSaved = true")
+                    _state.update { it.copy(isLoading = false) }
+                    Timber.d("saveLink: Emitting LinkSaved event")
+                    _uiEvents.emit(AddEditLinkUiEvent.LinkSaved)
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "saveLink: Failed to ${operation.lowercase()} link - ${result.exception.message}")
@@ -486,6 +502,10 @@ class AddEditLinkViewModel(
     }
 }
 
+sealed class AddEditLinkUiEvent {
+    data object LinkSaved : AddEditLinkUiEvent()
+}
+
 sealed class AddEditLinkEvent {
     data class OnTitleChange(val title: String) : AddEditLinkEvent()
     data class OnDescriptionChange(val description: String) : AddEditLinkEvent()
@@ -495,6 +515,7 @@ sealed class AddEditLinkEvent {
     data object OnToggleFavorite : AddEditLinkEvent()
     data object OnToggleHideFromHome : AddEditLinkEvent()
     data object OnFetchPreview : AddEditLinkEvent()
+    data object OnDismissPreviewSuggestion : AddEditLinkEvent()
     data object OnSave : AddEditLinkEvent()
     // Create collection dialog events
     data object OnCreateCollectionClick : AddEditLinkEvent()

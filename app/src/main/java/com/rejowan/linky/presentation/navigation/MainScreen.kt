@@ -1,22 +1,32 @@
 package com.rejowan.linky.presentation.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +65,9 @@ fun MainScreen(
 
     // State for Collections screen FAB action
     var onCreateCollectionClick by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // State for exit confirmation dialog
+    var showExitDialog by remember { mutableStateOf(false) }
 
     // Handle shared URL from other apps
     LaunchedEffect(sharedUrl) {
@@ -186,7 +199,91 @@ fun MainScreen(
             onCreateCollectionClick = { callback ->
                 onCreateCollectionClick = callback
             },
+            onExitRequest = { showExitDialog = true },
             modifier = Modifier.padding(paddingValues)
         )
+    }
+
+    // Exit Confirmation Bottom Sheet
+    if (showExitDialog) {
+        ExitConfirmationBottomSheet(
+            onConfirm = { (parentNavController.context as? android.app.Activity)?.finish() },
+            onDismiss = { showExitDialog = false }
+        )
+    }
+}
+
+/**
+ * Exit Confirmation Bottom Sheet
+ * Asks user to confirm before exiting the app
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExitConfirmationBottomSheet(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Header with icon and title
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Exit app",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Text(
+                    text = "Exit Linky?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Message
+            Text(
+                text = "Are you sure you want to exit the app?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Cancel button
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Cancel")
+                }
+
+                // Exit button
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Exit")
+                }
+            }
+        }
     }
 }

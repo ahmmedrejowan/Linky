@@ -1,5 +1,6 @@
 package com.rejowan.linky.presentation.feature.addlink
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -59,6 +61,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,23 +104,29 @@ fun AddEditLinkScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
     var showBackConfirmDialog by remember { mutableStateOf(false) }
+    var linkSaved by remember { mutableStateOf(false) }
 
     // Check if there's unsaved data
-    val hasUnsavedData = remember(state.url, state.title, state.note, state.description, state.isSaved) {
-        !state.isSaved && (state.url.isNotBlank() || state.title.isNotBlank() ||
+    val hasUnsavedData = remember(state.url, state.title, state.note, state.description, linkSaved) {
+        !linkSaved && (state.url.isNotBlank() || state.title.isNotBlank() ||
             state.note.isNotBlank() || state.description.isNotBlank())
+    }
+
+    // Collect and handle UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is AddEditLinkUiEvent.LinkSaved -> {
+                    linkSaved = true
+                    onNavigateBack()
+                }
+            }
+        }
     }
 
     // Handle back press with confirmation if there's unsaved data
     BackHandler(enabled = hasUnsavedData) {
         showBackConfirmDialog = true
-    }
-
-    // Navigate back on successful save
-    LaunchedEffect(state.isSaved) {
-        if (state.isSaved) {
-            onNavigateBack()
-        }
     }
 
     // Show error in Snackbar when error state changes
@@ -212,6 +221,13 @@ fun AddEditLinkScreen(
                     )
                 }
             )
+
+            // Preview Fetch Suggestion Card
+            if (state.showPreviewFetchSuggestion) {
+                PreviewFetchSuggestionCard(
+                    onDismiss = { viewModel.onEvent(AddEditLinkEvent.OnDismissPreviewSuggestion) }
+                )
+            }
 
             // Fetch Preview Button - Auto-fetches title, description, and image from URL
             Row(
@@ -629,7 +645,7 @@ private fun CollectionDropdown(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = null,
+                            contentDescription = "Create new collection",
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -857,6 +873,71 @@ private fun ColorBlock(
                 tint = if (colorHex != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
+        }
+    }
+}
+
+/**
+ * Suggestion card explaining preview fetch behavior
+ */
+@Composable
+private fun PreviewFetchSuggestionCard(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Info icon
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Information",
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+
+            // Content column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "About Preview Fetch",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Text(
+                    text = "\"Fetch Preview\" will replace your current title and description with data from the URL. Any changes you've made will be overwritten.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                )
+            }
+
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }

@@ -127,25 +127,23 @@ fun LinkDetailScreen(
         }
     }
 
-    // Show error in Snackbar
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-        }
-    }
-
-    // Show success messages in Snackbar
-    LaunchedEffect(state.successMessage) {
-        timber.log.Timber.d("LinkDetailScreen: LaunchedEffect triggered with successMessage: ${state.successMessage}")
-        state.successMessage?.let { message ->
-            timber.log.Timber.d("LinkDetailScreen: About to show snackbar with message: $message")
-            val result = snackbarHostState.showSnackbar(
-                message = message,
-                duration = androidx.compose.material3.SnackbarDuration.Short
-            )
-            timber.log.Timber.d("LinkDetailScreen: Snackbar dismissed with result: $result")
-            timber.log.Timber.d("LinkDetailScreen: Calling OnClearSuccessMessage")
-            viewModel.onEvent(LinkDetailEvent.OnClearSuccessMessage)
+    // Collect and handle UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is LinkDetailUiEvent.ShowSuccess -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                }
+                is LinkDetailUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = androidx.compose.material3.SnackbarDuration.Long
+                    )
+                }
+            }
         }
     }
 
@@ -221,7 +219,7 @@ fun LinkDetailScreen(
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Filled.RestoreFromTrash,
-                                            contentDescription = null
+                                            contentDescription = "Restore from trash"
                                         )
                                     }
                                 )
@@ -236,7 +234,7 @@ fun LinkDetailScreen(
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Filled.Delete,
-                                            contentDescription = null,
+                                            contentDescription = "Delete permanently",
                                             tint = MaterialTheme.colorScheme.error
                                         )
                                     }
@@ -261,7 +259,7 @@ fun LinkDetailScreen(
                                     leadingIcon = {
                                         Icon(
                                             imageVector = if (state.link?.isArchived == true) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                                            contentDescription = null
+                                            contentDescription = if (state.link?.isArchived == true) "Unarchive" else "Archive"
                                         )
                                     }
                                 )
@@ -276,7 +274,7 @@ fun LinkDetailScreen(
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Filled.Delete,
-                                            contentDescription = null,
+                                            contentDescription = "Delete",
                                             tint = MaterialTheme.colorScheme.error
                                         )
                                     }
@@ -302,14 +300,6 @@ fun LinkDetailScreen(
                 // Loading state
                 state.isLoading -> {
                     LoadingIndicator(message = "Loading link...")
-                }
-
-                // Error state
-                state.error != null && state.link == null -> {
-                    ErrorStates.GenericError(
-                        errorMessage = state.error ?: "Unknown error",
-                        onRetryClick = { viewModel.onEvent(LinkDetailEvent.OnRefresh) }
-                    )
                 }
 
                 // Link content
@@ -529,7 +519,7 @@ private fun LinkContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.RestoreFromTrash,
-                                contentDescription = null,
+                                contentDescription = "Restore",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -547,7 +537,7 @@ private fun LinkContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Delete,
-                                contentDescription = null,
+                                contentDescription = "Delete permanently",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -629,7 +619,7 @@ private fun LinkContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = null,
+                    contentDescription = "Share",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -648,7 +638,7 @@ private fun LinkContent(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = null,
+                    contentDescription = "Copy",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -665,7 +655,7 @@ private fun LinkContent(
         ) {
             Icon(
                 imageVector = Icons.Default.OpenInBrowser,
-                contentDescription = null,
+                contentDescription = "Open in browser",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -1179,7 +1169,7 @@ private fun StatusBanner(
             // Icon
             Icon(
                 imageVector = Icons.Filled.Archive,
-                contentDescription = null,
+                contentDescription = "Status",
                 tint = iconColor,
                 modifier = Modifier.size(20.dp)
             )

@@ -17,8 +17,8 @@ data class AddEditLinkState(
     val isLoading: Boolean = false,
     val isFetchingPreview: Boolean = false,
     val error: String? = null,
-    val isSaved: Boolean = false,
     val isEditMode: Boolean = false,
+    val showPreviewFetchSuggestion: Boolean = false,
     // Create collection dialog state
     val showCreateCollectionDialog: Boolean = false,
     val newCollectionName: String = "",
