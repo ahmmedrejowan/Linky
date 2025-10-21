@@ -10,6 +10,11 @@ import androidx.navigation.toRoute
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
+import com.rejowan.linky.presentation.feature.settings.about.AboutScreen
+import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScreen
+import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
+import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
+import com.rejowan.linky.presentation.feature.settings.sync.SyncScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
 
@@ -146,6 +151,40 @@ fun LinkyNavHost(
                 onLinkClick = { linkId ->
                     navController.navigate(Route.LinkDetail(linkId))
                 }
+            )
+        }
+
+        // ============ SETTINGS DETAIL SCREENS ============
+
+        composable<Route.DataStorage> {
+            DataStorageScreen(
+                onNavigateToTrash = { navController.navigate(Route.Trash) },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.Appearance> {
+            AppearanceScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.PrivacySecurity> {
+            PrivacySecurityScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.About> {
+            AboutScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.SyncSettings> {
+            SyncScreen(
+                onNavigateToLogin = { navController.navigate(Route.Login) },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

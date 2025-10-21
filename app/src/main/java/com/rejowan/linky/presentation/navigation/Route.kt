@@ -92,6 +92,43 @@ sealed class Route {
     @Serializable
     data object AdvancedSettings : Route()
 
+    // ============ SETTINGS DETAIL ROUTES ============
+
+    /**
+     * Data & Storage settings screen
+     * Shows storage usage, trash management, export/import
+     */
+    @Serializable
+    data object DataStorage : Route()
+
+    /**
+     * Appearance settings screen
+     * Theme selection, view options, card design
+     */
+    @Serializable
+    data object Appearance : Route()
+
+    /**
+     * Privacy & Security settings screen
+     * Privacy policy, data management, security options
+     */
+    @Serializable
+    data object PrivacySecurity : Route()
+
+    /**
+     * About screen
+     * App version, licenses, credits, feedback
+     */
+    @Serializable
+    data object About : Route()
+
+    /**
+     * Sync settings screen (Phase 2)
+     * Account status, sync frequency, sync options
+     */
+    @Serializable
+    data object SyncSettings : Route()
+
 
     // ============ AUTH ROUTES (Phase 2) ============
 

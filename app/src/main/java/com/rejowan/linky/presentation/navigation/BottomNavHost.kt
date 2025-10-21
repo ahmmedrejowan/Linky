@@ -88,29 +88,25 @@ fun BottomNavHost(
         // ============ SETTINGS SCREEN ============
         composable<Route.Settings> {
             SettingsScreen(
-                snackbarHostState = snackbarHostState,
-                onNavigateToAdvanced = {
-                    // Navigate using parent controller to AdvancedSettings
-                    parentNavController.navigate(Route.AdvancedSettings)
+                onNavigateToDataStorage = {
+                    // Navigate using parent controller to DataStorage
+                    parentNavController.navigate(Route.DataStorage)
                 },
-                onNavigateToHome = {
-                    // Navigate within bottom nav using local controller
-                    navController.navigate(Route.Home)
+                onNavigateToAppearance = {
+                    // Navigate using parent controller to Appearance
+                    parentNavController.navigate(Route.Appearance)
                 },
-                onNavigateToCollections = {
-                    // Navigate within bottom nav using local controller
-                    navController.navigate(Route.Collections)
+                onNavigateToPrivacySecurity = {
+                    // Navigate using parent controller to PrivacySecurity
+                    parentNavController.navigate(Route.PrivacySecurity)
                 },
-                onNavigateToTrash = {
-                    // Navigate using parent controller to Trash
-                    parentNavController.navigate(Route.Trash)
+                onNavigateToAbout = {
+                    // Navigate using parent controller to About
+                    parentNavController.navigate(Route.About)
                 },
-                onLogout = {
-                    // Navigate using parent controller to Welcome (Phase 2)
-                    parentNavController.navigate(Route.Welcome) {
-                        // Clear entire back stack
-                        popUpTo(0) { inclusive = true }
-                    }
+                onNavigateToSync = {
+                    // Navigate using parent controller to SyncSettings
+                    parentNavController.navigate(Route.SyncSettings)
                 }
             )
         }
