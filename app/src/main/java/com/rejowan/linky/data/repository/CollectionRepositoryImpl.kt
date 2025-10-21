@@ -31,9 +31,18 @@ class CollectionRepositoryImpl(
     override fun getCollectionsWithLinkCount(): Flow<List<CollectionWithLinkCount>> {
         return collectionDao.getCollectionsWithCount().map { collectionWithCountList ->
             collectionWithCountList.map { collectionWithCount ->
+                // Fetch preview images for this collection (up to 3)
+                val previews = try {
+                    collectionDao.getPreviewsForCollection(collectionWithCount.collection.id)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to fetch previews for collection ${collectionWithCount.collection.id}")
+                    emptyList()
+                }
+
                 CollectionWithLinkCount(
                     collection = collectionWithCount.collection.toDomain(),
-                    linkCount = collectionWithCount.linkCount
+                    linkCount = collectionWithCount.linkCount,
+                    linkPreviews = previews
                 )
             }
         }

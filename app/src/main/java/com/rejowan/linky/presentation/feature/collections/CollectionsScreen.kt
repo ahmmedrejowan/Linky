@@ -185,7 +185,8 @@ private fun CollectionsList(
             CollectionCard(
                 collection = collectionWithCount.collection,
                 linkCount = collectionWithCount.linkCount,
-                onClick = { onCollectionClick(collectionWithCount.collection.id) }
+                onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                linkPreviews = collectionWithCount.linkPreviews
             )
         }
     }

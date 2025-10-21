@@ -43,6 +43,31 @@ interface CollectionDao {
     """)
     fun getCollectionsWithCount(): Flow<List<CollectionWithCount>>
 
+    // Get collection with link count and preview images (up to 3 most recent links)
+    @Query("""
+        SELECT collections.*, COUNT(links.id) as linkCount,
+        GROUP_CONCAT(links.previewImagePath, '|') as previewImages
+        FROM collections
+        LEFT JOIN (
+            SELECT * FROM links
+            WHERE deletedAt IS NULL
+            ORDER BY createdAt DESC
+            LIMIT 3
+        ) as links ON collections.id = links.collectionId
+        GROUP BY collections.id
+        ORDER BY collections.sortOrder ASC
+    """)
+    fun getCollectionsWithCountAndPreviews(): Flow<List<CollectionWithCountAndPreviews>>
+
+    // Get preview images for a specific collection (up to 3 most recent)
+    @Query("""
+        SELECT previewImagePath FROM links
+        WHERE collectionId = :collectionId AND deletedAt IS NULL
+        ORDER BY createdAt DESC
+        LIMIT 3
+    """)
+    suspend fun getPreviewsForCollection(collectionId: String): List<String?>
+
     // Count collections
     @Query("SELECT COUNT(*) FROM collections")
     suspend fun countCollections(): Int
@@ -58,4 +83,10 @@ interface CollectionDao {
 data class CollectionWithCount(
     @Embedded val collection: CollectionEntity,
     val linkCount: Int
+)
+
+data class CollectionWithCountAndPreviews(
+    @Embedded val collection: CollectionEntity,
+    val linkCount: Int,
+    val previewImages: String? // Pipe-separated preview image paths (|)
 )

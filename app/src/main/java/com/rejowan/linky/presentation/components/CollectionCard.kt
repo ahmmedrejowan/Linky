@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,15 +28,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Collection
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.min
 
 /**
- * CollectionCard component - Displays a collection with name, color, and link count
+ * CollectionCard component - Displays a collection with name, color, link count, and preview thumbnails
  *
  * @param collection The collection to display
  * @param linkCount Number of links in this collection
+ * @param linkPreviews List of preview image paths (up to 3)
  * @param onClick Callback when card is clicked
  * @param modifier Modifier for styling
  */
@@ -43,7 +52,8 @@ fun CollectionCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    linkPreviews: List<String?> = emptyList()
 ) {
     Card(
         modifier = modifier
@@ -52,18 +62,15 @@ fun CollectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Collection Icon with Color
+                // Left: Collection Icon (restored to original)
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -80,12 +87,12 @@ fun CollectionCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // Collection Name and Count
+                // Middle: Collection Info
                 Column(
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    // Collection Name
                     Text(
                         text = collection.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -94,18 +101,86 @@ fun CollectionCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
+                    // Link Count
                     Text(
                         text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    // Last Modified Timestamp
+                    Text(
+                        text = collection.updatedAt.toRelativeTime(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                // Right: Favorite Icon
+                if (collection.isFavorite) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = "Favorite collection",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
 
-            // Arrow or additional indicator could go here
-            // Currently just using implicit clickability
+            // Link Preview Thumbnails - Bottom Right Corner
+            if (linkPreviews.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    linkPreviews.take(3).forEach { previewPath ->
+                        PreviewThumbnail(
+                            previewPath = previewPath,
+                            collectionColor = collection.color?.toColor()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Preview thumbnail for link preview images
+ */
+@Composable
+private fun PreviewThumbnail(
+    previewPath: String?,
+    collectionColor: Color?,
+    modifier: Modifier = Modifier
+) {
+    if (previewPath != null) {
+        AsyncImage(
+            model = previewPath,
+            contentDescription = "Link preview",
+            modifier = modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        // Placeholder for links without preview
+        Box(
+            modifier = modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(collectionColor?.copy(alpha = 0.3f) ?: MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Image,
+                contentDescription = "No preview",
+                modifier = Modifier.size(10.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
         }
     }
 }
@@ -133,4 +208,24 @@ private fun String.toColor(): Color? {
 private fun Color.getContrastingColor(): Color {
     val luminance = (0.299 * red + 0.587 * green + 0.114 * blue)
     return if (luminance > 0.5) Color.Black else Color.White
+}
+
+/**
+ * Convert timestamp to relative time string
+ */
+private fun Long.toRelativeTime(): String {
+    val now = System.currentTimeMillis()
+    val diff = now - this
+
+    return when {
+        diff < 60_000 -> "Just now"
+        diff < 3600_000 -> "${diff / 60_000}m ago"
+        diff < 86400_000 -> "${diff / 3600_000}h ago"
+        diff < 604800_000 -> "${diff / 86400_000}d ago"
+        diff < 2592000_000 -> "${diff / 604800_000}w ago"
+        else -> {
+            val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            sdf.format(Date(this))
+        }
+    }
 }
