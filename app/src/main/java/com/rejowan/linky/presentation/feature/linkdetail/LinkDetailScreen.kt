@@ -116,6 +116,9 @@ fun LinkDetailScreen(
     var showMoreMenu by remember { mutableStateOf(false) }
     var showRestoreDialogFromMenu by remember { mutableStateOf(false) }
     var showPermanentDeleteDialogFromMenu by remember { mutableStateOf(false) }
+    var showArchiveDialog by remember { mutableStateOf(false) }
+    var showUnarchiveDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // Navigate back on delete
     LaunchedEffect(state.isDeleted) {
@@ -248,7 +251,11 @@ fun LinkDetailScreen(
                                         )
                                     },
                                     onClick = {
-                                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                                        if (state.link?.isArchived == true) {
+                                            showUnarchiveDialog = true
+                                        } else {
+                                            showArchiveDialog = true
+                                        }
                                         showMoreMenu = false
                                     },
                                     leadingIcon = {
@@ -263,7 +270,7 @@ fun LinkDetailScreen(
                                 DropdownMenuItem(
                                     text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                     onClick = {
-                                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink)
+                                        showDeleteDialog = true
                                         showMoreMenu = false
                                     },
                                     leadingIcon = {
@@ -372,6 +379,78 @@ fun LinkDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showPermanentDeleteDialogFromMenu = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Archive confirmation dialog
+    if (showArchiveDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showArchiveDialog = false },
+            title = { Text("Archive Link?") },
+            text = { Text("This link will be archived and hidden from your main view. You can unarchive it anytime from the Archived section.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                        showArchiveDialog = false
+                    }
+                ) {
+                    Text("Archive")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showArchiveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Unarchive confirmation dialog
+    if (showUnarchiveDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showUnarchiveDialog = false },
+            title = { Text("Unarchive Link?") },
+            text = { Text("This link will be unarchived and moved back to your active links.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                        showUnarchiveDialog = false
+                    }
+                ) {
+                    Text("Unarchive")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnarchiveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete confirmation dialog (soft delete)
+    if (showDeleteDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Move to Trash?") },
+            text = { Text("This link will be moved to trash. You can restore it within 30 days or it will be automatically deleted.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink)
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Move to Trash", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }
             }
