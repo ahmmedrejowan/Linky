@@ -18,9 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -45,6 +48,7 @@ import kotlin.math.min
  * @param linkCount Number of links in this collection
  * @param linkPreviews List of preview image paths (up to 3)
  * @param onClick Callback when card is clicked
+ * @param onFavoriteClick Callback when favorite icon is clicked
  * @param modifier Modifier for styling
  */
 @Composable
@@ -52,6 +56,7 @@ fun CollectionCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier,
     linkPreviews: List<String?> = emptyList()
 ) {
@@ -62,18 +67,25 @@ fun CollectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 20.dp,
+                        bottom = if (linkPreviews.isNotEmpty()) 40.dp else 20.dp
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Left: Collection Icon (restored to original)
+                // Left: Collection Icon
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(64.dp)
                         .clip(CircleShape)
                         .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
@@ -81,7 +93,7 @@ fun CollectionCard(
                     Icon(
                         imageVector = Icons.Default.Folder,
                         contentDescription = "Collection icon",
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(36.dp),
                         tint = collection.color?.toColor()?.getContrastingColor()
                             ?: MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -90,7 +102,7 @@ fun CollectionCard(
                 // Middle: Collection Info
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Collection Name
                     Text(
@@ -101,11 +113,13 @@ fun CollectionCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Link Count
+                    // Link Count - More prominent
                     Text(
                         text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.primary
                     )
 
                     // Last Modified Timestamp
@@ -116,13 +130,14 @@ fun CollectionCard(
                     )
                 }
 
-                // Right: Favorite Icon
-                if (collection.isFavorite) {
+                // Right: Favorite Icon Button (clickable like LinkCard)
+                IconButton(
+                    onClick = onFavoriteClick
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.Favorite,
-                        contentDescription = "Favorite collection",
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.error
+                        imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -135,7 +150,7 @@ fun CollectionCard(
                         .padding(end = 12.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    linkPreviews.take(3).forEach { previewPath ->
+                    linkPreviews.take(4).forEach { previewPath ->
                         PreviewThumbnail(
                             previewPath = previewPath,
                             collectionColor = collection.color?.toColor()
@@ -161,8 +176,8 @@ private fun PreviewThumbnail(
             model = previewPath,
             contentDescription = "Link preview",
             modifier = modifier
-                .size(18.dp)
-                .clip(CircleShape)
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
@@ -170,15 +185,15 @@ private fun PreviewThumbnail(
         // Placeholder for links without preview
         Box(
             modifier = modifier
-                .size(18.dp)
-                .clip(CircleShape)
+                .size(24.dp)
+                .clip(RoundedCornerShape(4.dp))
                 .background(collectionColor?.copy(alpha = 0.3f) ?: MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Image,
                 contentDescription = "No preview",
-                modifier = Modifier.size(10.dp),
+                modifier = Modifier.size(12.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }

@@ -59,6 +59,7 @@ val viewModelModule = module {
         CollectionsViewModel(
             getCollectionsWithLinkCountUseCase = get(),
             saveCollectionUseCase = get(),
+            updateCollectionUseCase = get(),
             deleteCollectionUseCase = get()
         )
     }

@@ -36,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,6 +56,7 @@ import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.CollectionCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import org.koin.androidx.compose.koinViewModel
+import androidx.core.graphics.toColorInt
 
 /**
  * Collections Screen
@@ -102,51 +104,56 @@ fun CollectionsScreen(
         }
     }
 
-    Box(
+    PullToRefreshBox(
+        isRefreshing = state.isLoading && state.collections.isNotEmpty(),
+        onRefresh = { viewModel.onEvent(CollectionsEvent.OnRefresh) },
         modifier = modifier.fillMaxSize()
     ) {
-            when {
-                // Loading state
-                state.isLoading && state.collections.isEmpty() -> {
-                    LoadingIndicator(message = "Loading collections...")
-                }
+        when {
+            // Loading state
+            state.isLoading && state.collections.isEmpty() -> {
+                LoadingIndicator(message = "Loading collections...")
+            }
 
-                // Error state
-                state.error != null && state.collections.isEmpty() -> {
-                    ErrorStates.GenericError(
-                        errorMessage = state.error ?: "Unknown error",
-                        onRetryClick = { viewModel.onEvent(CollectionsEvent.OnRefresh) }
+            // Error state
+            state.error != null && state.collections.isEmpty() -> {
+                ErrorStates.GenericError(
+                    errorMessage = state.error ?: "Unknown error",
+                    onRetryClick = { viewModel.onEvent(CollectionsEvent.OnRefresh) }
+                )
+            }
+
+            // Empty state
+            state.collections.isEmpty() -> {
+                EmptyStates.NoCollections(
+                    onCreateCollectionClick = { viewModel.onEvent(CollectionsEvent.OnCreateCollection) }
+                )
+            }
+
+            // Collections list
+            else -> {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Count and Sort Row
+                    CountAndSortRow(
+                        count = state.collections.size,
+                        sortType = state.sortType,
+                        onSortClick = { viewModel.onEvent(CollectionsEvent.OnSortTypeChange(it)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
                     )
-                }
 
-                // Empty state
-                state.collections.isEmpty() -> {
-                    EmptyStates.NoCollections(
-                        onCreateCollectionClick = { viewModel.onEvent(CollectionsEvent.OnCreateCollection) }
+                    // Collections List
+                    CollectionsList(
+                        collections = state.collections,
+                        onCollectionClick = onCollectionClick,
+                        onFavoriteClick = { collectionId ->
+                            viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(collectionId))
+                        }
                     )
-                }
-
-                // Collections list
-                else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // Count and Sort Row
-                        CountAndSortRow(
-                            count = state.collections.size,
-                            sortType = state.sortType,
-                            onSortClick = { viewModel.onEvent(CollectionsEvent.OnSortTypeChange(it)) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
-                        )
-
-                        // Collections List
-                        CollectionsList(
-                            collections = state.collections,
-                            onCollectionClick = onCollectionClick
-                        )
-                    }
                 }
             }
+        }
     }
 
     // Create Collection Dialog
@@ -171,6 +178,7 @@ fun CollectionsScreen(
 private fun CollectionsList(
     collections: List<CollectionWithLinkCount>,
     onCollectionClick: (String) -> Unit,
+    onFavoriteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -186,6 +194,7 @@ private fun CollectionsList(
                 collection = collectionWithCount.collection,
                 linkCount = collectionWithCount.linkCount,
                 onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
                 linkPreviews = collectionWithCount.linkPreviews
             )
         }
@@ -374,7 +383,7 @@ private fun ColorBlock(
             .clip(RoundedCornerShape(8.dp))
             .background(
                 color = if (colorHex != null) {
-                    Color(android.graphics.Color.parseColor(colorHex))
+                    Color(colorHex.toColorInt())
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
                 }

@@ -22,6 +22,7 @@ import timber.log.Timber
 class CollectionsViewModel(
     private val getCollectionsWithLinkCountUseCase: GetCollectionsWithLinkCountUseCase,
     private val saveCollectionUseCase: SaveCollectionUseCase,
+    private val updateCollectionUseCase: com.rejowan.linky.domain.usecase.collection.UpdateCollectionUseCase,
     private val deleteCollectionUseCase: DeleteCollectionUseCase
 ) : ViewModel() {
 
@@ -68,6 +69,9 @@ class CollectionsViewModel(
             is CollectionsEvent.OnSortTypeChange -> {
                 _state.update { it.copy(sortType = event.sortType) }
                 applySorting()
+            }
+            is CollectionsEvent.OnToggleCollectionFavorite -> {
+                toggleCollectionFavorite(event.collectionId)
             }
         }
     }
@@ -186,6 +190,34 @@ class CollectionsViewModel(
             }
         }
     }
+
+    private fun toggleCollectionFavorite(collectionId: String) {
+        viewModelScope.launch {
+            // Find the collection in current state
+            val collectionWithCount = _state.value.collections.find { it.collection.id == collectionId }
+            if (collectionWithCount == null) {
+                Timber.w("toggleCollectionFavorite: Collection not found | CollectionId: $collectionId")
+                return@launch
+            }
+
+            val collection = collectionWithCount.collection
+            val updatedCollection = collection.copy(isFavorite = !collection.isFavorite)
+            Timber.d("toggleCollectionFavorite: Toggling favorite | CollectionId: $collectionId | NewValue: ${updatedCollection.isFavorite}")
+
+            when (val result = updateCollectionUseCase(updatedCollection)) {
+                is Result.Success -> {
+                    Timber.d("toggleCollectionFavorite: Successfully updated favorite status")
+                    // State will be updated automatically through the Flow from loadCollections
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "toggleCollectionFavorite: Failed to update favorite status")
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.UPDATE)
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
 }
 
 sealed class CollectionsEvent {
@@ -196,6 +228,7 @@ sealed class CollectionsEvent {
     data object OnToggleFavorite : CollectionsEvent()
     data object OnSaveCollection : CollectionsEvent()
     data class OnDeleteCollection(val collectionId: String) : CollectionsEvent()
+    data class OnToggleCollectionFavorite(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
     data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
 }
