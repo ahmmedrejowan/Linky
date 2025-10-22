@@ -32,7 +32,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -101,6 +103,36 @@ fun CollectionsScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+        }
+    }
+
+    // Listen to UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is CollectionsUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                is CollectionsUiEvent.ShowFavoriteToggled -> {
+                    val message = if (event.isFavorite) {
+                        "Added to favorites"
+                    } else {
+                        "Removed from favorites"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the favorite toggle
+                        viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(event.collectionId))
+                    }
+                }
+            }
         }
     }
 
@@ -195,7 +227,8 @@ private fun CollectionsList(
                 linkCount = collectionWithCount.linkCount,
                 onClick = { onCollectionClick(collectionWithCount.collection.id) },
                 onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
-                linkPreviews = collectionWithCount.linkPreviews
+                linkPreviews = collectionWithCount.linkPreviews,
+                modifier = Modifier.animateItem()
             )
         }
     }

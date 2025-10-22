@@ -11,8 +11,11 @@ import com.rejowan.linky.util.CollectionOperation
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -28,6 +31,9 @@ class CollectionsViewModel(
 
     private val _state = MutableStateFlow(CollectionsState())
     val state: StateFlow<CollectionsState> = _state.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<CollectionsUiEvent>()
+    val uiEvents: SharedFlow<CollectionsUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         loadCollections()
@@ -207,12 +213,18 @@ class CollectionsViewModel(
             when (val result = updateCollectionUseCase(updatedCollection)) {
                 is Result.Success -> {
                     Timber.d("toggleCollectionFavorite: Successfully updated favorite status")
-                    // State will be updated automatically through the Flow from loadCollections
+                    // Emit UI event for snackbar with undo
+                    _uiEvents.emit(
+                        CollectionsUiEvent.ShowFavoriteToggled(
+                            collectionId = collectionId,
+                            isFavorite = updatedCollection.isFavorite
+                        )
+                    )
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "toggleCollectionFavorite: Failed to update favorite status")
                     val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.UPDATE)
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(CollectionsUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -231,4 +243,9 @@ sealed class CollectionsEvent {
     data class OnToggleCollectionFavorite(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
     data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
+}
+
+sealed class CollectionsUiEvent {
+    data class ShowError(val message: String) : CollectionsUiEvent()
+    data class ShowFavoriteToggled(val collectionId: String, val isFavorite: Boolean) : CollectionsUiEvent()
 }
