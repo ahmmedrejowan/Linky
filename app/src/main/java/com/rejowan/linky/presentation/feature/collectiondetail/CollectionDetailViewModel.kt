@@ -60,6 +60,15 @@ class CollectionDetailViewModel(
             is CollectionDetailEvent.OnToggleFavorite -> {
                 toggleFavorite()
             }
+            is CollectionDetailEvent.OnSortTypeChange -> {
+                Timber.d("onEvent: Changing sort type to ${event.sortType}")
+                _state.update {
+                    it.copy(
+                        sortType = event.sortType,
+                        links = sortLinks(it.links, event.sortType)
+                    )
+                }
+            }
             is CollectionDetailEvent.OnEditClick -> {
                 _state.value.collection?.let { collection ->
                     _state.update {
@@ -143,7 +152,8 @@ class CollectionDetailViewModel(
                     }
                     .collect { links ->
                         Timber.d("loadCollectionDetails: Loaded ${links.size} links")
-                        _state.update { it.copy(links = links, isLoading = false) }
+                        val sortedLinks = sortLinks(links, _state.value.sortType)
+                        _state.update { it.copy(links = sortedLinks, isLoading = false) }
                     }
             }
         }
@@ -298,11 +308,42 @@ class CollectionDetailViewModel(
             }
         }
     }
+
+    /**
+     * Sort links based on the selected sort type
+     * Matches HomeViewModel logic: applies sort, then prioritizes favorites at top
+     */
+    private fun sortLinks(links: List<com.rejowan.linky.domain.model.Link>, sortType: com.rejowan.linky.presentation.feature.home.SortType): List<com.rejowan.linky.domain.model.Link> {
+        // Apply the selected sort to all links
+        val sorted = when (sortType) {
+            com.rejowan.linky.presentation.feature.home.SortType.DATE_ADDED_DESC -> {
+                links.sortedByDescending { it.createdAt }
+            }
+            com.rejowan.linky.presentation.feature.home.SortType.DATE_ADDED_ASC -> {
+                links.sortedBy { it.createdAt }
+            }
+            com.rejowan.linky.presentation.feature.home.SortType.TITLE_ASC -> {
+                links.sortedBy { it.title.lowercase() }
+            }
+            com.rejowan.linky.presentation.feature.home.SortType.TITLE_DESC -> {
+                links.sortedByDescending { it.title.lowercase() }
+            }
+            com.rejowan.linky.presentation.feature.home.SortType.LAST_MODIFIED -> {
+                links.sortedByDescending { it.updatedAt }
+            }
+        }
+
+        // Prioritize favorites at top (maintaining sort order within each group)
+        val favorites = sorted.filter { it.isFavorite }
+        val nonFavorites = sorted.filter { !it.isFavorite }
+        return favorites + nonFavorites
+    }
 }
 
 sealed class CollectionDetailEvent {
     data object OnRefresh : CollectionDetailEvent()
     data object OnToggleFavorite : CollectionDetailEvent()
+    data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
     data class OnEditColorChange(val color: String?) : CollectionDetailEvent()

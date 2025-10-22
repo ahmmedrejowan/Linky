@@ -25,6 +25,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
@@ -40,9 +42,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -59,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rejowan.linky.domain.model.Link
@@ -66,6 +71,7 @@ import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
+import com.rejowan.linky.presentation.feature.home.SortType
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -226,7 +232,9 @@ fun CollectionDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.links.isNotEmpty(),
+            onRefresh = { viewModel.onEvent(CollectionDetailEvent.OnRefresh) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -271,6 +279,18 @@ fun CollectionDetailScreen(
                                 createdAt = collection.createdAt,
                                 updatedAt = collection.updatedAt,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            )
+                        }
+
+                        // Count and Sort Row
+                        if (state.links.isNotEmpty()) {
+                            CountAndSortRow(
+                                count = state.links.size,
+                                sortType = state.sortType,
+                                onSortClick = { viewModel.onEvent(CollectionDetailEvent.OnSortTypeChange(it)) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
                             )
                         }
 
@@ -597,6 +617,89 @@ private fun DeleteCollectionDialog(
         },
         modifier = modifier
     )
+}
+
+/**
+ * Count and Sort Row - Shows total count and sort dropdown
+ */
+@Composable
+private fun CountAndSortRow(
+    count: Int,
+    sortType: SortType,
+    onSortClick: (SortType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: Count display
+        Text(
+            text = if (count == 1) "1 link" else "$count links",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Right: Sort button with dropdown
+        Box {
+            OutlinedButton(
+                onClick = { showSortMenu = true },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                    contentDescription = "Sort",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = sortType.displayName,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand sort options",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Dropdown menu
+            DropdownMenu(
+                expanded = showSortMenu,
+                onDismissRequest = { showSortMenu = false }
+            ) {
+                SortType.entries.forEach { sort ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = sort.displayName,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        onClick = {
+                            onSortClick(sort)
+                            showSortMenu = false
+                        },
+                        leadingIcon = if (sort == sortType) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else null
+                    )
+                }
+            }
+        }
+    }
 }
 
 /**
