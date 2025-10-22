@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
@@ -60,12 +61,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.ClipboardManager
+import android.content.Context
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Collection
 import org.koin.androidx.compose.koinViewModel
@@ -103,6 +107,7 @@ fun AddEditLinkScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
     var showBackConfirmDialog by remember { mutableStateOf(false) }
     var linkSaved by remember { mutableStateOf(false) }
 
@@ -203,14 +208,38 @@ fun AddEditLinkScreen(
                 enabled = !state.isLoading,
                 singleLine = true,
                 trailingIcon = {
-                    if (state.url.isNotEmpty()) {
-                        IconButton(
-                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange("")) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear URL"
-                            )
+                    Row {
+                        // Paste button - pastes from clipboard
+                        if (state.url.isEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                    val clipData = clipboard?.primaryClip
+                                    if (clipData != null && clipData.itemCount > 0) {
+                                        val text = clipData.getItemAt(0)?.text?.toString()
+                                        if (!text.isNullOrBlank()) {
+                                            viewModel.onEvent(AddEditLinkEvent.OnUrlChange(text.trim()))
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentPaste,
+                                    contentDescription = "Paste from clipboard"
+                                )
+                            }
+                        }
+
+                        // Clear button - clears the URL field
+                        if (state.url.isNotEmpty()) {
+                            IconButton(
+                                onClick = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange("")) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear URL"
+                                )
+                            }
                         }
                     }
                 },
@@ -252,11 +281,54 @@ fun AddEditLinkScreen(
                 }
             }
 
+            // Loading skeleton while fetching preview
+            if (state.isFetchingPreview) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Loading placeholder for image
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+
+                        // Loading text
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Fetching preview...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
             // Compact Preview Card - Shows how the link will appear in home screen
             // Layout: Left (70dp image/placeholder) | Right (title + description)
             // Matches LinkCard design from home screen for consistency
-            if (state.title.isNotBlank() || state.description.isNotBlank() ||
-                state.previewImagePath != null || state.previewUrl != null) {
+            if (!state.isFetchingPreview && (state.title.isNotBlank() || state.description.isNotBlank() ||
+                state.previewImagePath != null || state.previewUrl != null)) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

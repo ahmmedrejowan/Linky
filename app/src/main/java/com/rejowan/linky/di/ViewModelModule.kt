@@ -20,6 +20,7 @@ val viewModelModule = module {
             getArchivedLinksUseCase = get(),
             getTrashedLinksUseCase = get(),
             toggleFavoriteUseCase = get(),
+            toggleArchiveUseCase = get(),
             deleteLinkUseCase = get(),
             linkRepository = get()
         )

@@ -501,7 +501,7 @@ private fun LinkContent(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Status Cards (Deleted/Archived)
+        // Status Cards (Deleted takes priority over Archived)
         if (link.isDeleted || link.isArchived) {
             Column(
                 modifier = Modifier
@@ -560,8 +560,8 @@ private fun LinkContent(
                             Text("Delete")
                         }
                     }
-                }
-                if (link.isArchived) {
+                } else if (link.isArchived) {
+                    // Only show archived status if NOT deleted
                     StatusBanner(
                         message = "This link has been archived. It's hidden from your main view but still accessible.",
                         backgroundColor = Color(0xFFFFF3CD), // Yellowish background

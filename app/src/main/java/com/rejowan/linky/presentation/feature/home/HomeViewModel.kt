@@ -32,6 +32,7 @@ class HomeViewModel(
     private val getArchivedLinksUseCase: GetArchivedLinksUseCase,
     private val getTrashedLinksUseCase: GetTrashedLinksUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val toggleArchiveUseCase: com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository
 ) : ViewModel() {
@@ -62,6 +63,7 @@ class HomeViewModel(
                 applySorting()
             }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite)
+            is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
             is HomeEvent.OnRefresh -> {
                 // Trigger a refresh by re-emitting the current filter
@@ -235,6 +237,21 @@ class HomeViewModel(
         }
     }
 
+    private fun archiveLink(linkId: String, isArchiving: Boolean) {
+        viewModelScope.launch {
+            when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
+                is Result.Success -> {
+                    Timber.d("Toggled archive for link: $linkId, isArchiving: $isArchiving")
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
+                    _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
     private fun deleteLink(linkId: String) {
         viewModelScope.launch {
             when (val result = deleteLinkUseCase(linkId, softDelete = true)) {
@@ -260,6 +277,7 @@ sealed class HomeEvent {
     data class OnFilterTypeChange(val filterType: FilterType) : HomeEvent()
     data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()
+    data class OnArchiveLink(val linkId: String, val isArchiving: Boolean) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()
     data class OnClipboardUrlDetected(val url: String) : HomeEvent()

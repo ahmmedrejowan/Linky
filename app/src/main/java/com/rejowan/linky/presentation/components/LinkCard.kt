@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,18 +16,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,24 +50,129 @@ import java.util.Locale
 
 /**
  * LinkCard component - Displays a link with preview image, title, URL, and actions
+ * Supports swipe gestures: swipe right to archive, swipe left to trash
  *
  * @param link The link to display
  * @param onClick Callback when card is clicked
  * @param onFavoriteClick Callback when favorite icon is clicked
+ * @param onArchiveClick Callback when link is archived via swipe
+ * @param onTrashClick Callback when link is moved to trash via swipe
  * @param modifier Modifier for styling
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LinkCard(
     link: Link,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onArchiveClick: (() -> Unit)? = null,
+    onTrashClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        shape = RoundedCornerShape(12.dp)
+    // Disable swipe for deleted links
+    val swipeEnabled = !link.isDeleted
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (!swipeEnabled) return@rememberSwipeToDismissBoxState false
+
+            when (value) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    // Swiped left (trash) - only if not already deleted
+                    if (!link.isDeleted) {
+                        onTrashClick?.invoke()
+                        false // Return false to reset immediately
+                    } else {
+                        false
+                    }
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Swiped right (archive/unarchive) - only if not deleted
+                    if (!link.isDeleted) {
+                        onArchiveClick?.invoke()
+                        false // Return false to reset immediately
+                    } else {
+                        false
+                    }
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = swipeEnabled,
+        enableDismissFromEndToStart = swipeEnabled,
+        backgroundContent = {
+            if (swipeEnabled) {
+                val color = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
+                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                    SwipeToDismissBoxValue.Settled -> MaterialTheme.colorScheme.surface
+                }
+                val icon = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Archive
+                    SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+                    SwipeToDismissBoxValue.Settled -> null
+                }
+                val alignment = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    SwipeToDismissBoxValue.Settled -> Alignment.Center
+                }
+                // Text label for swipe action
+                val actionText = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> if (link.isArchived) "Unarchive" else "Archive"
+                    SwipeToDismissBoxValue.EndToStart -> "Trash"
+                    SwipeToDismissBoxValue.Settled -> null
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(color, shape = RoundedCornerShape(12.dp))
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = alignment
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        icon?.let {
+                            Icon(
+                                imageVector = it,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.onErrorContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                        actionText?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.onErrorContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        modifier = modifier
+    ) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier
@@ -96,22 +209,23 @@ fun LinkCard(
                     )
                 }
 
-                // Status Banner Overlay (Archived/Deleted)
-                if (link.isArchived || link.isDeleted) {
+                // Status Banner Overlay (Deleted takes priority over Archived)
+                if (link.isDeleted || link.isArchived) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                     ) {
+                        // Show only Deleted badge if deleted (deleted overrides archived)
                         if (link.isDeleted) {
                             StatusBanner(
                                 text = "Deleted",
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                                 labelColor = MaterialTheme.colorScheme.onErrorContainer
                             )
-                        }
-                        if (link.isArchived) {
+                        } else if (link.isArchived) {
+                            // Only show Archived if NOT deleted
                             StatusBanner(
                                 text = "Archived",
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -169,6 +283,7 @@ fun LinkCard(
                 )
             }
         }
+    }
     }
 }
 

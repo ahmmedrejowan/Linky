@@ -103,6 +103,9 @@ fun HomeScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Throttle clipboard checks - only check once per 5 seconds
+    var lastClipboardCheckTime by remember { mutableStateOf(0L) }
+
     // Collect and handle UI events
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
@@ -138,12 +141,21 @@ fun HomeScreen(
         onExitRequest()
     }
 
-    // Check clipboard when screen resumes
+    // Check clipboard when screen resumes (throttled to once per 5 seconds)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                Timber.tag("HomeScreen").d("Screen resumed, checking clipboard")
-                checkClipboardForUrl(context, viewModel)
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLastCheck = currentTime - lastClipboardCheckTime
+                val throttleMillis = 5000L // 5 seconds
+
+                if (timeSinceLastCheck >= throttleMillis) {
+                    Timber.tag("HomeScreen").d("Screen resumed, checking clipboard (${timeSinceLastCheck}ms since last check)")
+                    checkClipboardForUrl(context, viewModel)
+                    lastClipboardCheckTime = currentTime
+                } else {
+                    Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (throttled, ${timeSinceLastCheck}ms since last check)")
+                }
             }
         }
 
@@ -165,6 +177,12 @@ fun HomeScreen(
             onLinkClick = onLinkClick,
             onFavoriteClick = { linkId, isFavorite ->
                 viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+            },
+            onArchiveClick = { linkId, isArchiving ->
+                viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
+            },
+            onTrashClick = { linkId ->
+                viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
             },
             onAddLinkClick = { onAddLinkClick(null) },
             onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
@@ -258,6 +276,8 @@ private fun HomeContent(
     state: HomeState,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
+    onArchiveClick: (String, Boolean) -> Unit,
+    onTrashClick: (String) -> Unit,
     onAddLinkClick: () -> Unit,
     onRetry: () -> Unit,
     onFilterTypeChange: (FilterType) -> Unit,
@@ -325,6 +345,12 @@ private fun HomeContent(
                             onClick = { onLinkClick(link.id) },
                             onFavoriteClick = {
                                 onFavoriteClick(link.id, !link.isFavorite)
+                            },
+                            onArchiveClick = {
+                                onArchiveClick(link.id, !link.isArchived)
+                            },
+                            onTrashClick = {
+                                onTrashClick(link.id)
                             },
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)

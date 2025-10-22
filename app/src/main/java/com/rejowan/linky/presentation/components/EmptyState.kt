@@ -139,8 +139,8 @@ object EmptyStates {
     ) {
         EmptyState(
             icon = Icons.Outlined.LinkOff,
-            title = "No Favorites",
-            message = "Mark links as favorites to see them here",
+            title = "No Favorites Yet",
+            message = "Tap the heart icon on any link to mark it as a favorite. Favorites appear at the top of your All Links list for quick access.",
             modifier = modifier
         )
     }
@@ -152,7 +152,7 @@ object EmptyStates {
         EmptyState(
             icon = Icons.Outlined.LinkOff,
             title = "No Archived Links",
-            message = "Archived links will appear here",
+            message = "Archive links you want to keep but don't need immediate access to. Archived links are hidden from your main list but can be unarchived anytime.",
             modifier = modifier
         )
     }
