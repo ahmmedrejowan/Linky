@@ -38,6 +38,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -89,6 +90,7 @@ import timber.log.Timber
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    snackbarHostState: SnackbarHostState,
     onAddLinkClick: (String?) -> Unit,
     onLinkClick: (String) -> Unit,
     onNavigateToCollections: () -> Unit,
@@ -100,7 +102,6 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // Collect and handle UI events
     LaunchedEffect(Unit) {
@@ -111,6 +112,22 @@ fun HomeScreen(
                         message = event.message,
                         duration = SnackbarDuration.Long
                     )
+                }
+                is HomeUiEvent.ShowFavoriteToggled -> {
+                    val message = if (event.isFavorite) {
+                        "Added to favorites"
+                    } else {
+                        "Removed from favorites"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the favorite toggle
+                        viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite))
+                    }
                 }
             }
         }
@@ -137,30 +154,22 @@ fun HomeScreen(
         }
     }
 
-    // Content Area with Pull-to-Refresh and Snackbar
-    Box(modifier = Modifier.fillMaxSize()) {
-        PullToRefreshBox(
-            isRefreshing = state.isLoading && state.links.isNotEmpty(),
-            onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            HomeContent(
-                state = state,
-                onLinkClick = onLinkClick,
-                onFavoriteClick = { linkId, isFavorite ->
-                    viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
-                },
-                onAddLinkClick = { onAddLinkClick(null) },
-                onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
-                onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-                onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
-            )
-        }
-
-        // Snackbar host at bottom
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+    // Content Area with Pull-to-Refresh
+    PullToRefreshBox(
+        isRefreshing = state.isLoading && state.links.isNotEmpty(),
+        onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        HomeContent(
+            state = state,
+            onLinkClick = onLinkClick,
+            onFavoriteClick = { linkId, isFavorite ->
+                viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+            },
+            onAddLinkClick = { onAddLinkClick(null) },
+            onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
+            onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
+            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
         )
     }
 
@@ -186,6 +195,7 @@ fun HomeScreen(
 private fun HomeScreenPreview() {
 
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     KoinApplication(application = {
         androidContext(context)
         modules(
@@ -196,6 +206,7 @@ private fun HomeScreenPreview() {
     }) {
 
         HomeScreen(
+            snackbarHostState = snackbarHostState,
             onAddLinkClick = {},
             onLinkClick = {},
             onNavigateToCollections = {},

@@ -143,6 +143,22 @@ fun LinkDetailScreen(
                         duration = androidx.compose.material3.SnackbarDuration.Long
                     )
                 }
+                is LinkDetailUiEvent.ShowFavoriteToggled -> {
+                    val message = if (event.isFavorite) {
+                        "Added to favorites"
+                    } else {
+                        "Removed from favorites"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        // Undo the favorite toggle
+                        viewModel.onEvent(LinkDetailEvent.OnToggleFavorite)
+                    }
+                }
             }
         }
     }

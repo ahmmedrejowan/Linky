@@ -220,6 +220,11 @@ class HomeViewModel(
             when (val result = toggleFavoriteUseCase(linkId, isFavorite)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: $linkId")
+                    // Emit event with undo action
+                    _uiEvents.emit(HomeUiEvent.ShowFavoriteToggled(
+                        linkId = linkId,
+                        isFavorite = isFavorite
+                    ))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
@@ -248,6 +253,7 @@ class HomeViewModel(
 
 sealed class HomeUiEvent {
     data class ShowError(val message: String) : HomeUiEvent()
+    data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : HomeUiEvent()
 }
 
 sealed class HomeEvent {

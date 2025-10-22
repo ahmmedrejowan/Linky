@@ -37,6 +37,7 @@ fun BottomNavHost(
         // ============ HOME SCREEN ============
         composable<Route.Home> {
             HomeScreen(
+                snackbarHostState = snackbarHostState,
                 onAddLinkClick = { url ->
                     // Navigate using parent controller to AddEditLink with optional URL
                     parentNavController.navigate(Route.AddEditLink(url = url))

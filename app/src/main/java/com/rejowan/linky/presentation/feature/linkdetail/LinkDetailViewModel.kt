@@ -121,9 +121,11 @@ class LinkDetailViewModel(
             when (val result = toggleFavoriteUseCase(link.id, isFavoriting)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: ${link.id}")
-                    val message = if (isFavoriting) "Added to favorites" else "Removed from favorites"
-                    Timber.d("toggleFavorite: Emitting success message: $message")
-                    _uiEvents.emit(LinkDetailUiEvent.ShowSuccess(message))
+                    // Emit event with undo action
+                    _uiEvents.emit(LinkDetailUiEvent.ShowFavoriteToggled(
+                        linkId = link.id,
+                        isFavorite = isFavoriting
+                    ))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
@@ -268,6 +270,7 @@ class LinkDetailViewModel(
 sealed class LinkDetailUiEvent {
     data class ShowSuccess(val message: String) : LinkDetailUiEvent()
     data class ShowError(val message: String) : LinkDetailUiEvent()
+    data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : LinkDetailUiEvent()
 }
 
 sealed class LinkDetailEvent {
