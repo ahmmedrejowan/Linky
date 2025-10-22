@@ -97,7 +97,9 @@ fun LinkCard(
                 }
                 SwipeToDismissBoxValue.Settled -> false
             }
-        }
+        },
+        // Require 70% swipe distance to trigger action (prevents accidental swipes)
+        positionalThreshold = { distance -> distance * 0.7f }
     )
 
     SwipeToDismissBox(
@@ -106,6 +108,12 @@ fun LinkCard(
         enableDismissFromEndToStart = swipeEnabled,
         backgroundContent = {
             if (swipeEnabled) {
+                // Calculate alpha based on swipe progress for better visual feedback
+                // Progress ranges from 0.0 (no swipe) to 1.0 (full swipe)
+                val swipeProgress = dismissState.progress
+                // Scale alpha from 0.3 to 1.0 as user swipes
+                val backgroundAlpha = (0.3f + (swipeProgress * 0.7f)).coerceIn(0.3f, 1.0f)
+
                 val color = when (dismissState.dismissDirection) {
                     SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -131,7 +139,7 @@ fun LinkCard(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(color, shape = RoundedCornerShape(12.dp))
+                        .background(color.copy(alpha = backgroundAlpha), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 24.dp),
                     contentAlignment = alignment
                 ) {
