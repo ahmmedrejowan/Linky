@@ -47,8 +47,10 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -117,6 +119,36 @@ fun CollectionDetailScreen(
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
+        }
+    }
+
+    // Listen to UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is CollectionDetailUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                is CollectionDetailUiEvent.ShowLinkFavoriteToggled -> {
+                    val message = if (event.isFavorite) {
+                        "Added to favorites"
+                    } else {
+                        "Removed from favorites"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the favorite toggle
+                        viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(event.linkId))
+                    }
+                }
+            }
         }
     }
 
@@ -310,7 +342,9 @@ fun CollectionDetailScreen(
                             LinksList(
                                 links = state.links,
                                 onLinkClick = onLinkClick,
-                                onFavoriteClick = onFavoriteClick
+                                onFavoriteClick = { linkId ->
+                                    viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
+                                }
                             )
                         }
                     }
@@ -436,7 +470,8 @@ private fun LinksList(
             LinkCard(
                 link = link,
                 onClick = { onLinkClick(link.id) },
-                onFavoriteClick = { onFavoriteClick(link.id) }
+                onFavoriteClick = { onFavoriteClick(link.id) },
+                modifier = Modifier.animateItem()
             )
         }
     }

@@ -16,8 +16,11 @@ import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.ValidationResult
 import com.rejowan.linky.util.Validator
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -36,6 +39,9 @@ class CollectionDetailViewModel(
 
     private val _state = MutableStateFlow(CollectionDetailState())
     val state: StateFlow<CollectionDetailState> = _state.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<CollectionDetailUiEvent>()
+    val uiEvents: SharedFlow<CollectionDetailUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         val collectionId = savedStateHandle.get<String>("collectionId")
@@ -59,6 +65,9 @@ class CollectionDetailViewModel(
             }
             is CollectionDetailEvent.OnToggleFavorite -> {
                 toggleFavorite()
+            }
+            is CollectionDetailEvent.OnToggleLinkFavorite -> {
+                toggleLinkFavorite(event.linkId)
             }
             is CollectionDetailEvent.OnSortTypeChange -> {
                 Timber.d("onEvent: Changing sort type to ${event.sortType}")
@@ -309,6 +318,39 @@ class CollectionDetailViewModel(
         }
     }
 
+    private fun toggleLinkFavorite(linkId: String) {
+        viewModelScope.launch {
+            // Find the link in current state
+            val link = _state.value.links.find { it.id == linkId }
+            if (link == null) {
+                Timber.w("toggleLinkFavorite: Link not found | LinkId: $linkId")
+                return@launch
+            }
+
+            val updatedLink = link.copy(isFavorite = !link.isFavorite)
+            Timber.d("toggleLinkFavorite: Toggling favorite | LinkId: $linkId | NewValue: ${updatedLink.isFavorite}")
+
+            when (val result = updateLinkUseCase(updatedLink)) {
+                is Result.Success -> {
+                    Timber.d("toggleLinkFavorite: Successfully updated favorite status")
+                    // Emit UI event for snackbar with undo
+                    _uiEvents.emit(
+                        CollectionDetailUiEvent.ShowLinkFavoriteToggled(
+                            linkId = linkId,
+                            isFavorite = updatedLink.isFavorite
+                        )
+                    )
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "toggleLinkFavorite: Failed to update favorite status")
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
     /**
      * Sort links based on the selected sort type
      * Matches HomeViewModel logic: applies sort, then prioritizes favorites at top
@@ -343,6 +385,7 @@ class CollectionDetailViewModel(
 sealed class CollectionDetailEvent {
     data object OnRefresh : CollectionDetailEvent()
     data object OnToggleFavorite : CollectionDetailEvent()
+    data class OnToggleLinkFavorite(val linkId: String) : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
@@ -354,4 +397,9 @@ sealed class CollectionDetailEvent {
     data class OnDeleteWithLinksChange(val deleteWithLinks: Boolean) : CollectionDetailEvent()
     data object OnDeleteDismiss : CollectionDetailEvent()
     data object OnDeleteConfirm : CollectionDetailEvent()
+}
+
+sealed class CollectionDetailUiEvent {
+    data class ShowError(val message: String) : CollectionDetailUiEvent()
+    data class ShowLinkFavoriteToggled(val linkId: String, val isFavorite: Boolean) : CollectionDetailUiEvent()
 }
