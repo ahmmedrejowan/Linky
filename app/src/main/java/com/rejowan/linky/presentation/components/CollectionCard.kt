@@ -67,96 +67,75 @@ fun CollectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            // Left: Collection Icon (larger, prominent)
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = 20.dp,
-                        end = 20.dp,
-                        top = 20.dp,
-                        bottom = if (linkPreviews.isNotEmpty()) 40.dp else 20.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                // Left: Collection Icon
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Folder,
-                        contentDescription = "Collection icon",
-                        modifier = Modifier.size(36.dp),
-                        tint = collection.color?.toColor()?.getContrastingColor()
-                            ?: MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = "Collection icon",
+                    modifier = Modifier.size(36.dp),
+                    tint = collection.color?.toColor()?.getContrastingColor()
+                        ?: MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
 
-                // Middle: Collection Info
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Collection Name
-                    Text(
-                        text = collection.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+            // Middle: Collection Info
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Collection Name
+                Text(
+                    text = collection.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-                    // Link Count - More prominent
-                    Text(
-                        text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                // Link Count
+                Text(
+                    text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-                    // Last Modified Timestamp
-                    Text(
-                        text = collection.updatedAt.toRelativeTime(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                // Right: Favorite Icon Button (clickable like LinkCard)
-                IconButton(
-                    onClick = onFavoriteClick
-                ) {
-                    Icon(
-                        imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Preview Thumbnails (only show if present)
+                if (linkPreviews.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        linkPreviews.take(4).forEach { previewPath ->
+                            PreviewThumbnail(
+                                previewPath = previewPath,
+                                collectionColor = collection.color?.toColor()
+                            )
+                        }
+                    }
                 }
             }
 
-            // Link Preview Thumbnails - Bottom Right Corner
-            if (linkPreviews.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    linkPreviews.take(4).forEach { previewPath ->
-                        PreviewThumbnail(
-                            previewPath = previewPath,
-                            collectionColor = collection.color?.toColor()
-                        )
-                    }
-                }
+            // Right: Favorite Icon Button
+            IconButton(
+                onClick = onFavoriteClick
+            ) {
+                Icon(
+                    imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -164,6 +143,7 @@ fun CollectionCard(
 
 /**
  * Preview thumbnail for link preview images
+ * Compact size for inline display
  */
 @Composable
 private fun PreviewThumbnail(
@@ -176,8 +156,8 @@ private fun PreviewThumbnail(
             model = previewPath,
             contentDescription = "Link preview",
             modifier = modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .size(20.dp)
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
@@ -185,15 +165,15 @@ private fun PreviewThumbnail(
         // Placeholder for links without preview
         Box(
             modifier = modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .size(20.dp)
+                .clip(CircleShape)
                 .background(collectionColor?.copy(alpha = 0.3f) ?: MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Image,
                 contentDescription = "No preview",
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(10.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
