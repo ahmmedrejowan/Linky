@@ -247,6 +247,28 @@ fun CollectionDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
+                                text = { Text("Show archived links") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.onEvent(CollectionDetailEvent.OnToggleShowArchived)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (state.showArchivedLinks) {
+                                            Icons.Default.Check
+                                        } else {
+                                            Icons.Default.Check
+                                        },
+                                        contentDescription = "Show archived",
+                                        tint = if (state.showArchivedLinks) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.Transparent
+                                        }
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Delete collection") },
                                 onClick = {
                                     showMenu = false
@@ -342,8 +364,14 @@ fun CollectionDetailScreen(
                                 )
                             }
                         } else {
-                            LinksList(
-                                links = state.links,
+                            // Separate active and archived links
+                            val activeLinks = state.links.filter { !it.isArchived }
+                            val archivedLinks = state.links.filter { it.isArchived }
+
+                            LinksListWithArchived(
+                                activeLinks = activeLinks,
+                                archivedLinks = archivedLinks,
+                                showArchived = state.showArchivedLinks,
                                 onLinkClick = onLinkClick,
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
@@ -486,6 +514,72 @@ private fun LinksList(
                 onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
             )
+        }
+    }
+}
+
+/**
+ * Links list with archived section
+ * Shows active links first, then archived links in a separate section if showArchived is true
+ */
+@Composable
+private fun LinksListWithArchived(
+    activeLinks: List<Link>,
+    archivedLinks: List<Link>,
+    showArchived: Boolean,
+    onLinkClick: (String) -> Unit,
+    onFavoriteClick: (String) -> Unit,
+    onArchiveClick: (String) -> Unit,
+    onTrashClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Active Links
+        items(
+            items = activeLinks,
+            key = { it.id }
+        ) { link ->
+            LinkCard(
+                link = link,
+                onClick = { onLinkClick(link.id) },
+                onFavoriteClick = { onFavoriteClick(link.id) },
+                onArchiveClick = { onArchiveClick(link.id) },
+                onTrashClick = { onTrashClick(link.id) },
+                modifier = Modifier.animateItem()
+            )
+        }
+
+        // Archived Links Section (if enabled and there are archived links)
+        if (showArchived && archivedLinks.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Archived (${archivedLinks.size})",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+            }
+
+            items(
+                items = archivedLinks,
+                key = { it.id }
+            ) { link ->
+                LinkCard(
+                    link = link,
+                    onClick = { onLinkClick(link.id) },
+                    onFavoriteClick = { onFavoriteClick(link.id) },
+                    onArchiveClick = { onArchiveClick(link.id) },
+                    onTrashClick = { onTrashClick(link.id) },
+                    modifier = Modifier.animateItem()
+                )
+            }
         }
     }
 }

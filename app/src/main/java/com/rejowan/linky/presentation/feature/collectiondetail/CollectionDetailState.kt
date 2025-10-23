@@ -8,6 +8,7 @@ data class CollectionDetailState(
     val collection: Collection? = null,
     val links: List<Link> = emptyList(),
     val sortType: SortType = SortType.DATE_ADDED_DESC,
+    val showArchivedLinks: Boolean = true, // Show archived links by default
     val isLoading: Boolean = false,
     val error: String? = null,
     // Edit dialog state
