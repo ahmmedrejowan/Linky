@@ -15,6 +15,7 @@ interface LinkRepository {
     fun searchLinks(query: String): Flow<List<Link>>
     fun getLinkById(id: String): Flow<Link?>
     suspend fun getLinkByIdOnce(id: String): Link?
+    suspend fun existsByUrl(url: String): Boolean
 
     // Create/Update operations
     suspend fun saveLink(link: Link): Result<Unit>

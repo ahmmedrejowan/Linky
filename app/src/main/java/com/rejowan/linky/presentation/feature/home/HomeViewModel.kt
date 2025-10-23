@@ -84,13 +84,13 @@ class HomeViewModel(
 
     /**
      * Handle clipboard URL detection
-     * Validates URL and shows prompt if valid and not already prompted
+     * Validates URL and shows prompt if valid, not already prompted, and not already saved
      */
     private fun handleClipboardUrl(url: String) {
         Timber.tag("HomeViewModel").d("handleClipboardUrl called with: $url")
         val trimmedUrl = url.trim()
 
-        // Check if we've already prompted for this URL
+        // Check if we've already prompted for this URL in this session
         if (_state.value.promptedUrls.contains(trimmedUrl)) {
             Timber.tag("HomeViewModel").d("✗ Already prompted for this URL: $trimmedUrl")
             return
@@ -100,7 +100,22 @@ class HomeViewModel(
         val isValid = isValidUrl(trimmedUrl)
         Timber.tag("HomeViewModel").d("URL validation result: $isValid for URL: $trimmedUrl")
 
-        if (isValid) {
+        if (!isValid) {
+            Timber.tag("HomeViewModel").d("✗ Invalid URL in clipboard: $trimmedUrl")
+            return
+        }
+
+        // Check if URL already exists in database
+        viewModelScope.launch {
+            val exists = linkRepository.existsByUrl(trimmedUrl)
+            if (exists) {
+                Timber.tag("HomeViewModel").d("✗ URL already exists in database: $trimmedUrl")
+                // Add to prompted set to avoid checking again in this session
+                _state.update { it.copy(promptedUrls = it.promptedUrls + trimmedUrl) }
+                return@launch
+            }
+
+            // URL is valid and doesn't exist - show prompt
             _state.update {
                 it.copy(
                     clipboardUrl = trimmedUrl,
@@ -109,8 +124,6 @@ class HomeViewModel(
                 )
             }
             Timber.tag("HomeViewModel").d("✓ State updated - showClipboardPrompt=true, clipboardUrl=$trimmedUrl")
-        } else {
-            Timber.tag("HomeViewModel").d("✗ Invalid URL in clipboard: $trimmedUrl")
         }
     }
 

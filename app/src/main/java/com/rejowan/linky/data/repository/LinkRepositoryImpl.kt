@@ -51,6 +51,10 @@ class LinkRepositoryImpl(
         return linkDao.getById(id)?.toDomain()
     }
 
+    override suspend fun existsByUrl(url: String): Boolean {
+        return linkDao.existsByUrl(url)
+    }
+
     override suspend fun saveLink(link: Link): Result<Unit> {
         return try {
             val entity = link.toEntity(syncToRemote = false)

@@ -54,6 +54,10 @@ interface LinkDao {
     @Query("SELECT * FROM links WHERE id = :id")
     fun getByIdFlow(id: String): Flow<LinkEntity?>
 
+    // Check if URL exists (excluding deleted links)
+    @Query("SELECT EXISTS(SELECT 1 FROM links WHERE url = :url AND deletedAt IS NULL)")
+    suspend fun existsByUrl(url: String): Boolean
+
     // Insert
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(link: LinkEntity)
