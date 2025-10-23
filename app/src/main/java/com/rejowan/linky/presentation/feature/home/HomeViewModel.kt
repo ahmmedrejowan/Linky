@@ -63,8 +63,8 @@ class HomeViewModel(
                 // Re-apply sorting to current links
                 applySorting()
             }
-            is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite)
-            is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving)
+            is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite, event.silent)
+            is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving, event.silent)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
             is HomeEvent.OnRestoreLink -> restoreLink(event.linkId)
             is HomeEvent.OnRefresh -> {
@@ -219,16 +219,18 @@ class HomeViewModel(
         }
     }
 
-    private fun toggleFavorite(linkId: String, isFavorite: Boolean) {
+    private fun toggleFavorite(linkId: String, isFavorite: Boolean, silent: Boolean = false) {
         viewModelScope.launch {
             when (val result = toggleFavoriteUseCase(linkId, isFavorite)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: $linkId")
-                    // Emit event with undo action
-                    _uiEvents.emit(HomeUiEvent.ShowFavoriteToggled(
-                        linkId = linkId,
-                        isFavorite = isFavorite
-                    ))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(HomeUiEvent.ShowFavoriteToggled(
+                            linkId = linkId,
+                            isFavorite = isFavorite
+                        ))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
@@ -239,13 +241,15 @@ class HomeViewModel(
         }
     }
 
-    private fun archiveLink(linkId: String, isArchiving: Boolean) {
+    private fun archiveLink(linkId: String, isArchiving: Boolean, silent: Boolean = false) {
         viewModelScope.launch {
             when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("Toggled archive for link: $linkId, isArchiving: $isArchiving")
-                    // Emit UI event for undo functionality
-                    _uiEvents.emit(HomeUiEvent.ShowArchiveToggled(linkId, isArchiving))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(HomeUiEvent.ShowArchiveToggled(linkId, isArchiving))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
@@ -299,8 +303,8 @@ sealed class HomeUiEvent {
 sealed class HomeEvent {
     data class OnFilterTypeChange(val filterType: FilterType) : HomeEvent()
     data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
-    data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()
-    data class OnArchiveLink(val linkId: String, val isArchiving: Boolean) : HomeEvent()
+    data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean, val silent: Boolean = false) : HomeEvent()
+    data class OnArchiveLink(val linkId: String, val isArchiving: Boolean, val silent: Boolean = false) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
     data class OnRestoreLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()

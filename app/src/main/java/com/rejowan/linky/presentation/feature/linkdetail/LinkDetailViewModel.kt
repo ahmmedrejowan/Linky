@@ -63,11 +63,11 @@ class LinkDetailViewModel(
 
     fun onEvent(event: LinkDetailEvent) {
         when (event) {
-            is LinkDetailEvent.OnToggleFavorite -> toggleFavorite()
-            is LinkDetailEvent.OnDeleteLink -> deleteLink()
-            is LinkDetailEvent.OnArchiveLink -> archiveLink()
-            is LinkDetailEvent.OnRestoreLink -> restoreLink()
-            is LinkDetailEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink()
+            is LinkDetailEvent.OnToggleFavorite -> toggleFavorite(event.silent)
+            is LinkDetailEvent.OnDeleteLink -> deleteLink(event.silent)
+            is LinkDetailEvent.OnArchiveLink -> archiveLink(event.silent)
+            is LinkDetailEvent.OnRestoreLink -> restoreLink(event.silent)
+            is LinkDetailEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink(event.silent)
             is LinkDetailEvent.OnRefresh -> linkId?.let { loadLinkDetails(it) }
             is LinkDetailEvent.OnCreateSnapshot -> captureSnapshot()
             is LinkDetailEvent.OnDeleteSnapshot -> deleteSnapshot(event.snapshotId)
@@ -113,7 +113,7 @@ class LinkDetailViewModel(
         }
     }
 
-    private fun toggleFavorite() {
+    private fun toggleFavorite(silent: Boolean = false) {
         val link = _state.value.link ?: return
         val isFavoriting = !link.isFavorite
 
@@ -121,11 +121,13 @@ class LinkDetailViewModel(
             when (val result = toggleFavoriteUseCase(link.id, isFavoriting)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: ${link.id}")
-                    // Emit event with undo action
-                    _uiEvents.emit(LinkDetailUiEvent.ShowFavoriteToggled(
-                        linkId = link.id,
-                        isFavorite = isFavoriting
-                    ))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(LinkDetailUiEvent.ShowFavoriteToggled(
+                            linkId = link.id,
+                            isFavorite = isFavoriting
+                        ))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
@@ -136,15 +138,17 @@ class LinkDetailViewModel(
         }
     }
 
-    private fun deleteLink() {
+    private fun deleteLink(silent: Boolean = false) {
         val link = _state.value.link ?: return
 
         viewModelScope.launch {
             when (val result = deleteLinkUseCase(link.id, softDelete = true)) {
                 is Result.Success -> {
                     Timber.d("Deleted link: ${link.id}")
-                    Timber.d("deleteLink: Emitting success message: Link moved to trash")
-                    _uiEvents.emit(LinkDetailUiEvent.ShowSuccess("Link moved to trash"))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(LinkDetailUiEvent.ShowLinkTrashed(link.id))
+                    }
                     // Add small delay to allow database changes to propagate through Flows
                     kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isDeleted = true) }
@@ -158,7 +162,7 @@ class LinkDetailViewModel(
         }
     }
 
-    private fun archiveLink() {
+    private fun archiveLink(silent: Boolean = false) {
         val link = _state.value.link ?: return
         val isArchiving = !link.isArchived
 
@@ -166,9 +170,10 @@ class LinkDetailViewModel(
             when (val result = toggleArchiveUseCase(link.id, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("Toggled archive for link: ${link.id}")
-                    val message = if (isArchiving) "Link archived" else "Link unarchived"
-                    Timber.d("archiveLink: Emitting success message: $message")
-                    _uiEvents.emit(LinkDetailUiEvent.ShowSuccess(message))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(LinkDetailUiEvent.ShowArchiveToggled(link.id, isArchiving))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
@@ -179,14 +184,17 @@ class LinkDetailViewModel(
         }
     }
 
-    private fun restoreLink() {
+    private fun restoreLink(silent: Boolean = false) {
         val link = _state.value.link ?: return
 
         viewModelScope.launch {
             when (val result = restoreLinkUseCase(link.id)) {
                 is Result.Success -> {
                     Timber.d("Restored link: ${link.id}")
-                    _uiEvents.emit(LinkDetailUiEvent.ShowSuccess("Link restored"))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(LinkDetailUiEvent.ShowLinkRestored(link.id))
+                    }
                     kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isDeleted = true) } // Navigate back
                 }
@@ -199,14 +207,17 @@ class LinkDetailViewModel(
         }
     }
 
-    private fun permanentlyDeleteLink() {
+    private fun permanentlyDeleteLink(silent: Boolean = false) {
         val link = _state.value.link ?: return
 
         viewModelScope.launch {
             when (val result = deleteLinkUseCase(link.id, softDelete = false)) {
                 is Result.Success -> {
                     Timber.d("Permanently deleted link: ${link.id}")
-                    _uiEvents.emit(LinkDetailUiEvent.ShowSuccess("Link permanently deleted"))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(LinkDetailUiEvent.ShowLinkDeleted(link.id))
+                    }
                     kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isDeleted = true) } // Navigate back
                 }
@@ -271,14 +282,18 @@ sealed class LinkDetailUiEvent {
     data class ShowSuccess(val message: String) : LinkDetailUiEvent()
     data class ShowError(val message: String) : LinkDetailUiEvent()
     data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : LinkDetailUiEvent()
+    data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : LinkDetailUiEvent()
+    data class ShowLinkTrashed(val linkId: String) : LinkDetailUiEvent()
+    data class ShowLinkRestored(val linkId: String) : LinkDetailUiEvent()
+    data class ShowLinkDeleted(val linkId: String) : LinkDetailUiEvent()
 }
 
 sealed class LinkDetailEvent {
-    data object OnToggleFavorite : LinkDetailEvent()
-    data object OnDeleteLink : LinkDetailEvent()
-    data object OnArchiveLink : LinkDetailEvent()
-    data object OnRestoreLink : LinkDetailEvent()
-    data object OnPermanentlyDeleteLink : LinkDetailEvent()
+    data class OnToggleFavorite(val silent: Boolean = false) : LinkDetailEvent()
+    data class OnDeleteLink(val silent: Boolean = false) : LinkDetailEvent()
+    data class OnArchiveLink(val silent: Boolean = false) : LinkDetailEvent()
+    data class OnRestoreLink(val silent: Boolean = false) : LinkDetailEvent()
+    data class OnPermanentlyDeleteLink(val silent: Boolean = false) : LinkDetailEvent()
     data object OnRefresh : LinkDetailEvent()
     data object OnCreateSnapshot : LinkDetailEvent()
     data class OnDeleteSnapshot(val snapshotId: String) : LinkDetailEvent()

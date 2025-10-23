@@ -38,8 +38,8 @@ class TrashViewModel(
     fun onEvent(event: TrashEvent) {
         when (event) {
             is TrashEvent.OnRefresh -> loadTrashedLinks()
-            is TrashEvent.OnRestoreLink -> restoreLink(event.linkId)
-            is TrashEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink(event.linkId)
+            is TrashEvent.OnRestoreLink -> restoreLink(event.linkId, event.silent)
+            is TrashEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink(event.linkId, event.silent)
             is TrashEvent.OnUndoDelete -> undoDelete(event.linkId)
             is TrashEvent.OnEmptyTrash -> emptyTrash()
         }
@@ -60,13 +60,15 @@ class TrashViewModel(
         }
     }
 
-    private fun restoreLink(linkId: String) {
+    private fun restoreLink(linkId: String, silent: Boolean = false) {
         viewModelScope.launch {
             when (val result = restoreLinkUseCase(linkId)) {
                 is Result.Success -> {
                     Timber.d("Restored link: $linkId")
-                    // Emit UI event for undo functionality
-                    _uiEvents.emit(TrashUiEvent.ShowLinkRestored(linkId))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(TrashUiEvent.ShowLinkRestored(linkId))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
@@ -77,13 +79,15 @@ class TrashViewModel(
         }
     }
 
-    private fun permanentlyDeleteLink(linkId: String) {
+    private fun permanentlyDeleteLink(linkId: String, silent: Boolean = false) {
         viewModelScope.launch {
             when (val result = deleteLinkUseCase(linkId, softDelete = false)) {
                 is Result.Success -> {
                     Timber.d("Permanently deleted link: $linkId")
-                    // Emit UI event for undo functionality
-                    _uiEvents.emit(TrashUiEvent.ShowLinkDeleted(linkId))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(TrashUiEvent.ShowLinkDeleted(linkId))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
@@ -140,8 +144,8 @@ class TrashViewModel(
 
 sealed class TrashEvent {
     data object OnRefresh : TrashEvent()
-    data class OnRestoreLink(val linkId: String) : TrashEvent()
-    data class OnPermanentlyDeleteLink(val linkId: String) : TrashEvent()
+    data class OnRestoreLink(val linkId: String, val silent: Boolean = false) : TrashEvent()
+    data class OnPermanentlyDeleteLink(val linkId: String, val silent: Boolean = false) : TrashEvent()
     data class OnUndoDelete(val linkId: String) : TrashEvent()
     data object OnEmptyTrash : TrashEvent()
 }

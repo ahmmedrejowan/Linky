@@ -128,8 +128,8 @@ fun HomeScreen(
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle
-                        viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite))
+                        // Undo the favorite toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite, silent = true))
                     }
                 }
                 is HomeUiEvent.ShowArchiveToggled -> {
@@ -144,8 +144,8 @@ fun HomeScreen(
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the archive toggle
-                        viewModel.onEvent(HomeEvent.OnArchiveLink(event.linkId, !event.isArchived))
+                        // Undo the archive toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(HomeEvent.OnArchiveLink(event.linkId, !event.isArchived, silent = true))
                     }
                 }
                 is HomeUiEvent.ShowLinkTrashed -> {

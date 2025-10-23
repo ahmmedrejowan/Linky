@@ -9,8 +9,11 @@ import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -28,6 +31,9 @@ class SearchViewModel(
 
     private val _state = MutableStateFlow(SearchState())
     val state: StateFlow<SearchState> = _state.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<SearchUiEvent>()
+    val uiEvents: SharedFlow<SearchUiEvent> = _uiEvents.asSharedFlow()
 
     // Job to track and cancel search operations
     private var searchJob: Job? = null
@@ -77,7 +83,7 @@ class SearchViewModel(
                 }
             }
             is SearchEvent.OnToggleFavorite -> {
-                toggleFavorite(event.linkId, event.isFavorite)
+                toggleFavorite(event.linkId, event.isFavorite, event.silent)
             }
         }
     }
@@ -114,23 +120,35 @@ class SearchViewModel(
         }
     }
 
-    private fun toggleFavorite(linkId: String, isFavorite: Boolean) {
+    private fun toggleFavorite(linkId: String, isFavorite: Boolean, silent: Boolean = false) {
         viewModelScope.launch {
             when (val result = toggleFavoriteUseCase(linkId, isFavorite)) {
                 is Result.Success -> {
                     Timber.d("Toggled favorite for link: $linkId")
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(SearchUiEvent.ShowFavoriteToggled(linkId, isFavorite))
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(
                         result.exception,
                         LinkOperation.TOGGLE_FAVORITE
                     )
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(SearchUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
         }
     }
+}
+
+/**
+ * UI Events for Search screen
+ */
+sealed class SearchUiEvent {
+    data class ShowError(val message: String) : SearchUiEvent()
+    data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : SearchUiEvent()
 }
 
 /**
@@ -140,5 +158,5 @@ sealed class SearchEvent {
     data class OnSearchQueryChange(val query: String) : SearchEvent()
     data object OnSearch : SearchEvent()
     data object OnClearSearch : SearchEvent()
-    data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : SearchEvent()
+    data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean, val silent: Boolean = false) : SearchEvent()
 }

@@ -35,6 +35,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,28 +76,28 @@ fun LinkCard(
     // Disable swipe for deleted links
     val swipeEnabled = !link.isDeleted
 
+    // Track pending action to execute when user releases finger
+    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (!swipeEnabled) return@rememberSwipeToDismissBoxState false
-
+            // Store the action when threshold is met, but don't execute yet
+            // Return false to prevent auto-dismiss and make it bounce back
+            // Action executes when user releases (detected in LaunchedEffect)
             when (value) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    // Swiped left (trash) - only if not already deleted
-                    if (!link.isDeleted) {
-                        onTrashClick?.invoke()
-                        false // Return false to reset immediately
-                    } else {
-                        false
+                    // User swiped past threshold for trash
+                    if (swipeEnabled && !link.isDeleted) {
+                        pendingAction = onTrashClick
                     }
+                    false // Don't auto-dismiss, bounce back
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    // Swiped right (archive/unarchive) - only if not deleted
-                    if (!link.isDeleted) {
-                        onArchiveClick?.invoke()
-                        false // Return false to reset immediately
-                    } else {
-                        false
+                    // User swiped past threshold for archive
+                    if (swipeEnabled && !link.isDeleted) {
+                        pendingAction = onArchiveClick
                     }
+                    false // Don't auto-dismiss, bounce back
                 }
                 SwipeToDismissBoxValue.Settled -> false
             }
@@ -101,6 +105,16 @@ fun LinkCard(
         // Require 70% swipe distance to trigger action (prevents accidental swipes)
         positionalThreshold = { distance -> distance * 0.7f }
     )
+
+    // Execute pending action when user releases and swipe settles back
+    LaunchedEffect(dismissState.currentValue, pendingAction) {
+        // When swipe bounces back to Settled and we have a pending action
+        if (dismissState.currentValue == SwipeToDismissBoxValue.Settled && pendingAction != null) {
+            // User has released finger - execute the action now
+            pendingAction?.invoke()
+            pendingAction = null
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,

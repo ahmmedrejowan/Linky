@@ -13,9 +13,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -47,28 +53,64 @@ fun SearchScreen(
     viewModel: SearchViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
 
-    PullToRefreshBox(
-        isRefreshing = state.isSearching,
-        onRefresh = {
-            if (state.searchQuery.isNotBlank()) {
-                viewModel.onEvent(SearchEvent.OnSearch)
+    // Handle UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is SearchUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                is SearchUiEvent.ShowFavoriteToggled -> {
+                    val message = if (event.isFavorite) {
+                        "Added to favorites"
+                    } else {
+                        "Removed from favorites"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the favorite toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(SearchEvent.OnToggleFavorite(event.linkId, !event.isFavorite, silent = true))
+                    }
+                }
             }
-        },
-        // Focus management: Tap outside search bar to hide keyboard
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                focusManager.clearFocus()
-            }
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+    ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = state.isSearching,
+            onRefresh = {
+                if (state.searchQuery.isNotBlank()) {
+                    viewModel.onEvent(SearchEvent.OnSearch)
+                }
+            },
+            // Focus management: Tap outside search bar to hide keyboard
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    focusManager.clearFocus()
+                }
         ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
             // Search Bar - Always visible
             SearchBar(
                 query = state.searchQuery,
@@ -91,8 +133,9 @@ fun SearchScreen(
                 onFavoriteClick = { linkId, isFavorite ->
                     viewModel.onEvent(SearchEvent.OnToggleFavorite(linkId, isFavorite))
                 },
-                onRetry = { viewModel.onEvent(SearchEvent.OnSearch) }
-            )
+                    onRetry = { viewModel.onEvent(SearchEvent.OnSearch) }
+                )
+            }
         }
     }
 }

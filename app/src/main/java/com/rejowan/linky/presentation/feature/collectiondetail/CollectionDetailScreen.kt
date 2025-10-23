@@ -144,8 +144,8 @@ fun CollectionDetailScreen(
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle
-                        viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(event.linkId))
+                        // Undo the favorite toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(event.linkId, silent = true))
                     }
                 }
                 is CollectionDetailUiEvent.ShowArchiveToggled -> {
@@ -160,8 +160,8 @@ fun CollectionDetailScreen(
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the archive toggle
-                        viewModel.onEvent(CollectionDetailEvent.OnArchiveLink(event.linkId))
+                        // Undo the archive toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(CollectionDetailEvent.OnArchiveLink(event.linkId, silent = true))
                     }
                 }
                 is CollectionDetailUiEvent.ShowLinkTrashed -> {

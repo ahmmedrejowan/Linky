@@ -155,8 +155,57 @@ fun LinkDetailScreen(
                         duration = androidx.compose.material3.SnackbarDuration.Short
                     )
                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle
-                        viewModel.onEvent(LinkDetailEvent.OnToggleFavorite)
+                        // Undo the favorite toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(LinkDetailEvent.OnToggleFavorite(silent = true))
+                    }
+                }
+                is LinkDetailUiEvent.ShowArchiveToggled -> {
+                    val message = if (event.isArchived) {
+                        "Link archived"
+                    } else {
+                        "Link unarchived"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        // Undo the archive toggle (silent to prevent another snackbar)
+                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink(silent = true))
+                    }
+                }
+                is LinkDetailUiEvent.ShowLinkTrashed -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link moved to trash",
+                        actionLabel = "Undo",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        // Undo the trash action by restoring (silent to prevent another snackbar)
+                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink(silent = true))
+                    }
+                }
+                is LinkDetailUiEvent.ShowLinkRestored -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link restored",
+                        actionLabel = "Undo",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        // Undo the restore by moving back to trash (silent to prevent another snackbar)
+                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink(silent = true))
+                    }
+                }
+                is LinkDetailUiEvent.ShowLinkDeleted -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link permanently deleted",
+                        actionLabel = "Undo",
+                        duration = androidx.compose.material3.SnackbarDuration.Short
+                    )
+                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        // Undo the permanent delete by restoring (silent to prevent another snackbar)
+                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink(silent = true))
                     }
                 }
             }
@@ -196,7 +245,7 @@ fun LinkDetailScreen(
 
                         // Favorite toggle
                         IconButton(
-                            onClick = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite) },
+                            onClick = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite()) },
                             enabled = state.link != null
                         ) {
                             Icon(
@@ -334,8 +383,8 @@ fun LinkDetailScreen(
                         onDeleteSnapshot = { snapshotId ->
                             viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(snapshotId))
                         },
-                        onRestoreLink = { viewModel.onEvent(LinkDetailEvent.OnRestoreLink) },
-                        onPermanentlyDeleteLink = { viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink) },
+                        onRestoreLink = { viewModel.onEvent(LinkDetailEvent.OnRestoreLink()) },
+                        onPermanentlyDeleteLink = { viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink()) },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -352,7 +401,7 @@ fun LinkDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink)
+                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink())
                         showRestoreDialogFromMenu = false
                     }
                 ) {
@@ -376,7 +425,7 @@ fun LinkDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink)
+                        viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink())
                         showPermanentDeleteDialogFromMenu = false
                     }
                 ) {
@@ -400,7 +449,7 @@ fun LinkDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink())
                         showArchiveDialog = false
                     }
                 ) {
@@ -424,7 +473,7 @@ fun LinkDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink)
+                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink())
                         showUnarchiveDialog = false
                     }
                 ) {
@@ -448,7 +497,7 @@ fun LinkDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink)
+                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink())
                         showDeleteDialog = false
                     }
                 ) {

@@ -69,10 +69,10 @@ class CollectionDetailViewModel(
                 toggleFavorite()
             }
             is CollectionDetailEvent.OnToggleLinkFavorite -> {
-                toggleLinkFavorite(event.linkId)
+                toggleLinkFavorite(event.linkId, event.silent)
             }
             is CollectionDetailEvent.OnArchiveLink -> {
-                archiveLink(event.linkId)
+                archiveLink(event.linkId, event.silent)
             }
             is CollectionDetailEvent.OnTrashLink -> {
                 trashLink(event.linkId)
@@ -338,7 +338,7 @@ class CollectionDetailViewModel(
         }
     }
 
-    private fun toggleLinkFavorite(linkId: String) {
+    private fun toggleLinkFavorite(linkId: String, silent: Boolean = false) {
         viewModelScope.launch {
             // Find the link in current state
             val link = _state.value.links.find { it.id == linkId }
@@ -353,13 +353,15 @@ class CollectionDetailViewModel(
             when (val result = updateLinkUseCase(updatedLink)) {
                 is Result.Success -> {
                     Timber.d("toggleLinkFavorite: Successfully updated favorite status")
-                    // Emit UI event for snackbar with undo
-                    _uiEvents.emit(
-                        CollectionDetailUiEvent.ShowLinkFavoriteToggled(
-                            linkId = linkId,
-                            isFavorite = updatedLink.isFavorite
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(
+                            CollectionDetailUiEvent.ShowLinkFavoriteToggled(
+                                linkId = linkId,
+                                isFavorite = updatedLink.isFavorite
+                            )
                         )
-                    )
+                    }
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "toggleLinkFavorite: Failed to update favorite status")
@@ -371,7 +373,7 @@ class CollectionDetailViewModel(
         }
     }
 
-    private fun archiveLink(linkId: String) {
+    private fun archiveLink(linkId: String, silent: Boolean = false) {
         viewModelScope.launch {
             // Find the link in current state
             val link = _state.value.links.find { it.id == linkId }
@@ -386,8 +388,10 @@ class CollectionDetailViewModel(
             when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("archiveLink: Successfully updated archive status")
-                    // Emit UI event for undo functionality
-                    _uiEvents.emit(CollectionDetailUiEvent.ShowArchiveToggled(linkId, isArchiving))
+                    // Only emit snackbar event if not silent (not an undo action)
+                    if (!silent) {
+                        _uiEvents.emit(CollectionDetailUiEvent.ShowArchiveToggled(linkId, isArchiving))
+                    }
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "archiveLink: Failed to update archive status")
@@ -467,8 +471,8 @@ class CollectionDetailViewModel(
 sealed class CollectionDetailEvent {
     data object OnRefresh : CollectionDetailEvent()
     data object OnToggleFavorite : CollectionDetailEvent()
-    data class OnToggleLinkFavorite(val linkId: String) : CollectionDetailEvent()
-    data class OnArchiveLink(val linkId: String) : CollectionDetailEvent()
+    data class OnToggleLinkFavorite(val linkId: String, val silent: Boolean = false) : CollectionDetailEvent()
+    data class OnArchiveLink(val linkId: String, val silent: Boolean = false) : CollectionDetailEvent()
     data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
     data class OnRestoreLink(val linkId: String) : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()

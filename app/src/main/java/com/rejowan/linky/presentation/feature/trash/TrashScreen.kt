@@ -89,8 +89,8 @@ fun TrashScreen(
                         duration = SnackbarDuration.Short
                     )
                     if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the restore by moving back to trash
-                        viewModel.onEvent(TrashEvent.OnPermanentlyDeleteLink(event.linkId))
+                        // Undo the restore by moving back to trash (silent to prevent another snackbar)
+                        viewModel.onEvent(TrashEvent.OnPermanentlyDeleteLink(event.linkId, silent = true))
                     }
                 }
                 is TrashUiEvent.ShowLinkDeleted -> {
