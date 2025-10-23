@@ -148,6 +148,9 @@ fun CollectionDetailScreen(
                         viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(event.linkId))
                     }
                 }
+                is CollectionDetailUiEvent.NavigateBack -> {
+                    onNavigateBack()
+                }
             }
         }
     }
@@ -190,7 +193,7 @@ fun CollectionDetailScreen(
                     IconButton(onClick = { viewModel.onEvent(CollectionDetailEvent.OnToggleFavorite) }) {
                         Icon(
                             imageVector = if (state.collection?.isFavorite == true) {
-                                Icons.Default.Favorite
+                                Icons.Filled.Favorite
                             } else {
                                 Icons.Outlined.FavoriteBorder
                             },
@@ -200,7 +203,7 @@ fun CollectionDetailScreen(
                                 "Add to favorites"
                             },
                             tint = if (state.collection?.isFavorite == true) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.error
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
@@ -633,6 +636,15 @@ private fun DeleteCollectionDialog(
                         }
                     }
                 }
+
+                // Warning text
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "⚠️ This action can't be undone",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
             }
         },
         confirmButton = {

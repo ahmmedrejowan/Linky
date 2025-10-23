@@ -259,15 +259,20 @@ class CollectionDetailViewModel(
 
         viewModelScope.launch {
             if (_state.value.deleteWithLinks) {
-                // Delete all links in the collection
-                Timber.d("deleteCollection: Deleting ${_state.value.links.size} links in collection")
+                // Move all links to trash (not delete immediately)
+                Timber.d("deleteCollection: Moving ${_state.value.links.size} links to trash")
                 _state.value.links.forEach { link ->
-                    when (val result = deleteLinkUseCase(link.id)) {
+                    val updatedLink = link.copy(
+                        deletedAt = System.currentTimeMillis(), // Move to trash
+                        collectionId = null, // Remove collection reference
+                        hideFromHome = false // Reset hideFromHome for potential restore
+                    )
+                    when (val result = updateLinkUseCase(updatedLink)) {
                         is Result.Success -> {
-                            Timber.d("deleteCollection: Deleted link | LinkId: ${link.id}")
+                            Timber.d("deleteCollection: Moved link to trash | LinkId: ${link.id}")
                         }
                         is Result.Error -> {
-                            Timber.e(result.exception, "deleteCollection: Failed to delete link | LinkId: ${link.id}")
+                            Timber.e(result.exception, "deleteCollection: Failed to move link to trash | LinkId: ${link.id}")
                         }
                         is Result.Loading -> {
                             // Loading state
@@ -275,10 +280,13 @@ class CollectionDetailViewModel(
                     }
                 }
             } else {
-                // Remove collection reference from all links
+                // Remove collection reference from all links and set hideFromHome to false
                 Timber.d("deleteCollection: Removing collection reference from ${_state.value.links.size} links")
                 _state.value.links.forEach { link ->
-                    val updatedLink = link.copy(collectionId = null)
+                    val updatedLink = link.copy(
+                        collectionId = null,
+                        hideFromHome = false // Reset hideFromHome since it only applies when in a collection
+                    )
                     when (val result = updateLinkUseCase(updatedLink)) {
                         is Result.Success -> {
                             Timber.d("deleteCollection: Removed collection reference | LinkId: ${link.id}")
@@ -301,10 +309,11 @@ class CollectionDetailViewModel(
                     _state.update {
                         it.copy(
                             showDeleteDialog = false,
-                            deleteWithLinks = false,
-                            error = "Collection deleted successfully"
+                            deleteWithLinks = false
                         )
                     }
+                    // Navigate back after successful deletion
+                    _uiEvents.emit(CollectionDetailUiEvent.NavigateBack)
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "deleteCollection: Failed to delete collection")
@@ -402,4 +411,5 @@ sealed class CollectionDetailEvent {
 sealed class CollectionDetailUiEvent {
     data class ShowError(val message: String) : CollectionDetailUiEvent()
     data class ShowLinkFavoriteToggled(val linkId: String, val isFavorite: Boolean) : CollectionDetailUiEvent()
+    data object NavigateBack : CollectionDetailUiEvent()
 }
