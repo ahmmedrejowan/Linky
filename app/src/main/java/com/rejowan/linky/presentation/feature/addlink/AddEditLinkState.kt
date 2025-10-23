@@ -14,6 +14,7 @@ data class AddEditLinkState(
     val previewUrl: String? = null,
     val isFavorite: Boolean = false,
     val hideFromHome: Boolean = false,
+    val isArchived: Boolean = false, // Preserve archive status when editing
     val isLoading: Boolean = false,
     val isFetchingPreview: Boolean = false,
     val error: String? = null,

@@ -247,28 +247,6 @@ fun CollectionDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Show archived links") },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.onEvent(CollectionDetailEvent.OnToggleShowArchived)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = if (state.showArchivedLinks) {
-                                            Icons.Default.Check
-                                        } else {
-                                            Icons.Default.Check
-                                        },
-                                        contentDescription = "Show archived",
-                                        tint = if (state.showArchivedLinks) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color.Transparent
-                                        }
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
                                 text = { Text("Delete collection") },
                                 onClick = {
                                     showMenu = false
@@ -364,14 +342,8 @@ fun CollectionDetailScreen(
                                 )
                             }
                         } else {
-                            // Separate active and archived links
-                            val activeLinks = state.links.filter { !it.isArchived }
-                            val archivedLinks = state.links.filter { it.isArchived }
-
-                            LinksListWithArchived(
-                                activeLinks = activeLinks,
-                                archivedLinks = archivedLinks,
-                                showArchived = state.showArchivedLinks,
+                            LinksList(
+                                links = state.links,
                                 onLinkClick = onLinkClick,
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))

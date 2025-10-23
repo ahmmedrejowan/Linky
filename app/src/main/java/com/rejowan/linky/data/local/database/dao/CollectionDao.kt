@@ -33,24 +33,24 @@ interface CollectionDao {
     @Delete
     suspend fun delete(collection: CollectionEntity)
 
-    // Get collection with link count
+    // Get collection with link count (excludes archived and deleted)
     @Query("""
         SELECT collections.*, COUNT(links.id) as linkCount
         FROM collections
-        LEFT JOIN links ON collections.id = links.collectionId AND links.deletedAt IS NULL
+        LEFT JOIN links ON collections.id = links.collectionId AND links.deletedAt IS NULL AND links.isArchived = 0
         GROUP BY collections.id
         ORDER BY collections.sortOrder ASC
     """)
     fun getCollectionsWithCount(): Flow<List<CollectionWithCount>>
 
-    // Get collection with link count and preview images (up to 3 most recent links)
+    // Get collection with link count and preview images (up to 3 most recent links, excludes archived)
     @Query("""
         SELECT collections.*, COUNT(links.id) as linkCount,
         GROUP_CONCAT(links.previewImagePath, '|') as previewImages
         FROM collections
         LEFT JOIN (
             SELECT * FROM links
-            WHERE deletedAt IS NULL
+            WHERE deletedAt IS NULL AND isArchived = 0
             ORDER BY createdAt DESC
             LIMIT 3
         ) as links ON collections.id = links.collectionId
@@ -59,10 +59,10 @@ interface CollectionDao {
     """)
     fun getCollectionsWithCountAndPreviews(): Flow<List<CollectionWithCountAndPreviews>>
 
-    // Get preview images for a specific collection (up to 3 most recent)
+    // Get preview images for a specific collection (up to 3 most recent, excludes archived)
     @Query("""
         SELECT previewImagePath FROM links
-        WHERE collectionId = :collectionId AND deletedAt IS NULL
+        WHERE collectionId = :collectionId AND deletedAt IS NULL AND isArchived = 0
         ORDER BY createdAt DESC
         LIMIT 3
     """)

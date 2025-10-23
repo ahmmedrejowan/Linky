@@ -267,6 +267,7 @@ class AddEditLinkViewModel(
                                 previewUrl = it.previewUrl,
                                 isFavorite = it.isFavorite,
                                 hideFromHome = it.hideFromHome,
+                                isArchived = it.isArchived, // Preserve archive status
                                 isLoading = false
                             )
                         }
@@ -460,7 +461,8 @@ class AddEditLinkViewModel(
                 previewImagePath = currentState.previewImagePath,
                 previewUrl = currentState.previewUrl,
                 isFavorite = currentState.isFavorite,
-                hideFromHome = currentState.hideFromHome
+                hideFromHome = currentState.hideFromHome,
+                isArchived = currentState.isArchived // Preserve archive status when editing
             )
 
             Timber.d("saveLink: Link object created | ID: ${link.id} | Title: ${link.title}")

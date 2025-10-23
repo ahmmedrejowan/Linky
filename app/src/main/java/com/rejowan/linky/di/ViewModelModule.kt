@@ -72,8 +72,7 @@ val viewModelModule = module {
             updateCollectionUseCase = get(),
             deleteCollectionUseCase = get(),
             updateLinkUseCase = get(),
-            deleteLinkUseCase = get(),
-            preferencesManager = get()
+            deleteLinkUseCase = get()
         )
     }
 

@@ -34,8 +34,7 @@ class CollectionDetailViewModel(
     private val updateCollectionUseCase: UpdateCollectionUseCase,
     private val deleteCollectionUseCase: DeleteCollectionUseCase,
     private val updateLinkUseCase: UpdateLinkUseCase,
-    private val deleteLinkUseCase: DeleteLinkUseCase,
-    private val preferencesManager: com.rejowan.linky.util.PreferencesManager
+    private val deleteLinkUseCase: DeleteLinkUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CollectionDetailState())
@@ -47,10 +46,6 @@ class CollectionDetailViewModel(
     init {
         val collectionId = savedStateHandle.get<String>("collectionId")
         Timber.d("CollectionDetailViewModel initialized | CollectionId: $collectionId")
-
-        // Load showArchivedLinks preference
-        val showArchived = preferencesManager.shouldShowArchivedLinks()
-        _state.update { it.copy(showArchivedLinks = showArchived) }
 
         collectionId?.let {
             loadCollectionDetails(it)
@@ -79,9 +74,6 @@ class CollectionDetailViewModel(
             }
             is CollectionDetailEvent.OnTrashLink -> {
                 trashLink(event.linkId)
-            }
-            is CollectionDetailEvent.OnToggleShowArchived -> {
-                toggleShowArchived()
             }
             is CollectionDetailEvent.OnSortTypeChange -> {
                 Timber.d("onEvent: Changing sort type to ${event.sortType}")
@@ -426,17 +418,6 @@ class CollectionDetailViewModel(
         }
     }
 
-    private fun toggleShowArchived() {
-        val newValue = !_state.value.showArchivedLinks
-        Timber.d("toggleShowArchived: Toggling show archived links | NewValue: $newValue")
-
-        // Update state
-        _state.update { it.copy(showArchivedLinks = newValue) }
-
-        // Save to preferences
-        preferencesManager.setShowArchivedLinks(newValue)
-    }
-
     /**
      * Sort links based on the selected sort type
      * Matches HomeViewModel logic: applies sort, then prioritizes favorites at top
@@ -474,7 +455,6 @@ sealed class CollectionDetailEvent {
     data class OnToggleLinkFavorite(val linkId: String) : CollectionDetailEvent()
     data class OnArchiveLink(val linkId: String) : CollectionDetailEvent()
     data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
-    data object OnToggleShowArchived : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
