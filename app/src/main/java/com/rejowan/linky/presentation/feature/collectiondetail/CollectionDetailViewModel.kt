@@ -34,7 +34,9 @@ class CollectionDetailViewModel(
     private val updateCollectionUseCase: UpdateCollectionUseCase,
     private val deleteCollectionUseCase: DeleteCollectionUseCase,
     private val updateLinkUseCase: UpdateLinkUseCase,
-    private val deleteLinkUseCase: DeleteLinkUseCase
+    private val deleteLinkUseCase: DeleteLinkUseCase,
+    private val toggleArchiveUseCase: com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase,
+    private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CollectionDetailState())
@@ -74,6 +76,9 @@ class CollectionDetailViewModel(
             }
             is CollectionDetailEvent.OnTrashLink -> {
                 trashLink(event.linkId)
+            }
+            is CollectionDetailEvent.OnRestoreLink -> {
+                restoreLink(event.linkId)
             }
             is CollectionDetailEvent.OnSortTypeChange -> {
                 Timber.d("onEvent: Changing sort type to ${event.sortType}")
@@ -375,16 +380,18 @@ class CollectionDetailViewModel(
                 return@launch
             }
 
-            val updatedLink = link.copy(isArchived = !link.isArchived)
-            Timber.d("archiveLink: Toggling archive | LinkId: $linkId | NewValue: ${updatedLink.isArchived}")
+            val isArchiving = !link.isArchived
+            Timber.d("archiveLink: Toggling archive | LinkId: $linkId | NewValue: $isArchiving")
 
-            when (val result = updateLinkUseCase(updatedLink)) {
+            when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("archiveLink: Successfully updated archive status")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowArchiveToggled(linkId, isArchiving))
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "archiveLink: Failed to update archive status")
-                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.UPDATE)
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
                     _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -394,23 +401,31 @@ class CollectionDetailViewModel(
 
     private fun trashLink(linkId: String) {
         viewModelScope.launch {
-            // Find the link in current state
-            val link = _state.value.links.find { it.id == linkId }
-            if (link == null) {
-                Timber.w("trashLink: Link not found | LinkId: $linkId")
-                return@launch
-            }
-
-            val updatedLink = link.copy(deletedAt = System.currentTimeMillis())
-            Timber.d("trashLink: Moving link to trash | LinkId: $linkId")
-
-            when (val result = updateLinkUseCase(updatedLink)) {
+            when (val result = deleteLinkUseCase(linkId, softDelete = true)) {
                 is Result.Success -> {
-                    Timber.d("trashLink: Successfully moved link to trash")
+                    Timber.d("trashLink: Successfully moved link to trash | LinkId: $linkId")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowLinkTrashed(linkId))
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "trashLink: Failed to move link to trash")
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
+    private fun restoreLink(linkId: String) {
+        viewModelScope.launch {
+            when (val result = restoreLinkUseCase(linkId)) {
+                is Result.Success -> {
+                    Timber.d("restoreLink: Successfully restored link | LinkId: $linkId")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "restoreLink: Failed to restore link")
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
                     _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -455,6 +470,7 @@ sealed class CollectionDetailEvent {
     data class OnToggleLinkFavorite(val linkId: String) : CollectionDetailEvent()
     data class OnArchiveLink(val linkId: String) : CollectionDetailEvent()
     data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
+    data class OnRestoreLink(val linkId: String) : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
@@ -471,5 +487,7 @@ sealed class CollectionDetailEvent {
 sealed class CollectionDetailUiEvent {
     data class ShowError(val message: String) : CollectionDetailUiEvent()
     data class ShowLinkFavoriteToggled(val linkId: String, val isFavorite: Boolean) : CollectionDetailUiEvent()
+    data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : CollectionDetailUiEvent()
+    data class ShowLinkTrashed(val linkId: String) : CollectionDetailUiEvent()
     data object NavigateBack : CollectionDetailUiEvent()
 }

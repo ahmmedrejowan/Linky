@@ -26,12 +26,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,7 +69,44 @@ fun TrashScreen(
     viewModel: TrashViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showEmptyTrashDialog by remember { mutableStateOf(false) }
+
+    // Listen to UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                is TrashUiEvent.ShowError -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                is TrashUiEvent.ShowLinkRestored -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link restored",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the restore by moving back to trash
+                        viewModel.onEvent(TrashEvent.OnPermanentlyDeleteLink(event.linkId))
+                    }
+                }
+                is TrashUiEvent.ShowLinkDeleted -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link permanently deleted",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the permanent delete by restoring
+                        viewModel.onEvent(TrashEvent.OnUndoDelete(event.linkId))
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -90,6 +132,7 @@ fun TrashScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
         Column(
@@ -236,9 +279,6 @@ private fun TrashLinkItem(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showRestoreDialog by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
     Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -261,7 +301,7 @@ private fun TrashLinkItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { showRestoreDialog = true },
+                    onClick = onRestoreClick,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -275,7 +315,7 @@ private fun TrashLinkItem(
                 }
 
                 OutlinedButton(
-                    onClick = { showDeleteDialog = true },
+                    onClick = onDeleteClick,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
@@ -291,58 +331,6 @@ private fun TrashLinkItem(
                 }
             }
         }
-    }
-
-    // Restore confirmation dialog
-    if (showRestoreDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestoreDialog = false },
-            title = { Text("Restore Link?") },
-            text = {
-                Text("This link will be restored from trash and moved back to your active links.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRestoreClick()
-                        showRestoreDialog = false
-                    }
-                ) {
-                    Text("Restore")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestoreDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Delete confirmation dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Permanently?") },
-            text = {
-                Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteClick()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 

@@ -132,6 +132,34 @@ fun HomeScreen(
                         viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite))
                     }
                 }
+                is HomeUiEvent.ShowArchiveToggled -> {
+                    val message = if (event.isArchived) {
+                        "Link archived"
+                    } else {
+                        "Link unarchived"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the archive toggle
+                        viewModel.onEvent(HomeEvent.OnArchiveLink(event.linkId, !event.isArchived))
+                    }
+                }
+                is HomeUiEvent.ShowLinkTrashed -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link moved to trash",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the trash action by restoring the link
+                        // Need to implement restore functionality
+                        viewModel.onEvent(HomeEvent.OnRestoreLink(event.linkId))
+                    }
+                }
             }
         }
     }

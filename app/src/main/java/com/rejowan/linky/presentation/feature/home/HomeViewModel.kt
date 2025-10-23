@@ -34,6 +34,7 @@ class HomeViewModel(
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val toggleArchiveUseCase: com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase,
+    private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository
 ) : ViewModel() {
 
@@ -65,6 +66,7 @@ class HomeViewModel(
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite)
             is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
+            is HomeEvent.OnRestoreLink -> restoreLink(event.linkId)
             is HomeEvent.OnRefresh -> {
                 // Trigger a refresh by re-emitting the current filter
                 filterTypeFlow.value = _state.value.filterType
@@ -242,6 +244,8 @@ class HomeViewModel(
             when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
                 is Result.Success -> {
                     Timber.d("Toggled archive for link: $linkId, isArchiving: $isArchiving")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(HomeUiEvent.ShowArchiveToggled(linkId, isArchiving))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
@@ -257,9 +261,26 @@ class HomeViewModel(
             when (val result = deleteLinkUseCase(linkId, softDelete = true)) {
                 is Result.Success -> {
                     Timber.d("Deleted link: $linkId")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(HomeUiEvent.ShowLinkTrashed(linkId))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
+                    _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
+    private fun restoreLink(linkId: String) {
+        viewModelScope.launch {
+            when (val result = restoreLinkUseCase(linkId)) {
+                is Result.Success -> {
+                    Timber.d("Restored link: $linkId")
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
                     _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -271,6 +292,8 @@ class HomeViewModel(
 sealed class HomeUiEvent {
     data class ShowError(val message: String) : HomeUiEvent()
     data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : HomeUiEvent()
+    data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : HomeUiEvent()
+    data class ShowLinkTrashed(val linkId: String) : HomeUiEvent()
 }
 
 sealed class HomeEvent {
@@ -279,6 +302,7 @@ sealed class HomeEvent {
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean) : HomeEvent()
     data class OnArchiveLink(val linkId: String, val isArchiving: Boolean) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
+    data class OnRestoreLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()
     data class OnClipboardUrlDetected(val url: String) : HomeEvent()
     data object OnDismissClipboardPrompt : HomeEvent()

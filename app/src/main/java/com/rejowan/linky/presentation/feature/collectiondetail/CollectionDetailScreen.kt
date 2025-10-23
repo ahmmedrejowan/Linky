@@ -148,6 +148,33 @@ fun CollectionDetailScreen(
                         viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(event.linkId))
                     }
                 }
+                is CollectionDetailUiEvent.ShowArchiveToggled -> {
+                    val message = if (event.isArchived) {
+                        "Link archived"
+                    } else {
+                        "Link unarchived"
+                    }
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the archive toggle
+                        viewModel.onEvent(CollectionDetailEvent.OnArchiveLink(event.linkId))
+                    }
+                }
+                is CollectionDetailUiEvent.ShowLinkTrashed -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "Link moved to trash",
+                        actionLabel = "Undo",
+                        duration = SnackbarDuration.Short
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        // Undo the trash action by restoring the link
+                        viewModel.onEvent(CollectionDetailEvent.OnRestoreLink(event.linkId))
+                    }
+                }
                 is CollectionDetailUiEvent.NavigateBack -> {
                     onNavigateBack()
                 }

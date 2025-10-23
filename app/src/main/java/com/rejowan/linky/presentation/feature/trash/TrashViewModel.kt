@@ -8,8 +8,11 @@ import com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -25,6 +28,9 @@ class TrashViewModel(
     private val _state = MutableStateFlow(TrashState())
     val state: StateFlow<TrashState> = _state.asStateFlow()
 
+    private val _uiEvents = MutableSharedFlow<TrashUiEvent>()
+    val uiEvents: SharedFlow<TrashUiEvent> = _uiEvents.asSharedFlow()
+
     init {
         loadTrashedLinks()
     }
@@ -34,6 +40,7 @@ class TrashViewModel(
             is TrashEvent.OnRefresh -> loadTrashedLinks()
             is TrashEvent.OnRestoreLink -> restoreLink(event.linkId)
             is TrashEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink(event.linkId)
+            is TrashEvent.OnUndoDelete -> undoDelete(event.linkId)
             is TrashEvent.OnEmptyTrash -> emptyTrash()
         }
     }
@@ -58,10 +65,12 @@ class TrashViewModel(
             when (val result = restoreLinkUseCase(linkId)) {
                 is Result.Success -> {
                     Timber.d("Restored link: $linkId")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(TrashUiEvent.ShowLinkRestored(linkId))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(TrashUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -73,10 +82,27 @@ class TrashViewModel(
             when (val result = deleteLinkUseCase(linkId, softDelete = false)) {
                 is Result.Success -> {
                     Timber.d("Permanently deleted link: $linkId")
+                    // Emit UI event for undo functionality
+                    _uiEvents.emit(TrashUiEvent.ShowLinkDeleted(linkId))
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
-                    _state.update { it.copy(error = errorMessage) }
+                    _uiEvents.emit(TrashUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
+    private fun undoDelete(linkId: String) {
+        viewModelScope.launch {
+            when (val result = restoreLinkUseCase(linkId)) {
+                is Result.Success -> {
+                    Timber.d("Undid delete for link: $linkId")
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.RESTORE)
+                    _uiEvents.emit(TrashUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
             }
@@ -116,5 +142,12 @@ sealed class TrashEvent {
     data object OnRefresh : TrashEvent()
     data class OnRestoreLink(val linkId: String) : TrashEvent()
     data class OnPermanentlyDeleteLink(val linkId: String) : TrashEvent()
+    data class OnUndoDelete(val linkId: String) : TrashEvent()
     data object OnEmptyTrash : TrashEvent()
+}
+
+sealed class TrashUiEvent {
+    data class ShowError(val message: String) : TrashUiEvent()
+    data class ShowLinkRestored(val linkId: String) : TrashUiEvent()
+    data class ShowLinkDeleted(val linkId: String) : TrashUiEvent()
 }

@@ -22,6 +22,7 @@ val viewModelModule = module {
             toggleFavoriteUseCase = get(),
             toggleArchiveUseCase = get(),
             deleteLinkUseCase = get(),
+            restoreLinkUseCase = get(),
             linkRepository = get()
         )
     }
@@ -72,7 +73,9 @@ val viewModelModule = module {
             updateCollectionUseCase = get(),
             deleteCollectionUseCase = get(),
             updateLinkUseCase = get(),
-            deleteLinkUseCase = get()
+            deleteLinkUseCase = get(),
+            toggleArchiveUseCase = get(),
+            restoreLinkUseCase = get()
         )
     }
 
