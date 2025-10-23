@@ -69,6 +69,12 @@ class CollectionDetailViewModel(
             is CollectionDetailEvent.OnToggleLinkFavorite -> {
                 toggleLinkFavorite(event.linkId)
             }
+            is CollectionDetailEvent.OnArchiveLink -> {
+                archiveLink(event.linkId)
+            }
+            is CollectionDetailEvent.OnTrashLink -> {
+                trashLink(event.linkId)
+            }
             is CollectionDetailEvent.OnSortTypeChange -> {
                 Timber.d("onEvent: Changing sort type to ${event.sortType}")
                 _state.update {
@@ -360,6 +366,58 @@ class CollectionDetailViewModel(
         }
     }
 
+    private fun archiveLink(linkId: String) {
+        viewModelScope.launch {
+            // Find the link in current state
+            val link = _state.value.links.find { it.id == linkId }
+            if (link == null) {
+                Timber.w("archiveLink: Link not found | LinkId: $linkId")
+                return@launch
+            }
+
+            val updatedLink = link.copy(isArchived = !link.isArchived)
+            Timber.d("archiveLink: Toggling archive | LinkId: $linkId | NewValue: ${updatedLink.isArchived}")
+
+            when (val result = updateLinkUseCase(updatedLink)) {
+                is Result.Success -> {
+                    Timber.d("archiveLink: Successfully updated archive status")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "archiveLink: Failed to update archive status")
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.UPDATE)
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
+    private fun trashLink(linkId: String) {
+        viewModelScope.launch {
+            // Find the link in current state
+            val link = _state.value.links.find { it.id == linkId }
+            if (link == null) {
+                Timber.w("trashLink: Link not found | LinkId: $linkId")
+                return@launch
+            }
+
+            val updatedLink = link.copy(deletedAt = System.currentTimeMillis())
+            Timber.d("trashLink: Moving link to trash | LinkId: $linkId")
+
+            when (val result = updateLinkUseCase(updatedLink)) {
+                is Result.Success -> {
+                    Timber.d("trashLink: Successfully moved link to trash")
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "trashLink: Failed to move link to trash")
+                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.DELETE)
+                    _uiEvents.emit(CollectionDetailUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
     /**
      * Sort links based on the selected sort type
      * Matches HomeViewModel logic: applies sort, then prioritizes favorites at top
@@ -395,6 +453,8 @@ sealed class CollectionDetailEvent {
     data object OnRefresh : CollectionDetailEvent()
     data object OnToggleFavorite : CollectionDetailEvent()
     data class OnToggleLinkFavorite(val linkId: String) : CollectionDetailEvent()
+    data class OnArchiveLink(val linkId: String) : CollectionDetailEvent()
+    data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()

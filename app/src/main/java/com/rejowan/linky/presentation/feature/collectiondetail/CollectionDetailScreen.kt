@@ -347,6 +347,12 @@ fun CollectionDetailScreen(
                                 onLinkClick = onLinkClick,
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
+                                },
+                                onArchiveClick = { linkId ->
+                                    viewModel.onEvent(CollectionDetailEvent.OnArchiveLink(linkId))
+                                },
+                                onTrashClick = { linkId ->
+                                    viewModel.onEvent(CollectionDetailEvent.OnTrashLink(linkId))
                                 }
                             )
                         }
@@ -459,6 +465,8 @@ private fun LinksList(
     links: List<Link>,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onArchiveClick: (String) -> Unit,
+    onTrashClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -474,6 +482,8 @@ private fun LinksList(
                 link = link,
                 onClick = { onLinkClick(link.id) },
                 onFavoriteClick = { onFavoriteClick(link.id) },
+                onArchiveClick = { onArchiveClick(link.id) },
+                onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
             )
         }
