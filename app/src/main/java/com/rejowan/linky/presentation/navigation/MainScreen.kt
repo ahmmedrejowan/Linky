@@ -48,6 +48,8 @@ import timber.log.Timber
  * It contains the BottomNavHost (nested navigation for Home/Collections/Settings)
  *
  * @param parentNavController Parent NavController for navigating outside bottom nav
+ * @param initialTab The initial tab to navigate to (0=Home, 1=Collections, 2=Settings), null=remember last
+ * @param navigateToCollectionId If set, navigates to this collection detail after opening Collections tab
  * @param sharedUrl URL shared from another app via ACTION_SEND intent
  * @param onSharedUrlHandled Callback when shared URL has been handled
  */
@@ -55,11 +57,41 @@ import timber.log.Timber
 @Composable
 fun MainScreen(
     parentNavController: NavHostController,
+    initialTab: Int? = null,
+    navigateToCollectionId: String? = null,
     sharedUrl: String? = null,
     onSharedUrlHandled: () -> Unit = {}
 ) {
     // Local nav controller for bottom nav (nested navigation)
     val bottomNavController = rememberNavController()
+
+    // Navigate to initial tab if specified
+    LaunchedEffect(initialTab) {
+        if (initialTab != null) {
+            val route = when (initialTab) {
+                0 -> Route.Home
+                1 -> Route.Collections
+                2 -> Route.Settings
+                else -> null
+            }
+            if (route != null) {
+                bottomNavController.navigate(route) {
+                    popUpTo(bottomNavController.graph.startDestinationId) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
+
+    // Navigate to collection detail if specified (after tab is set)
+    LaunchedEffect(navigateToCollectionId) {
+        if (navigateToCollectionId != null) {
+            parentNavController.navigate(Route.CollectionDetail(navigateToCollectionId))
+        }
+    }
     val currentBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 

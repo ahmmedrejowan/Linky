@@ -14,9 +14,14 @@ sealed class Route {
     /**
      * Main screen - Container for bottom navigation
      * This is the entry point and contains the BottomNavHost with Home/Collections/Settings
+     * @param initialTab The initial tab to navigate to (0=Home, 1=Collections, 2=Settings), null=remember last
+     * @param navigateToCollectionId If set, navigates to this collection detail screen after opening Collections tab
      */
     @Serializable
-    data object Main : Route()
+    data class Main(
+        val initialTab: Int? = null,
+        val navigateToCollectionId: String? = null
+    ) : Route()
 
     /**
      * Home screen - Main entry point with all links

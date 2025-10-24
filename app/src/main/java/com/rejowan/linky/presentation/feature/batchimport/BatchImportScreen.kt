@@ -93,6 +93,7 @@ import kotlin.random.Random
 @Composable
 fun BatchImportScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onNavigateToCollectionDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BatchImportViewModel = koinViewModel()
@@ -110,7 +111,7 @@ fun BatchImportScreen(
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is BatchImportUiEvent.NavigateToHome -> {
-                    onNavigateBack()
+                    onNavigateToHome()
                 }
                 is BatchImportUiEvent.NavigateToSettings -> {
                     onNavigateBack()

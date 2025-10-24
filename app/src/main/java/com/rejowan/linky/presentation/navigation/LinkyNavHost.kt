@@ -36,7 +36,7 @@ fun LinkyNavHost(
     sharedUrl: String? = null,
     onSharedUrlHandled: () -> Unit = {}
 ) {
-    val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main
+    val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main()
 
     NavHost(
         navController = navController,
@@ -49,7 +49,7 @@ fun LinkyNavHost(
             composable<Route.Welcome> {
                 WelcomeScreen(
                     onContinueOffline = {
-                        navController.navigate(Route.Main) {
+                        navController.navigate(Route.Main()) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     },
@@ -67,7 +67,7 @@ fun LinkyNavHost(
                         }
                     },
                     onSkip = {
-                        navController.navigate(Route.Main) {
+                        navController.navigate(Route.Main()) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     }
@@ -77,7 +77,7 @@ fun LinkyNavHost(
             composable<Route.SyncSetup> {
                 SyncSetupScreen(
                     onComplete = {
-                        navController.navigate(Route.Main) {
+                        navController.navigate(Route.Main()) {
                             popUpTo<Route.Welcome> { inclusive = true }
                         }
                     }
@@ -87,9 +87,12 @@ fun LinkyNavHost(
         */
 
         // ============ MAIN SCREEN (Container for Bottom Nav) ============
-        composable<Route.Main> {
+        composable<Route.Main> { backStackEntry ->
+            val mainRoute = backStackEntry.toRoute<Route.Main>()
             MainScreen(
                 parentNavController = navController,
+                initialTab = mainRoute.initialTab,
+                navigateToCollectionId = mainRoute.navigateToCollectionId,
                 sharedUrl = sharedUrl,
                 onSharedUrlHandled = onSharedUrlHandled
             )
@@ -196,8 +199,23 @@ fun LinkyNavHost(
         composable<Route.BatchImport> {
             BatchImportScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToHome = {
+                    // Navigate to Main with Home tab (0) and clear BatchImport from back stack
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.BatchImport> { inclusive = true }
+                    }
+                },
                 onNavigateToCollectionDetail = { collectionId ->
-                    navController.navigate(Route.CollectionDetail(collectionId))
+                    // Navigate to Main with Collections tab (1) and set to navigate to collection detail
+                    // This ensures the Collections tab is active when backing from collection detail
+                    navController.navigate(
+                        Route.Main(
+                            initialTab = 1,
+                            navigateToCollectionId = collectionId
+                        )
+                    ) {
+                        popUpTo<Route.BatchImport> { inclusive = true }
+                    }
                 }
             )
         }
