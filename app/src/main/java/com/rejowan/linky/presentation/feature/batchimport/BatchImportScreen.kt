@@ -152,21 +152,36 @@ fun BatchImportScreen(
         }
     ) { paddingValues ->
         // Show different screens based on state
-        if (state.showSelectionScreen) {
-            // Step 4: Link Selection & Review
-            LinkSelectionScreen(
-                state = state,
-                onEvent = viewModel::onEvent,
-                onNavigateBack = {
-                    viewModel.onEvent(BatchImportEvent.OnBackToEdit)
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            )
-        } else {
-            // Step 1: Paste Text
-            Column(
+        when {
+            state.showPreviewScreen -> {
+                // Step 5: Preview Fetching & Results
+                PreviewFetchingScreen(
+                    state = state,
+                    onEvent = viewModel::onEvent,
+                    onNavigateBack = {
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                )
+            }
+            state.showSelectionScreen -> {
+                // Step 4: Link Selection & Review
+                LinkSelectionScreen(
+                    state = state,
+                    onEvent = viewModel::onEvent,
+                    onNavigateBack = {
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                )
+            }
+            else -> {
+                // Step 1: Paste Text
+                Column(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
@@ -348,7 +363,8 @@ fun BatchImportScreen(
                 }
             }
         }
-        } // end else (Step 1)
+            } // end else (Step 1)
+        } // end when
     }
 
     // Discard content confirmation dialog
@@ -1376,8 +1392,7 @@ private fun LinkSelectionScreen(
 
                 Button(
                     onClick = {
-                        // TODO: Proceed to preview fetching (Step 5)
-                        // For now, just show a placeholder message
+                        onEvent(BatchImportEvent.OnStartFetching)
                     },
                     modifier = Modifier.weight(1f),
                     enabled = state.selectedCount > 0,
@@ -1539,6 +1554,302 @@ private fun LinkListItem(
                 contentDescription = "Remove",
                 tint = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+/**
+ * Preview Fetching Screen - Step 5
+ *
+ * Features:
+ * - Progress indicator showing chunks and current/total
+ * - Real-time preview cards as they're fetched
+ * - Collection picker for organizing imports
+ * - Import button when fetching completes
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PreviewFetchingScreen(
+    state: BatchImportState,
+    onEvent: (BatchImportEvent) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Intercept system back gesture
+    BackHandler {
+        onNavigateBack()
+    }
+
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Progress Section
+        if (state.isFetching) {
+            FetchingProgressCard(state.fetchProgress)
+        } else {
+            // Completion Summary
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Previews Ready",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "${state.previewResults.size} links ready to import",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Collection Picker
+        // TODO: Implement collection picker
+
+        // Preview Results List
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            if (state.previewResults.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = "Starting preview fetch...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                ) {
+                    items(
+                        count = state.previewResults.size,
+                        key = { index -> state.previewResults[index].url }
+                    ) { index ->
+                        PreviewCard(state.previewResults[index])
+                    }
+                }
+            }
+        }
+
+        // Bottom Actions
+        if (!state.isFetching) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Back")
+                }
+
+                Button(
+                    onClick = {
+                        // TODO: Proceed to import (Step 6)
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = state.previewResults.isNotEmpty(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Import")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Fetching Progress Card
+ */
+@Composable
+private fun FetchingProgressCard(progress: FetchProgress?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Fetching Previews...",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                if (progress != null) {
+                    Text(
+                        text = "Chunk ${progress.currentChunk} of ${progress.totalChunks}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            if (progress != null) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { progress.current.toFloat() / progress.total.toFloat() },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Text(
+                    text = "${progress.current} of ${progress.total} links",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+            } else {
+                androidx.compose.material3.LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Preview Card for individual link
+ */
+@Composable
+private fun PreviewCard(result: LinkPreviewResult) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            when (result) {
+                is LinkPreviewResult.Success -> {
+                    // Title
+                    Text(
+                        text = result.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+
+                    // Description
+                    if (result.description != null) {
+                        Text(
+                            text = result.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Domain
+                    Text(
+                        text = result.domain,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+
+                is LinkPreviewResult.Error -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = result.domain,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Preview failed - will use domain as title",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                is LinkPreviewResult.Timeout -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column {
+                            Text(
+                                text = result.domain,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Request timeout - will use domain as title",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

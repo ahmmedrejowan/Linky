@@ -116,7 +116,8 @@ val viewModelModule = module {
     viewModel {
         BatchImportViewModel(
             saveLinkUseCase = get(),
-            checkUrlExistsUseCase = get()
+            checkUrlExistsUseCase = get(),
+            linkPreviewFetcher = get()
         )
     }
 }

@@ -23,8 +23,9 @@ data class BatchImportState(
 
     // Navigation between steps
     val showSelectionScreen: Boolean = false,
+    val showPreviewScreen: Boolean = false,
 
-    // Step 3: Preview Fetching
+    // Step 5: Preview Fetching
     val isFetching: Boolean = false,
     val fetchProgress: FetchProgress? = null,
     val previewResults: List<LinkPreviewResult> = emptyList(),
