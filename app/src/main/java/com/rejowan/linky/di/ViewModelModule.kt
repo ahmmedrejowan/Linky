@@ -1,6 +1,7 @@
 package com.rejowan.linky.di
 
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkViewModel
+import com.rejowan.linky.presentation.feature.batchimport.BatchImportViewModel
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailViewModel
 import com.rejowan.linky.presentation.feature.collections.CollectionsViewModel
 import com.rejowan.linky.presentation.feature.home.HomeViewModel
@@ -109,6 +110,13 @@ val viewModelModule = module {
         SearchViewModel(
             searchLinksUseCase = get(),
             toggleFavoriteUseCase = get()
+        )
+    }
+
+    viewModel {
+        BatchImportViewModel(
+            saveLinkUseCase = get(),
+            checkUrlExistsUseCase = get()
         )
     }
 }

@@ -15,11 +15,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 import kotlin.random.Random
 
 /**
@@ -72,14 +78,18 @@ import kotlin.random.Random
 @Composable
 fun BatchImportScreen(
     onNavigateBack: () -> Unit,
-    onStartScan: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: BatchImportViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val themePreferences = remember { ThemePreferences(context) }
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
 
+    // ViewModel state
+    val state by viewModel.state.collectAsState()
+
+    // Local UI state
     var pastedText by remember { mutableStateOf("") }
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var showClearConfirmationDialog by remember { mutableStateOf(false) }
@@ -93,12 +103,27 @@ fun BatchImportScreen(
     val characterCount = pastedText.length
     val lineCount = if (pastedText.isEmpty()) 0 else pastedText.lines().size
 
+    // Handle scanning completion
+    LaunchedEffect(state.extractedUrls) {
+        if (state.extractedUrls.isNotEmpty() && !state.isScanning) {
+            // TODO: Navigate to next step (summary or selection)
+            // For now, just show a message
+        }
+    }
+
     // Handle back press with confirmation
     val handleBackPress = {
         if (pastedText.isNotEmpty()) {
             showConfirmationDialog = true
         } else {
             onNavigateBack()
+        }
+    }
+
+    // Intercept system back gesture/button for Step 1
+    if (!state.showSelectionScreen) {
+        BackHandler(enabled = pastedText.isNotEmpty()) {
+            showConfirmationDialog = true
         }
     }
 
@@ -126,14 +151,29 @@ fun BatchImportScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        // Show different screens based on state
+        if (state.showSelectionScreen) {
+            // Step 4: Link Selection & Review
+            LinkSelectionScreen(
+                state = state,
+                onEvent = viewModel::onEvent,
+                onNavigateBack = {
+                    viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
+        } else {
+            // Step 1: Paste Text
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Test Section (for development/testing)
             TestDataCard(
                 onLoadNormalText = {
@@ -288,23 +328,35 @@ fun BatchImportScreen(
                 }
 
                 Button(
-                    onClick = { onStartScan(pastedText) },
+                    onClick = {
+                        viewModel.onEvent(BatchImportEvent.OnTextChanged(pastedText))
+                        viewModel.onEvent(BatchImportEvent.OnStartScan)
+                    },
                     modifier = Modifier.weight(1f),
-                    enabled = pastedText.isNotEmpty(),
+                    enabled = pastedText.isNotEmpty() && !state.isScanning,
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Check URLs")
+                    if (state.isScanning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Check URLs")
+                    }
                 }
             }
         }
+        } // end else (Step 1)
     }
 
     // Discard content confirmation dialog
     if (showConfirmationDialog) {
         ConfirmationDialog(
-            title = "Discard Pasted Content?",
-            message = "You have unsaved text. Do you want to discard it?",
-            confirmText = "Discard",
+            title = "Leave Import?",
+            message = "You have pasted text that hasn't been processed yet. Do you want to leave and discard it?",
+            confirmText = "Leave",
             onConfirm = {
                 showConfirmationDialog = false
                 onNavigateBack()
@@ -335,6 +387,56 @@ fun BatchImportScreen(
     if (showHowItWorksDialog) {
         HowItWorksDialog(
             onDismiss = { showHowItWorksDialog = false }
+        )
+    }
+
+    // Scanning Dialog
+    if (state.isScanning) {
+        ScanningDialog(
+            progress = state.scanProgress
+        )
+    }
+
+    // Scanning Result Dialog
+    if (state.error is BatchImportError.NoUrlsFound) {
+        AlertDialog(
+            onDismissRequest = {
+                // Clear error
+                viewModel.resetState()
+            },
+            title = {
+                Text("No URLs Found")
+            },
+            text = {
+                Text(
+                    text = (state.error as BatchImportError.NoUrlsFound).message,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetState()
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    // Success: Show extracted URLs count (only if not already on selection screen)
+    if (state.extractedUrls.isNotEmpty() && !state.isScanning && state.error == null && !state.showSelectionScreen) {
+        ScanResultDialog(
+            totalUrls = state.totalUrls,
+            duplicateCount = state.duplicateCount,
+            onProceed = {
+                viewModel.onEvent(BatchImportEvent.OnProceedToSelection)
+            },
+            onBackToEdit = {
+                viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+            }
         )
     }
 }
@@ -566,6 +668,114 @@ private fun ConfirmationDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+/**
+ * Scanning Dialog - Shows progress while extracting URLs
+ */
+@Composable
+private fun ScanningDialog(
+    progress: String
+) {
+    AlertDialog(
+        onDismissRequest = { /* Cannot dismiss while scanning */ },
+        title = {
+            Text(
+                text = "Scanning for URLs...",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp)
+                )
+                if (progress.isNotEmpty()) {
+                    Text(
+                        text = progress,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        },
+        confirmButton = { /* No button while scanning */ },
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+/**
+ * Scan Result Dialog - Shows scanning results and allows navigation
+ */
+@Composable
+private fun ScanResultDialog(
+    totalUrls: Int,
+    duplicateCount: Int,
+    onProceed: () -> Unit,
+    onBackToEdit: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onBackToEdit,
+        title = {
+            Text(
+                text = "URLs Found",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Found $totalUrls unique URL${if (totalUrls != 1) "s" else ""} ready to import",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                if (duplicateCount > 0) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "$duplicateCount URL${if (duplicateCount != 1) "s" else ""} already saved (marked as duplicate)",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+
+                Text(
+                    text = "New links: ${totalUrls - duplicateCount}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onProceed,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Review Links")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onBackToEdit,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Back to Edit")
             }
         },
         shape = RoundedCornerShape(16.dp)
@@ -901,4 +1111,434 @@ private fun getLargeTestData(): String {
     This collection contains over 150+ unique URLs across various categories for comprehensive testing.
     Use this to test batch import performance, duplicate detection, and URL extraction logic.
     """.trimIndent()
+}
+
+/**
+ * Link Selection & Review Screen - Step 4
+ *
+ * Features:
+ * - Statistics card showing total URLs, duplicates, new links, and selected count
+ * - Action buttons to remove all or remove duplicates
+ * - List of URLs with domain, full URL, duplicate badge, and remove button
+ * - Bottom action buttons (Next and Back)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LinkSelectionScreen(
+    state: BatchImportState,
+    onEvent: (BatchImportEvent) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Local state for confirmation dialogs
+    var showRemoveDuplicatesDialog by remember { mutableStateOf(false) }
+    var showRemoveUnselectedDialog by remember { mutableStateOf(false) }
+    var showBackConfirmationDialog by remember { mutableStateOf(false) }
+    var showActionsMenu by remember { mutableStateOf(false) }
+
+    // Intercept system back gesture/button for Step 4
+    BackHandler {
+        showBackConfirmationDialog = true
+    }
+
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header Statistics Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "URL Statistics",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    StatisticItem("Total URLs", state.totalUrls.toString())
+                    StatisticItem("Duplicates", state.duplicateCount.toString(), align = Alignment.End)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    StatisticItem("New Links", (state.totalUrls - state.duplicateCount).toString())
+                    StatisticItem("Selected", state.selectedCount.toString(), align = Alignment.End)
+                }
+            }
+        }
+
+        // Action Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Smart Select All / Deselect All toggle button
+            val isAllSelected = state.selectedCount == state.totalUrls && state.totalUrls > 0
+            OutlinedButton(
+                onClick = {
+                    if (isAllSelected) {
+                        onEvent(BatchImportEvent.OnDeselectAll)
+                    } else {
+                        onEvent(BatchImportEvent.OnSelectAll)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                enabled = state.urlStatuses.isNotEmpty()
+            ) {
+                Icon(
+                    imageVector = if (isAllSelected) Icons.Default.Clear else Icons.Default.Check,
+                    contentDescription = if (isAllSelected) "Deselect All" else "Select All",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.padding(4.dp))
+                Text(if (isAllSelected) "Deselect All" else "Select All")
+            }
+
+            // More Actions dropdown menu
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedButton(
+                    onClick = { showActionsMenu = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.urlStatuses.isNotEmpty()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More Actions",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.padding(4.dp))
+                    Text("More Actions")
+                }
+
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showActionsMenu,
+                    onDismissRequest = { showActionsMenu = false }
+                ) {
+                    // Select New Only
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("Select New Only") },
+                        onClick = {
+                            onEvent(BatchImportEvent.OnSelectNewOnly)
+                            showActionsMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null
+                            )
+                        },
+                        enabled = state.duplicateCount > 0
+                    )
+
+                    androidx.compose.material3.HorizontalDivider()
+
+                    // Remove Duplicates (destructive)
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("Remove Duplicates", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showActionsMenu = false
+                            showRemoveDuplicatesDialog = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        enabled = state.duplicateCount > 0
+                    )
+
+                    // Remove Unselected (destructive)
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("Remove Unselected", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showActionsMenu = false
+                            showRemoveUnselectedDialog = true
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        enabled = state.selectedCount < state.totalUrls
+                    )
+                }
+            }
+        }
+
+        // Link List
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            if (state.urlStatuses.isEmpty()) {
+                // Empty state
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = "No URLs to review",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "All URLs have been removed",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    items(
+                        count = state.urlStatuses.size,
+                        key = { index -> state.urlStatuses[index].url }
+                    ) { index ->
+                        val urlStatus = state.urlStatuses[index]
+                        LinkListItem(
+                            urlStatus = urlStatus,
+                            onToggleSelection = { onEvent(BatchImportEvent.OnToggleUrlSelection(urlStatus.url)) },
+                            onRemove = { onEvent(BatchImportEvent.OnRemoveUrl(urlStatus.url)) }
+                        )
+                        if (index < state.urlStatuses.size - 1) {
+                            androidx.compose.material3.HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Actions
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Selected count
+            Text(
+                text = "${state.selectedCount} links selected",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showBackConfirmationDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Back")
+                }
+
+                Button(
+                    onClick = {
+                        // TODO: Proceed to preview fetching (Step 5)
+                        // For now, just show a placeholder message
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = state.selectedCount > 0,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Next")
+                }
+            }
+        }
+    }
+
+    // Confirmation Dialogs
+
+    // Back confirmation
+    if (showBackConfirmationDialog) {
+        ConfirmationDialog(
+            title = "Leave Import?",
+            message = "You have ${state.selectedCount} links selected. Do you want to leave and go back to editing?",
+            confirmText = "Leave",
+            onConfirm = {
+                showBackConfirmationDialog = false
+                onNavigateBack()
+            },
+            onDismiss = {
+                showBackConfirmationDialog = false
+            }
+        )
+    }
+
+    // Remove Duplicates confirmation
+    if (showRemoveDuplicatesDialog) {
+        ConfirmationDialog(
+            title = "Remove Duplicates?",
+            message = "This will permanently remove ${state.duplicateCount} duplicate URL(s) from the list. This action cannot be undone.",
+            confirmText = "Remove",
+            onConfirm = {
+                showRemoveDuplicatesDialog = false
+                onEvent(BatchImportEvent.OnRemoveDuplicates)
+            },
+            onDismiss = {
+                showRemoveDuplicatesDialog = false
+            }
+        )
+    }
+
+    // Remove Unselected confirmation
+    if (showRemoveUnselectedDialog) {
+        val unselectedCount = state.totalUrls - state.selectedCount
+        ConfirmationDialog(
+            title = "Remove Unselected?",
+            message = "This will permanently remove $unselectedCount unselected URL(s) from the list. This action cannot be undone.",
+            confirmText = "Remove",
+            onConfirm = {
+                showRemoveUnselectedDialog = false
+                onEvent(BatchImportEvent.OnRemoveUnselected)
+            },
+            onDismiss = {
+                showRemoveUnselectedDialog = false
+            }
+        )
+    }
+}
+
+/**
+ * Statistic Item for the statistics card
+ */
+@Composable
+private fun StatisticItem(
+    label: String,
+    value: String,
+    align: Alignment.Horizontal = Alignment.Start
+) {
+    Column(
+        horizontalAlignment = align
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+/**
+ * Individual Link List Item
+ */
+@Composable
+private fun LinkListItem(
+    urlStatus: UrlStatus,
+    onToggleSelection: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Checkbox
+        androidx.compose.material3.Checkbox(
+            checked = urlStatus.isSelected,
+            onCheckedChange = { onToggleSelection() }
+        )
+
+        // URL Info
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Domain name (bold)
+                Text(
+                    text = urlStatus.domain,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Duplicate badge
+                if (urlStatus.isDuplicate) {
+                    androidx.compose.material3.Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = "Duplicate",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            // Full URL (ellipsized)
+            Text(
+                text = urlStatus.url,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+
+        // Remove button
+        IconButton(
+            onClick = onRemove
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
 }

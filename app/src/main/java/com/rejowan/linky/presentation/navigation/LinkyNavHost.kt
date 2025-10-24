@@ -195,12 +195,7 @@ fun LinkyNavHost(
 
         composable<Route.BatchImport> {
             BatchImportScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onStartScan = { pastedText ->
-                    // TODO: Handle scan logic and navigate to next step
-                    // For now, just pop back
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
