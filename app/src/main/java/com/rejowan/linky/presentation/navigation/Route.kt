@@ -129,6 +129,13 @@ sealed class Route {
     @Serializable
     data object SyncSettings : Route()
 
+    /**
+     * Batch Import screen
+     * Import multiple links at once from pasted text
+     */
+    @Serializable
+    data object BatchImport : Route()
+
 
     // ============ AUTH ROUTES (Phase 2) ============
 

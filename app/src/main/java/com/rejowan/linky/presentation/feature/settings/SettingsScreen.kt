@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
  * Features:
  * - Categorized settings navigation
  * - Data & Storage, Appearance, Privacy, About, Sync categories
+ * - Batch Import entry point
  * - Clean Material 3 design
  *
  * @param onNavigateToDataStorage Navigate to Data & Storage screen
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.dp
  * @param onNavigateToPrivacySecurity Navigate to Privacy & Security screen
  * @param onNavigateToAbout Navigate to About screen
  * @param onNavigateToSync Navigate to Sync settings (Phase 2)
+ * @param onNavigateToBatchImport Navigate to Batch Import screen
  * @param modifier Modifier for styling
  */
 @Composable
@@ -55,9 +58,16 @@ fun SettingsScreen(
     onNavigateToPrivacySecurity: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToSync: () -> Unit,
+    onNavigateToBatchImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val settingsCategories = listOf(
+        SettingsCategory(
+            icon = Icons.Filled.FileUpload,
+            title = "Batch Import Links",
+            description = "Import multiple links at once from text",
+            onClick = onNavigateToBatchImport
+        ),
         SettingsCategory(
             icon = Icons.Filled.Storage,
             title = "Data & Storage",

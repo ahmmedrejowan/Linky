@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
+import com.rejowan.linky.presentation.feature.batchimport.BatchImportScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
 import com.rejowan.linky.presentation.feature.settings.about.AboutScreen
@@ -189,6 +190,17 @@ fun LinkyNavHost(
             SyncScreen(
                 onNavigateToLogin = { navController.navigate(Route.Login) },
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.BatchImport> {
+            BatchImportScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onStartScan = { pastedText ->
+                    // TODO: Handle scan logic and navigate to next step
+                    // For now, just pop back
+                    navController.popBackStack()
+                }
             )
         }
 

@@ -16,6 +16,7 @@ class ThemePreferences(private val context: Context) {
 
     private val themeModeKey = stringPreferencesKey("theme_preference")
     private val dynamicColorKey = stringPreferencesKey("dynamic_color_preference")
+    private val showBatchImportHowItWorksKey = stringPreferencesKey("show_batch_import_how_it_works")
 
     suspend fun saveTheme(theme: String) {
         context.dataStore.edit { preferences ->
@@ -51,6 +52,16 @@ class ThemePreferences(private val context: Context) {
         }
     }
 
+    suspend fun setShowBatchImportHowItWorks(show: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[showBatchImportHowItWorksKey] = if (show) "true" else "false"
+        }
+    }
 
+    fun shouldShowBatchImportHowItWorks(): Flow<Boolean> {
+        return context.dataStore.data.map { preferences ->
+            preferences[showBatchImportHowItWorksKey]?.toBoolean() ?: true // Default: show it
+        }
+    }
 
 }

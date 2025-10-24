@@ -110,6 +110,10 @@ fun BottomNavHost(
                 onNavigateToSync = {
                     // Navigate using parent controller to SyncSettings
                     parentNavController.navigate(Route.SyncSettings)
+                },
+                onNavigateToBatchImport = {
+                    // Navigate using parent controller to BatchImport
+                    parentNavController.navigate(Route.BatchImport)
                 }
             )
         }
