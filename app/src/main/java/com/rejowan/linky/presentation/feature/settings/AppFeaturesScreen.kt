@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * App Features Screen - Control app behavior and features
@@ -55,7 +57,7 @@ fun AppFeaturesScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val themePreferences = ThemePreferences(context)
+    val themePreferences = remember { ThemePreferences(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // Collect clipboard checking preference
@@ -103,8 +105,10 @@ fun AppFeaturesScreen(
                     description = "Automatically detect URLs copied to clipboard when app resumes",
                     checked = isClipboardCheckingEnabled,
                     onCheckedChange = { enabled ->
+                        Timber.tag("AppFeatures").d("Toggle changed to: $enabled")
                         coroutineScope.launch {
                             themePreferences.setClipboardCheckingEnabled(enabled)
+                            Timber.tag("AppFeatures").d("Preference saved: $enabled")
                         }
                     }
                 )

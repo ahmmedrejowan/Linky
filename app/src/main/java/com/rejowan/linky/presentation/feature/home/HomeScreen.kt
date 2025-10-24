@@ -107,9 +107,15 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Collect clipboard checking preference
+    // Use null as initial to avoid checking before preference is loaded from DataStore
     val themePreferences = remember { com.rejowan.linky.data.local.preferences.ThemePreferences(context) }
     val isClipboardCheckingEnabled by themePreferences.isClipboardCheckingEnabled()
-        .collectAsState(initial = true)
+        .collectAsState(initial = null)
+
+    // Log preference changes
+    LaunchedEffect(isClipboardCheckingEnabled) {
+        Timber.tag("HomeScreen").d("Clipboard checking preference loaded/changed: $isClipboardCheckingEnabled")
+    }
 
     // Throttle clipboard checks - only check once per 5 seconds
     var lastClipboardCheckTime by remember { mutableStateOf(0L) }
@@ -179,12 +185,19 @@ fun HomeScreen(
 
     // Check clipboard when screen resumes (throttled to once per 5 seconds)
     // Skip clipboard check for 5 seconds after share intent to avoid conflicts
-    // Also skip if user has disabled clipboard checking in settings
+    // Also skip if user has disabled clipboard checking in settings or preference not loaded yet
     DisposableEffect(lifecycleOwner, lastShareIntentHandledTime, isClipboardCheckingEnabled) {
+        Timber.tag("HomeScreen").d("DisposableEffect created with isClipboardCheckingEnabled=$isClipboardCheckingEnabled")
+
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // Skip if clipboard checking is disabled in settings
-                if (!isClipboardCheckingEnabled) {
+                // Skip if preference not loaded yet or clipboard checking is disabled in settings
+                if (isClipboardCheckingEnabled == null) {
+                    Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (preference not loaded yet)")
+                    return@LifecycleEventObserver
+                }
+
+                if (isClipboardCheckingEnabled == false) {
                     Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (disabled in settings)")
                     return@LifecycleEventObserver
                 }
