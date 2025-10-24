@@ -94,6 +94,10 @@ fun BottomNavHost(
         // ============ SETTINGS SCREEN ============
         composable<Route.Settings> {
             SettingsScreen(
+                onNavigateToAppFeatures = {
+                    // Navigate using parent controller to AppFeatures
+                    parentNavController.navigate(Route.AppFeatures)
+                },
                 onNavigateToDataStorage = {
                     // Navigate using parent controller to DataStorage
                     parentNavController.navigate(Route.DataStorage)

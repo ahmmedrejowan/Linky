@@ -17,6 +17,7 @@ class ThemePreferences(private val context: Context) {
     private val themeModeKey = stringPreferencesKey("theme_preference")
     private val dynamicColorKey = stringPreferencesKey("dynamic_color_preference")
     private val showBatchImportHowItWorksKey = stringPreferencesKey("show_batch_import_how_it_works")
+    private val clipboardCheckingEnabledKey = stringPreferencesKey("clipboard_checking_enabled")
 
     suspend fun saveTheme(theme: String) {
         context.dataStore.edit { preferences ->
@@ -61,6 +62,18 @@ class ThemePreferences(private val context: Context) {
     fun shouldShowBatchImportHowItWorks(): Flow<Boolean> {
         return context.dataStore.data.map { preferences ->
             preferences[showBatchImportHowItWorksKey]?.toBoolean() ?: true // Default: show it
+        }
+    }
+
+    suspend fun setClipboardCheckingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[clipboardCheckingEnabledKey] = if (enabled) "true" else "false"
+        }
+    }
+
+    fun isClipboardCheckingEnabled(): Flow<Boolean> {
+        return context.dataStore.data.map { preferences ->
+            preferences[clipboardCheckingEnabledKey]?.toBoolean() ?: true // Default: enabled
         }
     }
 

@@ -11,6 +11,7 @@ import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
 import com.rejowan.linky.presentation.feature.batchimport.BatchImportScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
+import com.rejowan.linky.presentation.feature.settings.AppFeaturesScreen
 import com.rejowan.linky.presentation.feature.settings.about.AboutScreen
 import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScreen
 import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
@@ -163,6 +164,12 @@ fun LinkyNavHost(
         }
 
         // ============ SETTINGS DETAIL SCREENS ============
+
+        composable<Route.AppFeatures> {
+            AppFeaturesScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
 
         composable<Route.DataStorage> {
             DataStorageScreen(

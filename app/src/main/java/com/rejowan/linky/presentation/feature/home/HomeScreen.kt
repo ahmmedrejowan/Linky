@@ -45,6 +45,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,6 +105,11 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Collect clipboard checking preference
+    val themePreferences = remember { com.rejowan.linky.data.local.preferences.ThemePreferences(context) }
+    val isClipboardCheckingEnabled by themePreferences.isClipboardCheckingEnabled()
+        .collectAsState(initial = true)
 
     // Throttle clipboard checks - only check once per 5 seconds
     var lastClipboardCheckTime by remember { mutableStateOf(0L) }
@@ -173,9 +179,16 @@ fun HomeScreen(
 
     // Check clipboard when screen resumes (throttled to once per 5 seconds)
     // Skip clipboard check for 5 seconds after share intent to avoid conflicts
-    DisposableEffect(lifecycleOwner, lastShareIntentHandledTime) {
+    // Also skip if user has disabled clipboard checking in settings
+    DisposableEffect(lifecycleOwner, lastShareIntentHandledTime, isClipboardCheckingEnabled) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                // Skip if clipboard checking is disabled in settings
+                if (!isClipboardCheckingEnabled) {
+                    Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (disabled in settings)")
+                    return@LifecycleEventObserver
+                }
+
                 val currentTime = System.currentTimeMillis()
                 val timeSinceShareIntent = currentTime - lastShareIntentHandledTime
                 val shareIntentSuppressionMillis = 5000L // 5 seconds

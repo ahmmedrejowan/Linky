@@ -100,6 +100,13 @@ sealed class Route {
     // ============ SETTINGS DETAIL ROUTES ============
 
     /**
+     * App Features screen
+     * Control app behavior and features (clipboard checking, etc.)
+     */
+    @Serializable
+    data object AppFeatures : Route()
+
+    /**
      * Data & Storage settings screen
      * Shows storage usage, trash management, export/import
      */

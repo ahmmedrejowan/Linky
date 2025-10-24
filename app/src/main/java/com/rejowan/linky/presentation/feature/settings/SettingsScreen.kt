@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,11 +39,13 @@ import androidx.compose.ui.unit.dp
  * Settings Screen - Main hub for all settings categories
  *
  * Features:
- * - Categorized settings navigation
- * - Data & Storage, Appearance, Privacy, About, Sync categories
- * - Batch Import entry point
+ * - Categorized settings navigation with sections
+ * - App Features control
+ * - Data management and customization options
+ * - Account and information screens
  * - Clean Material 3 design
  *
+ * @param onNavigateToAppFeatures Navigate to App Features screen
  * @param onNavigateToDataStorage Navigate to Data & Storage screen
  * @param onNavigateToAppearance Navigate to Appearance screen
  * @param onNavigateToPrivacySecurity Navigate to Privacy & Security screen
@@ -53,6 +56,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun SettingsScreen(
+    onNavigateToAppFeatures: () -> Unit,
     onNavigateToDataStorage: () -> Unit,
     onNavigateToAppearance: () -> Unit,
     onNavigateToPrivacySecurity: () -> Unit,
@@ -61,7 +65,17 @@ fun SettingsScreen(
     onNavigateToBatchImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val settingsCategories = listOf(
+    // Group settings into sections
+    val appSection = listOf(
+        SettingsCategory(
+            icon = Icons.Filled.Settings,
+            title = "App Features",
+            description = "Control app behavior and features",
+            onClick = onNavigateToAppFeatures
+        )
+    )
+
+    val dataManagementSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.FileUpload,
             title = "Batch Import Links",
@@ -73,13 +87,19 @@ fun SettingsScreen(
             title = "Data & Storage",
             description = "Storage usage, Trash, Export/Import",
             onClick = onNavigateToDataStorage
-        ),
+        )
+    )
+
+    val customizationSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Palette,
             title = "Appearance",
             description = "Theme, View options, Card design",
             onClick = onNavigateToAppearance
-        ),
+        )
+    )
+
+    val accountSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Cloud,
             title = "Sync",
@@ -92,7 +112,10 @@ fun SettingsScreen(
             title = "Privacy & Security",
             description = "Privacy policy, Data management",
             onClick = onNavigateToPrivacySecurity
-        ),
+        )
+    )
+
+    val informationSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Info,
             title = "About",
@@ -109,7 +132,55 @@ fun SettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(settingsCategories) { category ->
+            // App Section
+            item {
+                SectionHeader(title = "App")
+            }
+            items(appSection) { category ->
+                SettingsCategoryCard(category = category)
+            }
+
+            // Spacer
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // Data Management Section
+            item {
+                SectionHeader(title = "Data Management")
+            }
+            items(dataManagementSection) { category ->
+                SettingsCategoryCard(category = category)
+            }
+
+            // Spacer
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // Customization Section
+            item {
+                SectionHeader(title = "Customization")
+            }
+            items(customizationSection) { category ->
+                SettingsCategoryCard(category = category)
+            }
+
+            // Spacer
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // Account Section
+            item {
+                SectionHeader(title = "Account")
+            }
+            items(accountSection) { category ->
+                SettingsCategoryCard(category = category)
+            }
+
+            // Spacer
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            // Information Section
+            item {
+                SectionHeader(title = "Information")
+            }
+            items(informationSection) { category ->
                 SettingsCategoryCard(category = category)
             }
         }
@@ -126,6 +197,22 @@ private data class SettingsCategory(
     val onClick: () -> Unit,
     val badge: String? = null
 )
+
+/**
+ * Section header component
+ */
+@Composable
+private fun SectionHeader(
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+    )
+}
 
 /**
  * Settings category card component
