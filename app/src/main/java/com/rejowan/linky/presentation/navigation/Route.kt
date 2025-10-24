@@ -137,9 +137,10 @@ sealed class Route {
     /**
      * Batch Import screen
      * Import multiple links at once from pasted text
+     * @param prefillText Optional text to pre-fill in the paste field (from share intent)
      */
     @Serializable
-    data object BatchImport : Route()
+    data class BatchImport(val prefillText: String? = null) : Route()
 
 
     // ============ AUTH ROUTES (Phase 2) ============

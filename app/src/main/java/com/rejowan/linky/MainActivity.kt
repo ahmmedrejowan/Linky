@@ -11,11 +11,13 @@ import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.rejowan.linky.presentation.navigation.LinkyNavHost
+import com.rejowan.linky.presentation.navigation.SharedContent
 import com.rejowan.linky.ui.theme.LinkyTheme
+import com.rejowan.linky.util.UrlExtractor
 import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
-    private var sharedUrl by mutableStateOf<String?>(null)
+    private var sharedContent by mutableStateOf<SharedContent?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,8 +34,8 @@ class MainActivity : ComponentActivity() {
                 LinkyNavHost(
                     navController = navController,
                     isAuthRequired = false,
-                    sharedUrl = sharedUrl,
-                    onSharedUrlHandled = { sharedUrl = null }
+                    sharedContent = sharedContent,
+                    onSharedContentHandled = { sharedContent = null }
                 )
             }
         }
@@ -51,40 +53,23 @@ class MainActivity : ComponentActivity() {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
                     if (!text.isNullOrBlank()) {
                         Timber.d("Received shared text: $text")
-                        // Extract URL from text (handles cases like "Check this: https://example.com cool!")
-                        val extractedUrl = extractUrlFromText(text)
-                        if (extractedUrl != null) {
-                            Timber.d("Extracted URL: $extractedUrl")
-                            sharedUrl = extractedUrl
+
+                        // Extract all URLs from the shared text
+                        val urls = UrlExtractor.extractUrls(text)
+                        Timber.d("Extracted ${urls.size} URL(s)")
+
+                        if (urls.isNotEmpty()) {
+                            sharedContent = SharedContent(
+                                text = text,
+                                urls = urls
+                            )
+                            Timber.d("Smart intent handling: ${urls.size} URLs detected")
                         } else {
-                            Timber.d("No URL found in shared text")
+                            Timber.d("No URLs found in shared text")
                         }
                     }
                 }
             }
         }
-    }
-
-    /**
-     * Extract URL from text that may contain additional content
-     * Handles cases like: "john doe https://johndoe.com djf"
-     * Returns the first valid URL found, or null if none found
-     */
-    private fun extractUrlFromText(text: String): String? {
-        // Regex pattern to match URLs with or without protocol
-        val urlPattern = Regex(
-            """(?:https?://)?(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)""",
-            RegexOption.IGNORE_CASE
-        )
-
-        val match = urlPattern.find(text.lowercase())
-        var url = match?.value
-
-        // If URL doesn't start with protocol, add https://
-        if (url != null && !url.startsWith("http://") && !url.startsWith("https://")) {
-            url = "https://$url"
-        }
-
-        return url?.lowercase()
     }
 }

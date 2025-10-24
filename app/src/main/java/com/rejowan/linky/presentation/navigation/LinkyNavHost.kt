@@ -26,15 +26,15 @@ import com.rejowan.linky.presentation.feature.trash.TrashScreen
  *
  * @param navController The NavHostController for app-level navigation
  * @param isAuthRequired Whether authentication is required (Phase 2)
- * @param sharedUrl URL shared from another app via ACTION_SEND intent
- * @param onSharedUrlHandled Callback when shared URL has been handled
+ * @param sharedContent Content shared from another app via ACTION_SEND intent
+ * @param onSharedContentHandled Callback when shared content has been handled
  */
 @Composable
 fun LinkyNavHost(
     navController: NavHostController,
     isAuthRequired: Boolean = false, // Phase 2: checks preferences
-    sharedUrl: String? = null,
-    onSharedUrlHandled: () -> Unit = {}
+    sharedContent: SharedContent? = null,
+    onSharedContentHandled: () -> Unit = {}
 ) {
     val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main()
 
@@ -93,8 +93,8 @@ fun LinkyNavHost(
                 parentNavController = navController,
                 initialTab = mainRoute.initialTab,
                 navigateToCollectionId = mainRoute.navigateToCollectionId,
-                sharedUrl = sharedUrl,
-                onSharedUrlHandled = onSharedUrlHandled
+                sharedContent = sharedContent,
+                onSharedContentHandled = onSharedContentHandled
             )
         }
 
@@ -196,8 +196,10 @@ fun LinkyNavHost(
             )
         }
 
-        composable<Route.BatchImport> {
+        composable<Route.BatchImport> { backStackEntry ->
+            val batchImportRoute = backStackEntry.toRoute<Route.BatchImport>()
             BatchImportScreen(
+                prefillText = batchImportRoute.prefillText,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToHome = {
                     // Navigate to Main with Home tab (0) and clear BatchImport from back stack

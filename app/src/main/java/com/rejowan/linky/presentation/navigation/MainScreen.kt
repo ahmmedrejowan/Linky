@@ -3,9 +3,12 @@ package com.rejowan.linky.presentation.navigation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
@@ -50,8 +53,8 @@ import timber.log.Timber
  * @param parentNavController Parent NavController for navigating outside bottom nav
  * @param initialTab The initial tab to navigate to (0=Home, 1=Collections, 2=Settings), null=remember last
  * @param navigateToCollectionId If set, navigates to this collection detail after opening Collections tab
- * @param sharedUrl URL shared from another app via ACTION_SEND intent
- * @param onSharedUrlHandled Callback when shared URL has been handled
+ * @param sharedContent Content shared from another app via ACTION_SEND intent
+ * @param onSharedContentHandled Callback when shared content has been handled
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,8 +62,8 @@ fun MainScreen(
     parentNavController: NavHostController,
     initialTab: Int? = null,
     navigateToCollectionId: String? = null,
-    sharedUrl: String? = null,
-    onSharedUrlHandled: () -> Unit = {}
+    sharedContent: SharedContent? = null,
+    onSharedContentHandled: () -> Unit = {}
 ) {
     // Local nav controller for bottom nav (nested navigation)
     val bottomNavController = rememberNavController()
@@ -101,12 +104,31 @@ fun MainScreen(
     // State for exit confirmation dialog
     var showExitDialog by remember { mutableStateOf(false) }
 
-    // Handle shared URL from other apps
-    LaunchedEffect(sharedUrl) {
-        if (!sharedUrl.isNullOrBlank()) {
-            Timber.d("Handling shared URL: $sharedUrl")
-            parentNavController.navigate(Route.AddEditLink(url = sharedUrl))
-            onSharedUrlHandled()
+    // State for batch import bottom sheet (smart intent handling)
+    var showBatchImportBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Handle shared content from other apps with smart intent detection
+    LaunchedEffect(sharedContent) {
+        if (sharedContent != null) {
+            when {
+                // 0 URLs: Do nothing (already handled by showing no URLs message in MainActivity)
+                sharedContent.hasNoUrls -> {
+                    Timber.d("No URLs in shared content")
+                    onSharedContentHandled()
+                }
+                // 1 URL: Navigate directly to Add Link (current behavior)
+                sharedContent.hasSingleUrl -> {
+                    Timber.d("Single URL detected: ${sharedContent.firstUrl}")
+                    parentNavController.navigate(Route.AddEditLink(url = sharedContent.firstUrl))
+                    onSharedContentHandled()
+                }
+                // 2+ URLs: Show bottom sheet with options
+                sharedContent.hasMultipleUrls -> {
+                    Timber.d("Multiple URLs detected: ${sharedContent.urlCount} URLs")
+                    showBatchImportBottomSheet = true
+                }
+            }
         }
     }
 
@@ -243,6 +265,28 @@ fun MainScreen(
             onDismiss = { showExitDialog = false }
         )
     }
+
+    // Batch Import Bottom Sheet (Smart Intent Handling)
+    if (showBatchImportBottomSheet && sharedContent != null) {
+        BatchImportPromptBottomSheet(
+            sheetState = sheetState,
+            urlCount = sharedContent.urlCount,
+            onBatchImport = {
+                showBatchImportBottomSheet = false
+                parentNavController.navigate(Route.BatchImport(prefillText = sharedContent.text))
+                onSharedContentHandled()
+            },
+            onAddFirstLinkOnly = {
+                showBatchImportBottomSheet = false
+                parentNavController.navigate(Route.AddEditLink(url = sharedContent.firstUrl))
+                onSharedContentHandled()
+            },
+            onDismiss = {
+                showBatchImportBottomSheet = false
+                onSharedContentHandled()
+            }
+        )
+    }
 }
 
 /**
@@ -316,6 +360,100 @@ private fun ExitConfirmationBottomSheet(
                     Text("Exit")
                 }
             }
+        }
+    }
+}
+
+/**
+ * Batch Import Prompt Bottom Sheet
+ * Shows options for handling shared text with multiple URLs
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BatchImportPromptBottomSheet(
+    sheetState: androidx.compose.material3.SheetState,
+    urlCount: Int,
+    onBatchImport: () -> Unit,
+    onAddFirstLinkOnly: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Icon
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(48.dp)
+                    .align(androidx.compose.ui.Alignment.CenterHorizontally),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            // Title
+            Text(
+                text = "Multiple Links Detected",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            // Message
+            Text(
+                text = "Found $urlCount links in the shared content. How would you like to proceed?",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Batch Import Button (Primary)
+            Button(
+                onClick = onBatchImport,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CreateNewFolder,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Batch Import ($urlCount links)")
+            }
+
+            // Add First Link Only Button (Secondary)
+            OutlinedButton(
+                onClick = onAddFirstLinkOnly,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add First Link Only")
+            }
+
+            // Dismiss Text Button
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancel")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

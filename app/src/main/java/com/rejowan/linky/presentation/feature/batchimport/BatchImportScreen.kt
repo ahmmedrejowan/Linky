@@ -92,6 +92,7 @@ import kotlin.random.Random
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BatchImportScreen(
+    prefillText: String? = null,
     onNavigateBack: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToCollectionDetail: (String) -> Unit,
@@ -130,7 +131,7 @@ fun BatchImportScreen(
     }
 
     // Local UI state
-    var pastedText by remember { mutableStateOf("") }
+    var pastedText by remember(prefillText) { mutableStateOf(prefillText ?: "") }
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var showClearConfirmationDialog by remember { mutableStateOf(false) }
     var showHowItWorksDialog by remember { mutableStateOf(false) }
