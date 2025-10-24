@@ -18,6 +18,7 @@ import com.rejowan.linky.presentation.feature.settings.SettingsScreen
  * @param navController Nested NavController for bottom nav (local to MainScreen)
  * @param parentNavController Parent NavController for navigating outside bottom nav
  * @param snackbarHostState Shared SnackbarHostState
+ * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param onCreateCollectionClick Callback to set the create collection action for FAB
  */
 @Composable
@@ -25,6 +26,7 @@ fun BottomNavHost(
     navController: NavHostController,
     parentNavController: NavHostController,
     snackbarHostState: SnackbarHostState,
+    lastShareIntentHandledTime: Long = 0L,
     onCreateCollectionClick: (() -> Unit) -> Unit,
     onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -38,6 +40,7 @@ fun BottomNavHost(
         composable<Route.Home> {
             HomeScreen(
                 snackbarHostState = snackbarHostState,
+                lastShareIntentHandledTime = lastShareIntentHandledTime,
                 onAddLinkClick = { url ->
                     // Navigate using parent controller to AddEditLink with optional URL
                     parentNavController.navigate(Route.AddEditLink(url = url))

@@ -108,9 +108,13 @@ fun MainScreen(
     var showBatchImportBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // Track when share intent was last handled to suppress clipboard checking temporarily
+    var lastShareIntentHandledTime by remember { mutableStateOf(0L) }
+
     // Handle shared content from other apps with smart intent detection
     LaunchedEffect(sharedContent) {
         if (sharedContent != null) {
+            lastShareIntentHandledTime = System.currentTimeMillis()
             when {
                 // 0 URLs: Do nothing (already handled by showing no URLs message in MainActivity)
                 sharedContent.hasNoUrls -> {
@@ -250,6 +254,7 @@ fun MainScreen(
             navController = bottomNavController,
             parentNavController = parentNavController,
             snackbarHostState = snackbarHostState,
+            lastShareIntentHandledTime = lastShareIntentHandledTime,
             onCreateCollectionClick = { callback ->
                 onCreateCollectionClick = callback
             },

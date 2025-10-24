@@ -84,6 +84,7 @@ import timber.log.Timber
  * @param onLinkClick Callback when a link is clicked
  * @param onNavigateToCollections Callback to navigate to collections (not used, handled by bottom nav)
  * @param onNavigateToSettings Callback to navigate to settings (not used, handled by bottom nav)
+ * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param modifier Modifier for styling
  * @param viewModel HomeViewModel injected via Koin
  */
@@ -91,6 +92,7 @@ import timber.log.Timber
 @Composable
 fun HomeScreen(
     snackbarHostState: SnackbarHostState,
+    lastShareIntentHandledTime: Long = 0L,
     onAddLinkClick: (String?) -> Unit,
     onLinkClick: (String) -> Unit,
     onNavigateToCollections: () -> Unit,
@@ -170,19 +172,28 @@ fun HomeScreen(
     }
 
     // Check clipboard when screen resumes (throttled to once per 5 seconds)
-    DisposableEffect(lifecycleOwner) {
+    // Skip clipboard check for 5 seconds after share intent to avoid conflicts
+    DisposableEffect(lifecycleOwner, lastShareIntentHandledTime) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 val currentTime = System.currentTimeMillis()
-                val timeSinceLastCheck = currentTime - lastClipboardCheckTime
-                val throttleMillis = 5000L // 5 seconds
+                val timeSinceShareIntent = currentTime - lastShareIntentHandledTime
+                val shareIntentSuppressionMillis = 5000L // 5 seconds
 
-                if (timeSinceLastCheck >= throttleMillis) {
-                    Timber.tag("HomeScreen").d("Screen resumed, checking clipboard (${timeSinceLastCheck}ms since last check)")
-                    checkClipboardForUrl(context, viewModel)
-                    lastClipboardCheckTime = currentTime
+                // Skip clipboard check if share intent was handled recently
+                if (lastShareIntentHandledTime > 0 && timeSinceShareIntent < shareIntentSuppressionMillis) {
+                    Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (share intent handled ${timeSinceShareIntent}ms ago)")
                 } else {
-                    Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (throttled, ${timeSinceLastCheck}ms since last check)")
+                    val timeSinceLastCheck = currentTime - lastClipboardCheckTime
+                    val throttleMillis = 5000L // 5 seconds
+
+                    if (timeSinceLastCheck >= throttleMillis) {
+                        Timber.tag("HomeScreen").d("Screen resumed, checking clipboard (${timeSinceLastCheck}ms since last check)")
+                        checkClipboardForUrl(context, viewModel)
+                        lastClipboardCheckTime = currentTime
+                    } else {
+                        Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (throttled, ${timeSinceLastCheck}ms since last check)")
+                    }
                 }
             }
         }
