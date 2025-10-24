@@ -195,7 +195,10 @@ fun LinkyNavHost(
 
         composable<Route.BatchImport> {
             BatchImportScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCollectionDetail = { collectionId ->
+                    navController.navigate(Route.CollectionDetail(collectionId))
+                }
             )
         }
 

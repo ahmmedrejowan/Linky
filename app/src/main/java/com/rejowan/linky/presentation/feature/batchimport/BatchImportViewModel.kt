@@ -191,7 +191,15 @@ class BatchImportViewModel(
 
             is BatchImportEvent.OnDone -> {
                 viewModelScope.launch {
-                    _uiEvent.emit(BatchImportUiEvent.NavigateToHome)
+                    // Navigate to collection detail if a collection was selected, otherwise go to home
+                    val selectedCollectionId = _state.value.selectedCollectionId
+                    if (selectedCollectionId != null) {
+                        _uiEvent.emit(BatchImportUiEvent.NavigateToCollection(selectedCollectionId))
+                    } else {
+                        _uiEvent.emit(BatchImportUiEvent.NavigateToHome)
+                    }
+                    // Reset state after navigation
+                    resetState()
                 }
             }
         }
@@ -435,7 +443,7 @@ class BatchImportViewModel(
                         it.copy(
                             previewResults = allResults.toList(),
                             fetchProgress = FetchProgress(
-                                current = (chunkIndex + 1) * chunkSize.coerceAtMost(selectedUrls.size),
+                                current = ((chunkIndex + 1) * chunkSize).coerceAtMost(selectedUrls.size),
                                 total = selectedUrls.size,
                                 currentChunk = chunkIndex + 1,
                                 totalChunks = chunks.size
@@ -470,10 +478,8 @@ class BatchImportViewModel(
      */
     private suspend fun fetchSinglePreview(url: String): LinkPreviewResult {
         return try {
-            // Set timeout of 10 seconds per URL
-            val preview = withTimeout(10000) {
-                linkPreviewFetcher.fetchPreview(url, timeoutMs = 10000)
-            }
+            // Fetch preview with 10 second timeout (handled by LinkPreviewFetcher)
+            val preview = linkPreviewFetcher.fetchPreview(url, timeoutMs = 10000)
 
             if (preview != null) {
                 LinkPreviewResult.Success(
@@ -537,31 +543,44 @@ class BatchImportViewModel(
                     )
                 }
 
-                // Convert LinkPreviewResult to Link objects
-                val links = previewResults.map { result ->
-                    createLinkFromPreviewResult(result, _state.value.selectedCollectionId)
-                }
+                // Wrap import operation with timeout (5 minutes max)
+                withTimeout(300000) {
+                    // Convert LinkPreviewResult to Link objects
+                    val links = previewResults.map { result ->
+                        createLinkFromPreviewResult(result, _state.value.selectedCollectionId)
+                    }
 
-                // Save links using batch save use case
-                val saveResult = batchSaveLinksUseCase(links)
+                    // Save links using batch save use case
+                    val saveResult = batchSaveLinksUseCase(links)
 
-                // Convert BatchSaveResult to BatchImportResult
-                val importResult = BatchImportResult(
-                    successful = saveResult.successful,
-                    failed = saveResult.failed.map { failedLink ->
-                        FailedImport(
-                            url = failedLink.link.url,
-                            error = failedLink.error
+                    // Convert BatchSaveResult to BatchImportResult
+                    val importResult = BatchImportResult(
+                        successful = saveResult.successful,
+                        failed = saveResult.failed.map { failedLink ->
+                            FailedImport(
+                                url = failedLink.link.url,
+                                error = failedLink.error
+                            )
+                        }
+                    )
+
+                    // Update state with result
+                    _state.update {
+                        it.copy(
+                            isImporting = false,
+                            importProgress = null,
+                            importResult = importResult
                         )
                     }
-                )
-
-                // Update state with result
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 _state.update {
                     it.copy(
                         isImporting = false,
                         importProgress = null,
-                        importResult = importResult
+                        error = BatchImportError.ImportFailed(
+                            "Import operation timed out. Please try again with fewer links."
+                        )
                     )
                 }
             } catch (e: Exception) {

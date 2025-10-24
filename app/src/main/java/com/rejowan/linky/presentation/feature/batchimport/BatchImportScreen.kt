@@ -93,6 +93,7 @@ import kotlin.random.Random
 @Composable
 fun BatchImportScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToCollectionDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BatchImportViewModel = koinViewModel()
 ) {
@@ -103,6 +104,29 @@ fun BatchImportScreen(
 
     // ViewModel state
     val state by viewModel.state.collectAsState()
+
+    // Collect UI events
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is BatchImportUiEvent.NavigateToHome -> {
+                    onNavigateBack()
+                }
+                is BatchImportUiEvent.NavigateToSettings -> {
+                    onNavigateBack()
+                }
+                is BatchImportUiEvent.NavigateToCollection -> {
+                    onNavigateToCollectionDetail(event.collectionId)
+                }
+                is BatchImportUiEvent.ShowError -> {
+                    // TODO: Show error message
+                }
+                is BatchImportUiEvent.ShowConfirmation -> {
+                    // TODO: Show confirmation dialog
+                }
+            }
+        }
+    }
 
     // Local UI state
     var pastedText by remember { mutableStateOf("") }
