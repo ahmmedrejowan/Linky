@@ -2,11 +2,17 @@ package com.rejowan.linky.presentation.feature.batchimport
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.domain.model.Collection
+import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
+import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
+import com.rejowan.linky.domain.usecase.link.BatchSaveLinksUseCase
 import com.rejowan.linky.domain.usecase.link.CheckUrlExistsUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.UrlExtractor
+import timber.log.Timber
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import java.util.UUID
 
 /**
  * ViewModel for Batch Import feature
@@ -25,7 +32,10 @@ import kotlinx.coroutines.withTimeout
 class BatchImportViewModel(
     private val saveLinkUseCase: SaveLinkUseCase,
     private val checkUrlExistsUseCase: CheckUrlExistsUseCase,
-    private val linkPreviewFetcher: LinkPreviewFetcher
+    private val linkPreviewFetcher: LinkPreviewFetcher,
+    private val batchSaveLinksUseCase: BatchSaveLinksUseCase,
+    private val getAllCollectionsUseCase: GetAllCollectionsUseCase,
+    private val saveCollectionUseCase: SaveCollectionUseCase
 ) : ViewModel() {
 
     // State
@@ -35,6 +45,11 @@ class BatchImportViewModel(
     // UI Events (one-time events)
     private val _uiEvent = MutableSharedFlow<BatchImportUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
+
+    init {
+        // Load collections on ViewModel creation
+        loadCollections()
+    }
 
     /**
      * Handle events from UI
@@ -114,15 +129,51 @@ class BatchImportViewModel(
             }
 
             is BatchImportEvent.OnStartImport -> {
-                // TODO: Implement import
+                startImport()
             }
 
             is BatchImportEvent.OnRetryImport -> {
-                // TODO: Implement retry
+                retryImport()
             }
 
             is BatchImportEvent.OnRetryFailed -> {
-                // TODO: Implement retry failed
+                retryFailedOnly()
+            }
+
+            // Create collection dialog events
+            is BatchImportEvent.OnCreateCollectionClick -> {
+                Timber.d("Create collection dialog opened")
+                _state.update { it.copy(showCreateCollectionDialog = true) }
+            }
+
+            is BatchImportEvent.OnNewCollectionNameChange -> {
+                _state.update { it.copy(newCollectionName = event.name) }
+            }
+
+            is BatchImportEvent.OnNewCollectionColorChange -> {
+                _state.update { it.copy(newCollectionColor = event.color) }
+            }
+
+            is BatchImportEvent.OnNewCollectionToggleFavorite -> {
+                val newValue = !_state.value.newCollectionIsFavorite
+                _state.update { it.copy(newCollectionIsFavorite = newValue) }
+            }
+
+            is BatchImportEvent.OnCreateCollectionConfirm -> {
+                Timber.d("Create collection confirm")
+                createCollection()
+            }
+
+            is BatchImportEvent.OnCreateCollectionDismiss -> {
+                Timber.d("Create collection dialog dismissed")
+                _state.update {
+                    it.copy(
+                        showCreateCollectionDialog = false,
+                        newCollectionName = "",
+                        newCollectionColor = null,
+                        newCollectionIsFavorite = false
+                    )
+                }
             }
 
             // Navigation
@@ -453,6 +504,283 @@ class BatchImportViewModel(
                 domain = UrlExtractor.extractDomain(url),
                 error = e.message
             )
+        }
+    }
+
+    /**
+     * Start importing links to database
+     */
+    private fun startImport() {
+        viewModelScope.launch {
+            try {
+                // Get preview results
+                val previewResults = _state.value.previewResults
+
+                if (previewResults.isEmpty()) {
+                    _state.update {
+                        it.copy(
+                            error = BatchImportError.ImportFailed("No links to import")
+                        )
+                    }
+                    return@launch
+                }
+
+                // Update state to importing
+                _state.update {
+                    it.copy(
+                        isImporting = true,
+                        importProgress = ImportProgress(
+                            current = 0,
+                            total = previewResults.size
+                        ),
+                        error = null
+                    )
+                }
+
+                // Convert LinkPreviewResult to Link objects
+                val links = previewResults.map { result ->
+                    createLinkFromPreviewResult(result, _state.value.selectedCollectionId)
+                }
+
+                // Save links using batch save use case
+                val saveResult = batchSaveLinksUseCase(links)
+
+                // Convert BatchSaveResult to BatchImportResult
+                val importResult = BatchImportResult(
+                    successful = saveResult.successful,
+                    failed = saveResult.failed.map { failedLink ->
+                        FailedImport(
+                            url = failedLink.link.url,
+                            error = failedLink.error
+                        )
+                    }
+                )
+
+                // Update state with result
+                _state.update {
+                    it.copy(
+                        isImporting = false,
+                        importProgress = null,
+                        importResult = importResult
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isImporting = false,
+                        importProgress = null,
+                        error = BatchImportError.ImportFailed(
+                            e.message ?: "Failed to import links"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Retry importing all links (complete retry)
+     */
+    private fun retryImport() {
+        // Simply call startImport again
+        startImport()
+    }
+
+    /**
+     * Retry importing only the failed links from last attempt
+     */
+    private fun retryFailedOnly() {
+        viewModelScope.launch {
+            try {
+                val previousResult = _state.value.importResult ?: return@launch
+
+                if (previousResult.failed.isEmpty()) {
+                    return@launch
+                }
+
+                // Update state to importing
+                _state.update {
+                    it.copy(
+                        isImporting = true,
+                        importProgress = ImportProgress(
+                            current = 0,
+                            total = previousResult.failed.size
+                        ),
+                        error = null
+                    )
+                }
+
+                // Find the preview results for failed URLs
+                val failedUrls = previousResult.failed.map { it.url }.toSet()
+                val failedPreviewResults = _state.value.previewResults.filter {
+                    failedUrls.contains(it.url)
+                }
+
+                // Convert to Link objects
+                val links = failedPreviewResults.map { result ->
+                    createLinkFromPreviewResult(result, _state.value.selectedCollectionId)
+                }
+
+                // Save links
+                val saveResult = batchSaveLinksUseCase(links)
+
+                // Merge with previous successful imports
+                val mergedSuccessful = previousResult.successful + saveResult.successful
+                val mergedFailed = saveResult.failed.map { failedLink ->
+                    FailedImport(
+                        url = failedLink.link.url,
+                        error = failedLink.error
+                    )
+                }
+
+                val updatedResult = BatchImportResult(
+                    successful = mergedSuccessful,
+                    failed = mergedFailed
+                )
+
+                // Update state with merged result
+                _state.update {
+                    it.copy(
+                        isImporting = false,
+                        importProgress = null,
+                        importResult = updatedResult
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isImporting = false,
+                        importProgress = null,
+                        error = BatchImportError.ImportFailed(
+                            e.message ?: "Failed to retry import"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a Link object from LinkPreviewResult
+     */
+    private fun createLinkFromPreviewResult(
+        result: LinkPreviewResult,
+        collectionId: String?
+    ): Link {
+        val currentTime = System.currentTimeMillis()
+
+        return when (result) {
+            is LinkPreviewResult.Success -> Link(
+                id = UUID.randomUUID().toString(),
+                url = result.url,
+                title = result.title,
+                description = result.description,
+                previewUrl = result.imageUrl,
+                collectionId = collectionId,
+                isFavorite = false,
+                isArchived = false,
+                createdAt = currentTime,
+                updatedAt = currentTime
+            )
+
+            is LinkPreviewResult.Error -> Link(
+                id = UUID.randomUUID().toString(),
+                url = result.url,
+                title = result.domain, // Fallback to domain
+                description = null,
+                previewUrl = null,
+                collectionId = collectionId,
+                isFavorite = false,
+                isArchived = false,
+                createdAt = currentTime,
+                updatedAt = currentTime
+            )
+
+            is LinkPreviewResult.Timeout -> Link(
+                id = UUID.randomUUID().toString(),
+                url = result.url,
+                title = result.domain, // Fallback to domain
+                description = null,
+                previewUrl = null,
+                collectionId = collectionId,
+                isFavorite = false,
+                isArchived = false,
+                createdAt = currentTime,
+                updatedAt = currentTime
+            )
+        }
+    }
+
+    /**
+     * Create a new collection
+     */
+    private fun createCollection() {
+        viewModelScope.launch {
+            val collectionName = _state.value.newCollectionName.trim()
+
+            if (collectionName.isBlank()) {
+                Timber.w("Collection name is blank")
+                return@launch
+            }
+
+            try {
+                val newCollection = Collection(
+                    name = collectionName,
+                    color = _state.value.newCollectionColor,
+                    isFavorite = _state.value.newCollectionIsFavorite
+                )
+
+                when (val result = saveCollectionUseCase(newCollection)) {
+                    is Result.Success -> {
+                        Timber.d("Collection created successfully: ${newCollection.name}")
+                        // Close dialog and select the new collection
+                        _state.update {
+                            it.copy(
+                                showCreateCollectionDialog = false,
+                                newCollectionName = "",
+                                newCollectionColor = null,
+                                newCollectionIsFavorite = false,
+                                selectedCollectionId = newCollection.id
+                            )
+                        }
+                    }
+                    is Result.Error -> {
+                        Timber.e(result.exception, "Failed to create collection")
+                        _state.update {
+                            it.copy(
+                                showCreateCollectionDialog = false,
+                                newCollectionName = "",
+                                newCollectionColor = null,
+                                newCollectionIsFavorite = false
+                            )
+                        }
+                    }
+                    is Result.Loading -> {
+                        // No-op
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Exception creating collection")
+                _state.update {
+                    it.copy(
+                        showCreateCollectionDialog = false,
+                        newCollectionName = "",
+                        newCollectionColor = null,
+                        newCollectionIsFavorite = false
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Load all collections for the collection picker
+     */
+    private fun loadCollections() {
+        viewModelScope.launch {
+            getAllCollectionsUseCase().collect { collections ->
+                _state.update { it.copy(collections = collections) }
+            }
         }
     }
 

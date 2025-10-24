@@ -1,5 +1,8 @@
 package com.rejowan.linky.presentation.feature.batchimport
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,13 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -27,13 +35,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -52,6 +66,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import kotlinx.coroutines.launch
@@ -153,6 +168,17 @@ fun BatchImportScreen(
     ) { paddingValues ->
         // Show different screens based on state
         when {
+            state.importResult != null -> {
+                // Step 7: Import Result
+                ImportResultScreen(
+                    result = state.importResult, // Null checked in when condition
+                    onEvent = viewModel::onEvent,
+                    onNavigateBack = onNavigateBack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                )
+            }
             state.showPreviewScreen -> {
                 // Step 5: Preview Fetching & Results
                 PreviewFetchingScreen(
@@ -453,6 +479,27 @@ fun BatchImportScreen(
             onBackToEdit = {
                 viewModel.onEvent(BatchImportEvent.OnBackToEdit)
             }
+        )
+    }
+
+    // Importing Dialog
+    if (state.isImporting) {
+        ImportingDialog(
+            progress = state.importProgress
+        )
+    }
+
+    // Create Collection Dialog
+    if (state.showCreateCollectionDialog) {
+        CreateCollectionDialog(
+            collectionName = state.newCollectionName,
+            selectedColor = state.newCollectionColor,
+            isFavorite = state.newCollectionIsFavorite,
+            onCollectionNameChange = { viewModel.onEvent(BatchImportEvent.OnNewCollectionNameChange(it)) },
+            onColorChange = { viewModel.onEvent(BatchImportEvent.OnNewCollectionColorChange(it)) },
+            onToggleFavorite = { viewModel.onEvent(BatchImportEvent.OnNewCollectionToggleFavorite) },
+            onSave = { viewModel.onEvent(BatchImportEvent.OnCreateCollectionConfirm) },
+            onDismiss = { viewModel.onEvent(BatchImportEvent.OnCreateCollectionDismiss) }
         )
     }
 }
@@ -1669,6 +1716,20 @@ private fun PreviewFetchingScreen(
             }
         }
 
+        // Collection Picker (only show when not fetching and has results)
+        if (!state.isFetching && state.previewResults.isNotEmpty()) {
+            CollectionPicker(
+                collections = state.collections,
+                selectedCollectionId = state.selectedCollectionId,
+                onCollectionSelected = { collectionId ->
+                    onEvent(BatchImportEvent.OnCollectionSelected(collectionId))
+                },
+                onCreateNewClick = {
+                    onEvent(BatchImportEvent.OnCreateCollectionClick)
+                }
+            )
+        }
+
         // Bottom Actions
         if (!state.isFetching) {
             Row(
@@ -1685,7 +1746,7 @@ private fun PreviewFetchingScreen(
 
                 Button(
                     onClick = {
-                        // TODO: Proceed to import (Step 6)
+                        onEvent(BatchImportEvent.OnStartImport)
                     },
                     modifier = Modifier.weight(1f),
                     enabled = state.previewResults.isNotEmpty(),
@@ -1850,6 +1911,585 @@ private fun PreviewCard(result: LinkPreviewResult) {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Importing Dialog - Shows progress while importing links
+ */
+@Composable
+private fun ImportingDialog(
+    progress: ImportProgress?
+) {
+    AlertDialog(
+        onDismissRequest = { /* Cannot dismiss */ },
+        title = {
+            Text("Importing Links")
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp)
+                )
+
+                if (progress != null) {
+                    Text(
+                        text = "Saving ${progress.current} of ${progress.total} links...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        text = "Preparing to save links...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+/**
+ * Import Result Screen - Shows success/failure summary
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImportResultScreen(
+    result: BatchImportResult?,
+    onEvent: (BatchImportEvent) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Return early if result is null
+    if (result == null) return
+
+    // Intercept system back gesture
+    BackHandler {
+        onEvent(BatchImportEvent.OnDone)
+    }
+
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Result Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (result.isCompleteSuccess) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else if (result.isCompleteFailure) {
+                    MaterialTheme.colorScheme.errorContainer
+                } else {
+                    MaterialTheme.colorScheme.tertiaryContainer
+                }
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Icon
+                Icon(
+                    imageVector = if (result.isCompleteSuccess) {
+                        Icons.Default.Check
+                    } else {
+                        Icons.Default.Info
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = if (result.isCompleteSuccess) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else if (result.isCompleteFailure) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Title
+                Text(
+                    text = when {
+                        result.isCompleteSuccess -> "Import Complete!"
+                        result.isCompleteFailure -> "Import Failed"
+                        else -> "Partial Success"
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = if (result.isCompleteSuccess) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else if (result.isCompleteFailure) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    }
+                )
+
+                // Summary
+                if (result.isCompleteSuccess) {
+                    Text(
+                        text = "Successfully imported ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                } else if (result.isCompleteFailure) {
+                    Text(
+                        text = "Failed to import all ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Success: ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = "Failed: ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        // Failed Links (if any)
+        if (result.hasFailures) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Failed Links",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(result.failed.size) { index ->
+                            val failedImport = result.failed[index]
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = failedImport.url,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (failedImport.error != null) {
+                                        Text(
+                                            text = failedImport.error,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Actions
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Retry Button (only if there are failures)
+            if (result.hasFailures && !result.isCompleteFailure) {
+                OutlinedButton(
+                    onClick = {
+                        onEvent(BatchImportEvent.OnRetryFailed)
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Retry Failed")
+                }
+            }
+
+            // Retry All Button (only if complete failure)
+            if (result.isCompleteFailure) {
+                OutlinedButton(
+                    onClick = {
+                        onEvent(BatchImportEvent.OnRetryImport)
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Retry All")
+                }
+            }
+
+            // Done Button
+            Button(
+                onClick = {
+                    onEvent(BatchImportEvent.OnDone)
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Done")
+            }
+        }
+    }
+}
+
+/**
+ * Collection Dropdown - Dropdown to select a collection for imported links
+ * Similar to AddEditLinkScreen implementation
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CollectionPicker(
+    collections: List<com.rejowan.linky.domain.model.Collection>,
+    selectedCollectionId: String?,
+    onCollectionSelected: (String?) -> Unit,
+    onCreateNewClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Find selected collection name - Optimized with remember to avoid recalculation
+    val selectedCollectionName = remember(selectedCollectionId, collections) {
+        if (selectedCollectionId == null) {
+            "(No Collection)"
+        } else {
+            collections.find { it.id == selectedCollectionId }?.name ?: "(No Collection)"
+        }
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = selectedCollectionName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Collection") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            // "No Collection" option
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "(No Collection)",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                onClick = {
+                    onCollectionSelected(null)
+                    expanded = false
+                }
+            )
+
+            // Collection options
+            collections.forEach { collection ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = collection.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    onClick = {
+                        onCollectionSelected(collection.id)
+                        expanded = false
+                    }
+                )
+            }
+
+            // "Create New" option
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Create new collection",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Create New Collection",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                onClick = {
+                    onCreateNewClick()
+                    expanded = false
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Create Collection Dialog
+ * Allows users to create a new collection with name, color, and favorite status
+ */
+@Composable
+private fun CreateCollectionDialog(
+    collectionName: String,
+    selectedColor: String?,
+    isFavorite: Boolean,
+    onCollectionNameChange: (String) -> Unit,
+    onColorChange: (String?) -> Unit,
+    onToggleFavorite: () -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Create Collection",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Collection name input
+                OutlinedTextField(
+                    value = collectionName,
+                    onValueChange = onCollectionNameChange,
+                    label = { Text("Collection Name") },
+                    placeholder = { Text("Enter collection name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Color picker
+                Text(
+                    text = "Color (Optional)",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                ColorBlockPicker(
+                    selectedColor = selectedColor,
+                    onColorSelected = onColorChange
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Favorite toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add to Favourite",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Switch(
+                        checked = isFavorite,
+                        onCheckedChange = { onToggleFavorite() }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                enabled = collectionName.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * Color block picker with visual color rectangles
+ * 15 total: 1 no color + 14 colors, arranged in 3 rows of 5
+ */
+@Composable
+private fun ColorBlockPicker(
+    selectedColor: String?,
+    onColorSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = listOf(
+        null,           // No Color - default
+        "#FF6B6B",      // Red
+        "#E74C3C",      // Dark Red
+        "#4ECDC4",      // Teal
+        "#45B7D1",      // Blue
+        "#3498DB",      // Strong Blue
+        "#FFA07A",      // Orange
+        "#E67E22",      // Dark Orange
+        "#98D8C8",      // Green
+        "#2ECC71",      // Emerald Green
+        "#F7B731",      // Yellow
+        "#F39C12",      // Golden Yellow
+        "#5F27CD",      // Purple
+        "#9B59B6",      // Light Purple
+        "#EE5A6F"       // Pink
+    )
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Row 1: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.take(5).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Row 2: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.subList(5, 10).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Row 3: 5 colors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            colors.subList(10, 15).forEach { colorHex ->
+                ColorBlock(
+                    colorHex = colorHex,
+                    isSelected = selectedColor == colorHex,
+                    onClick = { onColorSelected(colorHex) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual color block component
+ */
+@Composable
+private fun ColorBlock(
+    colorHex: String?,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                color = if (colorHex != null) {
+                    Color(android.graphics.Color.parseColor(colorHex))
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        // Show checkmark for selected color
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Selected",
+                tint = if (colorHex != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

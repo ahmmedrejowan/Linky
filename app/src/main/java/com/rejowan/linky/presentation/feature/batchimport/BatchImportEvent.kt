@@ -34,6 +34,14 @@ sealed class BatchImportEvent {
     data object OnRetryImport : BatchImportEvent()
     data object OnRetryFailed : BatchImportEvent()
 
+    // Create collection dialog events
+    data object OnCreateCollectionClick : BatchImportEvent()
+    data class OnNewCollectionNameChange(val name: String) : BatchImportEvent()
+    data class OnNewCollectionColorChange(val color: String?) : BatchImportEvent()
+    data object OnNewCollectionToggleFavorite : BatchImportEvent()
+    data object OnCreateCollectionConfirm : BatchImportEvent()
+    data object OnCreateCollectionDismiss : BatchImportEvent()
+
     // Navigation
     data object OnBack : BatchImportEvent()
     data object OnCancel : BatchImportEvent()

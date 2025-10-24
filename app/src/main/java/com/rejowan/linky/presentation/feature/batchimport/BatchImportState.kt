@@ -1,5 +1,6 @@
 package com.rejowan.linky.presentation.feature.batchimport
 
+import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
 
 /**
@@ -36,7 +37,14 @@ data class BatchImportState(
     val importResult: BatchImportResult? = null,
 
     // Collection
+    val collections: List<Collection> = emptyList(),
     val selectedCollectionId: String? = null,
+
+    // Create collection dialog state
+    val showCreateCollectionDialog: Boolean = false,
+    val newCollectionName: String = "",
+    val newCollectionColor: String? = null,
+    val newCollectionIsFavorite: Boolean = false,
 
     // Error states
     val error: BatchImportError? = null
