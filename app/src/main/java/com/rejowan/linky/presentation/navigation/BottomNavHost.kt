@@ -87,7 +87,8 @@ fun BottomNavHost(
                 onLinkClick = { linkId ->
                     // Navigate using parent controller to LinkDetail
                     parentNavController.navigate(Route.LinkDetail(linkId))
-                }
+                },
+                snackbarHostState = snackbarHostState
             )
         }
 

@@ -13,9 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -42,6 +40,7 @@ import org.koin.androidx.compose.koinViewModel
  * Features: Search bar, search results, empty states
  *
  * @param onLinkClick Callback when a link is clicked
+ * @param snackbarHostState Shared SnackbarHostState from MainScreen
  * @param modifier Modifier for styling
  * @param viewModel SearchViewModel injected via Koin
  */
@@ -49,11 +48,11 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SearchScreen(
     onLinkClick: (String) -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val focusManager = LocalFocusManager.current
 
     // Handle UI events
@@ -86,31 +85,26 @@ fun SearchScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+    PullToRefreshBox(
+        isRefreshing = state.isSearching,
+        onRefresh = {
+            if (state.searchQuery.isNotBlank()) {
+                viewModel.onEvent(SearchEvent.OnSearch)
+            }
+        },
+        // Focus management: Tap outside search bar to hide keyboard
         modifier = modifier
-    ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = state.isSearching,
-            onRefresh = {
-                if (state.searchQuery.isNotBlank()) {
-                    viewModel.onEvent(SearchEvent.OnSearch)
-                }
-            },
-            // Focus management: Tap outside search bar to hide keyboard
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    focusManager.clearFocus()
-                }
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
             ) {
+                focusManager.clearFocus()
+            }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
             // Search Bar - Always visible
             SearchBar(
                 query = state.searchQuery,
@@ -123,7 +117,7 @@ fun SearchScreen(
                 placeholder = "Search all links...",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
             )
 
             // Content Area
@@ -133,9 +127,8 @@ fun SearchScreen(
                 onFavoriteClick = { linkId, isFavorite ->
                     viewModel.onEvent(SearchEvent.OnToggleFavorite(linkId, isFavorite))
                 },
-                    onRetry = { viewModel.onEvent(SearchEvent.OnSearch) }
-                )
-            }
+                onRetry = { viewModel.onEvent(SearchEvent.OnSearch) }
+            )
         }
     }
 }
