@@ -120,7 +120,7 @@ fun BottomNavHost(
                 },
                 onNavigateToBatchImport = {
                     // Navigate using parent controller to BatchImport
-                    parentNavController.navigate(Route.BatchImport)
+                    parentNavController.navigate(Route.BatchImport())
                 }
             )
         }

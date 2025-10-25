@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
@@ -39,10 +40,8 @@ import androidx.compose.ui.unit.dp
  * Settings Screen - Main hub for all settings categories
  *
  * Features:
- * - Categorized settings navigation with sections
- * - App Features control
- * - Data management and customization options
- * - Account and information screens
+ * - Categorized settings navigation with 5 sections
+ * - Tools, Preferences, Data, Security, and Information
  * - Clean Material 3 design
  *
  * @param onNavigateToAppFeatures Navigate to App Features screen
@@ -65,22 +64,47 @@ fun SettingsScreen(
     onNavigateToBatchImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Group settings into sections
-    val appSection = listOf(
+    // 1. Tools Section
+    val toolsSection = listOf(
+        SettingsCategory(
+            icon = Icons.Filled.FileUpload,
+            title = "Batch Import",
+            description = "Import multiple links at once from text",
+            onClick = onNavigateToBatchImport
+        ),
+        SettingsCategory(
+            icon = Icons.Filled.Folder,
+            title = "Link Vaults",
+            description = "Secure storage for private collections",
+            onClick = { /* Placeholder for Phase 2 */ },
+            badge = "Soon"
+        )
+    )
+
+    // 2. Preferences Section
+    val preferencesSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Settings,
             title = "App Features",
             description = "Control app behavior and features",
             onClick = onNavigateToAppFeatures
+        ),
+        SettingsCategory(
+            icon = Icons.Filled.Palette,
+            title = "Appearance",
+            description = "Theme, View options, Card design",
+            onClick = onNavigateToAppearance
         )
     )
 
-    val dataManagementSection = listOf(
+    // 3. Data Section
+    val dataSection = listOf(
         SettingsCategory(
-            icon = Icons.Filled.FileUpload,
-            title = "Batch Import Links",
-            description = "Import multiple links at once from text",
-            onClick = onNavigateToBatchImport
+            icon = Icons.Filled.Cloud,
+            title = "Sync",
+            description = "Not logged in • Tap to configure",
+            onClick = onNavigateToSync,
+            badge = "Phase 2"
         ),
         SettingsCategory(
             icon = Icons.Filled.Storage,
@@ -90,23 +114,8 @@ fun SettingsScreen(
         )
     )
 
-    val customizationSection = listOf(
-        SettingsCategory(
-            icon = Icons.Filled.Palette,
-            title = "Appearance",
-            description = "Theme, View options, Card design",
-            onClick = onNavigateToAppearance
-        )
-    )
-
-    val accountSection = listOf(
-        SettingsCategory(
-            icon = Icons.Filled.Cloud,
-            title = "Sync",
-            description = "Not logged in • Tap to configure",
-            onClick = onNavigateToSync,
-            badge = "Phase 2"
-        ),
+    // 4. Security Section
+    val securitySection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Lock,
             title = "Privacy & Security",
@@ -115,6 +124,7 @@ fun SettingsScreen(
         )
     )
 
+    // 5. Information Section
     val informationSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Info,
@@ -130,53 +140,53 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // App Section
+            // 1. Tools Section
             item {
-                SectionHeader(title = "App")
+                SectionHeader(title = "Tools")
             }
-            items(appSection) { category ->
+            items(toolsSection) { category ->
                 SettingsCategoryCard(category = category)
             }
 
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Data Management Section
+            // 2. Preferences Section
             item {
-                SectionHeader(title = "Data Management")
+                SectionHeader(title = "Preferences")
             }
-            items(dataManagementSection) { category ->
+            items(preferencesSection) { category ->
                 SettingsCategoryCard(category = category)
             }
 
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Customization Section
+            // 3. Data Section
             item {
-                SectionHeader(title = "Customization")
+                SectionHeader(title = "Data")
             }
-            items(customizationSection) { category ->
+            items(dataSection) { category ->
                 SettingsCategoryCard(category = category)
             }
 
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Account Section
+            // 4. Security Section
             item {
-                SectionHeader(title = "Account")
+                SectionHeader(title = "Security")
             }
-            items(accountSection) { category ->
+            items(securitySection) { category ->
                 SettingsCategoryCard(category = category)
             }
 
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Information Section
+            // 5. Information Section
             item {
                 SectionHeader(title = "Information")
             }
@@ -210,7 +220,7 @@ private fun SectionHeader(
         text = title,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        modifier = modifier.padding(horizontal = 4.dp, vertical = 2.dp)
     )
 }
 
