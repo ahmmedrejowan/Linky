@@ -22,7 +22,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -174,13 +176,23 @@ fun HomeScreen(
                         viewModel.onEvent(HomeEvent.OnRestoreLink(event.linkId))
                     }
                 }
+                is HomeUiEvent.ShowBulkOperationResult -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
     }
 
-    // Handle back press - delegate to parent
+    // Handle back press - exit selection mode first, then delegate to parent
     BackHandler {
-        onExitRequest()
+        if (state.isSelectionMode) {
+            viewModel.onEvent(HomeEvent.OnExitSelectionMode)
+        } else {
+            onExitRequest()
+        }
     }
 
     // Check clipboard when screen resumes (throttled to once per 5 seconds)
@@ -252,7 +264,25 @@ fun HomeScreen(
             onAddLinkClick = { onAddLinkClick(null) },
             onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
             onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) }
+            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
+            onAdvancedFilterClick = { viewModel.onEvent(HomeEvent.OnShowAdvancedFilterSheet) },
+            // Bulk selection callbacks
+            onLongPress = { linkId ->
+                viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
+                viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+            },
+            onToggleSelection = { linkId ->
+                viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+            },
+            onExitSelectionMode = { viewModel.onEvent(HomeEvent.OnExitSelectionMode) },
+            onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
+            onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
+            onBulkDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
+            onBulkArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
+            onBulkUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
+            onBulkFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
+            onBulkUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
+            onBulkMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) }
         )
     }
 
@@ -267,6 +297,36 @@ fun HomeScreen(
             },
             onDismiss = {
                 viewModel.onEvent(HomeEvent.OnDismissClipboardPrompt)
+            }
+        )
+    }
+
+    // Advanced Filter Sheet
+    if (state.showAdvancedFilterSheet) {
+        AdvancedFilterSheet(
+            currentFilter = state.advancedFilter,
+            availableDomains = state.availableDomains,
+            availableCollections = state.availableCollections,
+            availableTags = state.availableTags,
+            onApply = { filter ->
+                viewModel.onEvent(HomeEvent.OnApplyAdvancedFilter(filter))
+            },
+            onDismiss = {
+                viewModel.onEvent(HomeEvent.OnDismissAdvancedFilterSheet)
+            }
+        )
+    }
+
+    // Bulk Move Sheet
+    if (state.showBulkMoveSheet) {
+        BulkMoveSheet(
+            selectedCount = state.selectedCount,
+            collections = state.availableCollections,
+            onMoveToCollection = { collectionId ->
+                viewModel.onEvent(HomeEvent.OnBulkMoveToCollection(collectionId))
+            },
+            onDismiss = {
+                viewModel.onEvent(HomeEvent.OnDismissBulkMoveSheet)
             }
         )
     }
@@ -347,17 +407,49 @@ private fun HomeContent(
     onRetry: () -> Unit,
     onFilterTypeChange: (FilterType) -> Unit,
     onSortTypeChange: (SortType) -> Unit,
+    onAdvancedFilterClick: () -> Unit,
+    // Bulk selection callbacks
+    onLongPress: (String) -> Unit,
+    onToggleSelection: (String) -> Unit,
+    onExitSelectionMode: () -> Unit,
+    onSelectAll: () -> Unit,
+    onDeselectAll: () -> Unit,
+    onBulkDelete: () -> Unit,
+    onBulkArchive: () -> Unit,
+    onBulkUnarchive: () -> Unit,
+    onBulkFavorite: () -> Unit,
+    onBulkUnfavorite: () -> Unit,
+    onBulkMove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
-        // Filter Segmented Buttons - ALWAYS VISIBLE
-        FilterSegmentedButtons(
-            selectedFilter = state.filterType,
-            onFilterSelected = onFilterTypeChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-        )
+        // Bulk Actions Bar - shown when in selection mode
+        if (state.isSelectionMode) {
+            BulkActionsBar(
+                selectedCount = state.selectedCount,
+                allSelected = state.allSelected,
+                filterType = state.filterType,
+                onClose = onExitSelectionMode,
+                onSelectAll = onSelectAll,
+                onDeselectAll = onDeselectAll,
+                onDelete = onBulkDelete,
+                onArchive = onBulkArchive,
+                onUnarchive = onBulkUnarchive,
+                onFavorite = onBulkFavorite,
+                onUnfavorite = onBulkUnfavorite,
+                onMove = onBulkMove,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        } else {
+            // Filter Segmented Buttons - ALWAYS VISIBLE (when not in selection mode)
+            FilterSegmentedButtons(
+                selectedFilter = state.filterType,
+                onFilterSelected = onFilterTypeChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+            )
+        }
 
         // Content area - changes based on state
         when {
@@ -393,7 +485,9 @@ private fun HomeContent(
                         CountAndSortRow(
                             count = state.links.size,
                             sortType = state.sortType,
+                            advancedFilterCount = state.advancedFilter.activeFilterCount,
                             onSortClick = onSortTypeChange,
+                            onAdvancedFilterClick = onAdvancedFilterClick,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 0.dp)
@@ -417,6 +511,10 @@ private fun HomeContent(
                             onTrashClick = {
                                 onTrashClick(link.id)
                             },
+                            isSelectionMode = state.isSelectionMode,
+                            isSelected = state.selectedLinkIds.contains(link.id),
+                            onLongPress = { onLongPress(link.id) },
+                            onToggleSelection = { onToggleSelection(link.id) },
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)
                                 .animateItem()
@@ -461,13 +559,15 @@ private fun EmptyContent(
 
 
 /**
- * Count and Sort Row - Shows total count and sort dropdown
+ * Count and Sort Row - Shows total count, advanced filter button, and sort dropdown
  */
 @Composable
 private fun CountAndSortRow(
     count: Int,
     sortType: SortType,
+    advancedFilterCount: Int,
     onSortClick: (SortType) -> Unit,
+    onAdvancedFilterClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
@@ -486,57 +586,89 @@ private fun CountAndSortRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Right: Sort button with dropdown
-        Box {
+        // Right: Filter and Sort buttons
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Advanced Filter button
             OutlinedButton(
-                onClick = { showSortMenu = true },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+                onClick = onAdvancedFilterClick,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                colors = if (advancedFilterCount > 0) {
+                    ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                }
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                    contentDescription = "Sort",
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "Advanced Filter",
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = sortType.displayName,
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = "Expand sort options",
-                    modifier = Modifier.size(20.dp)
-                )
+                if (advancedFilterCount > 0) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = advancedFilterCount.toString(),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
 
-            // Dropdown menu
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                SortType.entries.forEach { sort ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = sort.displayName,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        },
-                        onClick = {
-                            onSortClick(sort)
-                            showSortMenu = false
-                        },
-                        leadingIcon = if (sort == sortType) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = "Selected",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else null
+            // Sort button with dropdown
+            Box {
+                OutlinedButton(
+                    onClick = { showSortMenu = true },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort",
+                        modifier = Modifier.size(18.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = sortType.displayName,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = "Expand sort options",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Dropdown menu
+                DropdownMenu(
+                    expanded = showSortMenu,
+                    onDismissRequest = { showSortMenu = false }
+                ) {
+                    SortType.entries.forEach { sort ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = sort.displayName,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            onClick = {
+                                onSortClick(sort)
+                                showSortMenu = false
+                            },
+                            leadingIcon = if (sort == sortType) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            } else null
+                        )
+                    }
                 }
             }
         }

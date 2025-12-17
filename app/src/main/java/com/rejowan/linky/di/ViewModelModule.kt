@@ -10,6 +10,8 @@ import com.rejowan.linky.presentation.feature.search.SearchViewModel
 import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerViewModel
 import com.rejowan.linky.presentation.feature.trash.TrashViewModel
+import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionViewModel
+import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultSetupViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultUnlockViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultViewModel
@@ -28,7 +30,9 @@ val viewModelModule = module {
             toggleArchiveUseCase = get(),
             deleteLinkUseCase = get(),
             restoreLinkUseCase = get(),
-            linkRepository = get()
+            linkRepository = get(),
+            collectionRepository = get(),
+            tagRepository = get()
         )
     }
 
@@ -170,6 +174,20 @@ val viewModelModule = module {
             vaultRepository = get(),
             changeVaultPinUseCase = get(),
             clearVaultUseCase = get()
+        )
+    }
+
+    viewModel {
+        DuplicateDetectionViewModel(
+            linkRepository = get(),
+            deleteLinkUseCase = get()
+        )
+    }
+
+    viewModel {
+        LinkHealthCheckViewModel(
+            linkRepository = get(),
+            deleteLinkUseCase = get()
         )
     }
 }

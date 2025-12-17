@@ -14,8 +14,21 @@ data class HomeState(
     // Clipboard detection
     val clipboardUrl: String? = null,
     val showClipboardPrompt: Boolean = false,
-    val promptedUrls: Set<String> = emptySet() // Track URLs we've already prompted for
-)
+    val promptedUrls: Set<String> = emptySet(), // Track URLs we've already prompted for
+    // Advanced filtering
+    val advancedFilter: AdvancedFilter = AdvancedFilter.EMPTY,
+    val showAdvancedFilterSheet: Boolean = false,
+    val availableDomains: List<DomainInfo> = emptyList(),
+    val availableCollections: List<CollectionFilterInfo> = emptyList(),
+    val availableTags: List<TagFilterInfo> = emptyList(),
+    // Bulk selection
+    val isSelectionMode: Boolean = false,
+    val selectedLinkIds: Set<String> = emptySet(),
+    val showBulkMoveSheet: Boolean = false
+) {
+    val selectedCount: Int get() = selectedLinkIds.size
+    val allSelected: Boolean get() = links.isNotEmpty() && selectedLinkIds.size == links.size
+}
 
 enum class FilterType {
     ALL,

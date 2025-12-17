@@ -2,7 +2,10 @@ package com.rejowan.linky.presentation.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.repository.CollectionRepository
+import com.rejowan.linky.domain.repository.TagRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -12,6 +15,7 @@ import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.LinkOperation
 import com.rejowan.linky.util.Result
+import java.util.Calendar
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +39,9 @@ class HomeViewModel(
     private val toggleArchiveUseCase: com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
-    private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository
+    private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository,
+    private val collectionRepository: CollectionRepository,
+    private val tagRepository: TagRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -50,6 +56,7 @@ class HomeViewModel(
     init {
         observeFilteredLinks()
         observeCounts()
+        loadFilterOptions()
     }
 
     fun onEvent(event: HomeEvent) {
@@ -79,6 +86,57 @@ class HomeViewModel(
                 _state.update { it.copy(showClipboardPrompt = false, clipboardUrl = null) }
                 Timber.tag("HomeViewModel").d("Clipboard prompt dismissed")
             }
+            HomeEvent.OnShowAdvancedFilterSheet -> {
+                _state.update { it.copy(showAdvancedFilterSheet = true) }
+            }
+            HomeEvent.OnDismissAdvancedFilterSheet -> {
+                _state.update { it.copy(showAdvancedFilterSheet = false) }
+            }
+            is HomeEvent.OnApplyAdvancedFilter -> {
+                _state.update { it.copy(advancedFilter = event.filter, showAdvancedFilterSheet = false) }
+                // Trigger refresh to apply the new filter
+                filterTypeFlow.value = _state.value.filterType
+            }
+            HomeEvent.OnClearAdvancedFilter -> {
+                _state.update { it.copy(advancedFilter = AdvancedFilter.EMPTY) }
+                // Trigger refresh
+                filterTypeFlow.value = _state.value.filterType
+            }
+            // Bulk selection events
+            HomeEvent.OnEnterSelectionMode -> {
+                _state.update { it.copy(isSelectionMode = true, selectedLinkIds = emptySet()) }
+            }
+            HomeEvent.OnExitSelectionMode -> {
+                _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            }
+            is HomeEvent.OnToggleLinkSelection -> {
+                val currentSelection = _state.value.selectedLinkIds
+                val newSelection = if (currentSelection.contains(event.linkId)) {
+                    currentSelection - event.linkId
+                } else {
+                    currentSelection + event.linkId
+                }
+                _state.update { it.copy(selectedLinkIds = newSelection) }
+            }
+            HomeEvent.OnSelectAll -> {
+                val allLinkIds = _state.value.links.map { it.id }.toSet()
+                _state.update { it.copy(selectedLinkIds = allLinkIds) }
+            }
+            HomeEvent.OnDeselectAll -> {
+                _state.update { it.copy(selectedLinkIds = emptySet()) }
+            }
+            HomeEvent.OnBulkDelete -> bulkDelete()
+            HomeEvent.OnBulkArchive -> bulkArchive(true)
+            HomeEvent.OnBulkUnarchive -> bulkArchive(false)
+            HomeEvent.OnBulkFavorite -> bulkFavorite(true)
+            HomeEvent.OnBulkUnfavorite -> bulkFavorite(false)
+            HomeEvent.OnShowBulkMoveSheet -> {
+                _state.update { it.copy(showBulkMoveSheet = true) }
+            }
+            HomeEvent.OnDismissBulkMoveSheet -> {
+                _state.update { it.copy(showBulkMoveSheet = false) }
+            }
+            is HomeEvent.OnBulkMoveToCollection -> bulkMoveToCollection(event.collectionId)
         }
     }
 
@@ -165,9 +223,161 @@ class HomeViewModel(
                     _state.update { it.copy(isLoading = false, error = errorMessage) }
                 }
                 .collect { links ->
-                    val sortedLinks = sortLinks(links, _state.value.sortType, _state.value.filterType)
+                    val filteredLinks = applyAdvancedFilter(links, _state.value.advancedFilter)
+                    val sortedLinks = sortLinks(filteredLinks, _state.value.sortType, _state.value.filterType)
                     _state.update { it.copy(links = sortedLinks, isLoading = false, error = null) }
                 }
+        }
+    }
+
+    private fun applyAdvancedFilter(links: List<Link>, filter: AdvancedFilter): List<Link> {
+        if (!filter.isActive) return links
+
+        return links.filter { link ->
+            // Date range filter
+            val passesDateFilter = when (filter.dateRange) {
+                DateRangeFilter.ALL_TIME -> true
+                DateRangeFilter.TODAY -> {
+                    val startOfDay = getStartOfDay(0)
+                    link.createdAt >= startOfDay
+                }
+                DateRangeFilter.LAST_7_DAYS -> {
+                    val startTime = getStartOfDay(7)
+                    link.createdAt >= startTime
+                }
+                DateRangeFilter.LAST_30_DAYS -> {
+                    val startTime = getStartOfDay(30)
+                    link.createdAt >= startTime
+                }
+                DateRangeFilter.LAST_90_DAYS -> {
+                    val startTime = getStartOfDay(90)
+                    link.createdAt >= startTime
+                }
+                DateRangeFilter.THIS_YEAR -> {
+                    val startOfYear = getStartOfYear()
+                    link.createdAt >= startOfYear
+                }
+            }
+
+            // Domain filter
+            val passesDomainFilter = if (filter.domains.isEmpty()) {
+                true
+            } else {
+                val linkDomain = extractDomain(link.url)
+                filter.domains.contains(linkDomain)
+            }
+
+            // Collection filter
+            val passesCollectionFilter = if (filter.collectionIds.isEmpty()) {
+                true
+            } else {
+                link.collectionId != null && filter.collectionIds.contains(link.collectionId)
+            }
+
+            // Note filter
+            val passesNoteFilter = when (filter.hasNote) {
+                null -> true
+                true -> !link.note.isNullOrBlank()
+                false -> link.note.isNullOrBlank()
+            }
+
+            // Preview filter
+            val passesPreviewFilter = when (filter.hasPreview) {
+                null -> true
+                true -> link.previewImagePath != null || link.previewUrl != null
+                false -> link.previewImagePath == null && link.previewUrl == null
+            }
+
+            passesDateFilter && passesDomainFilter && passesCollectionFilter && passesNoteFilter && passesPreviewFilter
+        }
+    }
+
+    private fun getStartOfDay(daysAgo: Int): Long {
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -daysAgo)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return calendar.timeInMillis
+    }
+
+    private fun getStartOfYear(): Long {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return calendar.timeInMillis
+    }
+
+    private fun extractDomain(url: String): String {
+        return try {
+            val uri = Uri.parse(url)
+            uri.host?.removePrefix("www.") ?: url
+        } catch (e: Exception) {
+            url
+        }
+    }
+
+    private fun loadFilterOptions() {
+        // Load available domains
+        viewModelScope.launch {
+            try {
+                val urls = linkRepository.getAllActiveUrls()
+                val domainCounts = urls
+                    .map { extractDomain(it) }
+                    .groupingBy { it }
+                    .eachCount()
+                    .entries
+                    .sortedByDescending { it.value }
+                    .map { DomainInfo(it.key, it.value) }
+                _state.update { it.copy(availableDomains = domainCounts) }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load domain options")
+            }
+        }
+
+        // Load available collections
+        viewModelScope.launch {
+            try {
+                collectionRepository.getCollectionsWithLinkCount()
+                    .collect { collectionsWithCount ->
+                        val collectionOptions = collectionsWithCount.map { (collection, count) ->
+                            CollectionFilterInfo(
+                                id = collection.id,
+                                name = collection.name,
+                                count = count
+                            )
+                        }
+                        _state.update { it.copy(availableCollections = collectionOptions) }
+                    }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load collection options")
+            }
+        }
+
+        // Load available tags
+        viewModelScope.launch {
+            try {
+                tagRepository.getTagsWithLinkCount()
+                    .collect { tagsWithCount ->
+                        val tagOptions = tagsWithCount.map { tagWithCount ->
+                            TagFilterInfo(
+                                id = tagWithCount.id,
+                                name = tagWithCount.name,
+                                color = tagWithCount.color,
+                                count = tagWithCount.linkCount
+                            )
+                        }
+                        _state.update { it.copy(availableTags = tagOptions) }
+                    }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load tag options")
+            }
         }
     }
 
@@ -304,6 +514,89 @@ class HomeViewModel(
             }
         }
     }
+
+    // ============ BULK OPERATIONS ============
+
+    private fun bulkDelete() {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                when (deleteLinkUseCase(linkId, softDelete = true)) {
+                    is Result.Success -> successCount++
+                    else -> { /* continue with others */ }
+                }
+            }
+            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            _uiEvents.emit(HomeUiEvent.ShowBulkOperationResult("$successCount links moved to trash"))
+        }
+    }
+
+    private fun bulkArchive(archive: Boolean) {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                when (toggleArchiveUseCase(linkId, archive)) {
+                    is Result.Success -> successCount++
+                    else -> { /* continue with others */ }
+                }
+            }
+            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            val action = if (archive) "archived" else "unarchived"
+            _uiEvents.emit(HomeUiEvent.ShowBulkOperationResult("$successCount links $action"))
+        }
+    }
+
+    private fun bulkFavorite(favorite: Boolean) {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                when (toggleFavoriteUseCase(linkId, favorite)) {
+                    is Result.Success -> successCount++
+                    else -> { /* continue with others */ }
+                }
+            }
+            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            val action = if (favorite) "added to favorites" else "removed from favorites"
+            _uiEvents.emit(HomeUiEvent.ShowBulkOperationResult("$successCount links $action"))
+        }
+    }
+
+    private fun bulkMoveToCollection(collectionId: String?) {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                val link = linkRepository.getLinkByIdOnce(linkId)
+                if (link != null) {
+                    val updatedLink = link.copy(collectionId = collectionId)
+                    when (linkRepository.updateLink(updatedLink)) {
+                        is Result.Success -> successCount++
+                        else -> { /* continue with others */ }
+                    }
+                }
+            }
+            _state.update {
+                it.copy(
+                    isSelectionMode = false,
+                    selectedLinkIds = emptySet(),
+                    showBulkMoveSheet = false
+                )
+            }
+            val action = if (collectionId != null) "moved to collection" else "removed from collection"
+            _uiEvents.emit(HomeUiEvent.ShowBulkOperationResult("$successCount links $action"))
+        }
+    }
 }
 
 sealed class HomeUiEvent {
@@ -311,6 +604,7 @@ sealed class HomeUiEvent {
     data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : HomeUiEvent()
     data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : HomeUiEvent()
     data class ShowLinkTrashed(val linkId: String) : HomeUiEvent()
+    data class ShowBulkOperationResult(val message: String) : HomeUiEvent()
 }
 
 sealed class HomeEvent {
@@ -323,4 +617,23 @@ sealed class HomeEvent {
     data object OnRefresh : HomeEvent()
     data class OnClipboardUrlDetected(val url: String) : HomeEvent()
     data object OnDismissClipboardPrompt : HomeEvent()
+    // Advanced filter events
+    data object OnShowAdvancedFilterSheet : HomeEvent()
+    data object OnDismissAdvancedFilterSheet : HomeEvent()
+    data class OnApplyAdvancedFilter(val filter: AdvancedFilter) : HomeEvent()
+    data object OnClearAdvancedFilter : HomeEvent()
+    // Bulk selection events
+    data object OnEnterSelectionMode : HomeEvent()
+    data object OnExitSelectionMode : HomeEvent()
+    data class OnToggleLinkSelection(val linkId: String) : HomeEvent()
+    data object OnSelectAll : HomeEvent()
+    data object OnDeselectAll : HomeEvent()
+    data object OnBulkDelete : HomeEvent()
+    data object OnBulkArchive : HomeEvent()
+    data object OnBulkUnarchive : HomeEvent()
+    data object OnBulkFavorite : HomeEvent()
+    data object OnBulkUnfavorite : HomeEvent()
+    data object OnShowBulkMoveSheet : HomeEvent()
+    data object OnDismissBulkMoveSheet : HomeEvent()
+    data class OnBulkMoveToCollection(val collectionId: String?) : HomeEvent()
 }
