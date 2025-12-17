@@ -43,12 +43,14 @@ sealed class Route {
      * @param linkId Optional link ID for edit mode. Null for add mode
      * @param collectionId Optional collection ID to preselect collection when adding
      * @param url Optional URL to prefill when adding from clipboard/share
+     * @param title Optional title to prefill when adding from share (from EXTRA_SUBJECT)
      */
     @Serializable
     data class AddEditLink(
         val linkId: String? = null,
         val collectionId: String? = null,
-        val url: String? = null
+        val url: String? = null,
+        val title: String? = null
     ) : Route()
 
     /**
@@ -149,6 +151,20 @@ sealed class Route {
     data object TagManagement : Route()
 
     /**
+     * Duplicate Detection screen
+     * Find and manage duplicate links
+     */
+    @Serializable
+    data object DuplicateDetection : Route()
+
+    /**
+     * Link Health Check screen
+     * Validate links and find broken URLs
+     */
+    @Serializable
+    data object LinkHealthCheck : Route()
+
+    /**
      * Batch Import screen
      * Import multiple links at once from pasted text
      * @param prefillText Optional text to pre-fill in the paste field (from share intent)
@@ -185,6 +201,15 @@ sealed class Route {
      */
     @Serializable
     data object VaultSettings : Route()
+
+    // ============ ONBOARDING ============
+
+    /**
+     * Onboarding screen
+     * Shows app features on first launch
+     */
+    @Serializable
+    data object Onboarding : Route()
 
     // ============ AUTH ROUTES (Phase 2) ============
 

@@ -15,6 +15,9 @@ import com.rejowan.linky.presentation.feature.settings.AppFeaturesScreen
 import com.rejowan.linky.presentation.feature.settings.about.AboutScreen
 import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScreen
 import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
+import com.rejowan.linky.presentation.feature.onboarding.OnboardingScreen
+import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionScreen
+import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
 import com.rejowan.linky.presentation.feature.settings.sync.SyncScreen
 import com.rejowan.linky.presentation.feature.settings.tags.TagManagementScreen
@@ -32,6 +35,8 @@ import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
  *
  * @param navController The NavHostController for app-level navigation
  * @param isAuthRequired Whether authentication is required (Phase 2)
+ * @param showOnboarding Whether to show onboarding flow
+ * @param onOnboardingComplete Callback when onboarding is completed
  * @param sharedContent Content shared from another app via ACTION_SEND intent
  * @param onSharedContentHandled Callback when shared content has been handled
  */
@@ -39,10 +44,16 @@ import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
 fun LinkyNavHost(
     navController: NavHostController,
     isAuthRequired: Boolean = false, // Phase 2: checks preferences
+    showOnboarding: Boolean = false,
+    onOnboardingComplete: () -> Unit = {},
     sharedContent: SharedContent? = null,
     onSharedContentHandled: () -> Unit = {}
 ) {
-    val startDestination: Route = if (isAuthRequired) Route.Welcome else Route.Main()
+    val startDestination: Route = when {
+        showOnboarding -> Route.Onboarding
+        isAuthRequired -> Route.Welcome
+        else -> Route.Main()
+    }
 
     NavHost(
         navController = navController,
@@ -91,6 +102,18 @@ fun LinkyNavHost(
             }
         }
         */
+
+        // ============ ONBOARDING ============
+        composable<Route.Onboarding> {
+            OnboardingScreen(
+                onComplete = {
+                    onOnboardingComplete()
+                    navController.navigate(Route.Main()) {
+                        popUpTo<Route.Onboarding> { inclusive = true }
+                    }
+                }
+            )
+        }
 
         // ============ MAIN SCREEN (Container for Bottom Nav) ============
         composable<Route.Main> { backStackEntry ->
@@ -179,6 +202,8 @@ fun LinkyNavHost(
         composable<Route.DataStorage> {
             DataStorageScreen(
                 onNavigateToTrash = { navController.navigate(Route.Trash) },
+                onNavigateToDuplicateDetection = { navController.navigate(Route.DuplicateDetection) },
+                onNavigateToHealthCheck = { navController.navigate(Route.LinkHealthCheck) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -210,6 +235,18 @@ fun LinkyNavHost(
 
         composable<Route.TagManagement> {
             TagManagementScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.DuplicateDetection> {
+            DuplicateDetectionScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.LinkHealthCheck> {
+            LinkHealthCheckScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
