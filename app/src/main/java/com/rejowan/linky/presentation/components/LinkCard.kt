@@ -1,8 +1,10 @@
 package com.rejowan.linky.presentation.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,6 +60,7 @@ import java.util.Locale
 /**
  * LinkCard component - Displays a link with preview image, title, URL, and actions
  * Supports swipe gestures: swipe right to archive, swipe left to trash
+ * Supports selection mode for bulk operations
  *
  * @param link The link to display
  * @param onClick Callback when card is clicked
@@ -63,9 +68,13 @@ import java.util.Locale
  * @param onArchiveClick Callback when link is archived via swipe
  * @param onTrashClick Callback when link is moved to trash via swipe
  * @param tags Optional list of tags associated with the link
+ * @param isSelectionMode Whether selection mode is active
+ * @param isSelected Whether this link is selected
+ * @param onLongPress Callback when card is long-pressed (enters selection mode)
+ * @param onToggleSelection Callback when selection is toggled
  * @param modifier Modifier for styling
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LinkCard(
     link: Link,
@@ -74,6 +83,10 @@ fun LinkCard(
     onArchiveClick: (() -> Unit)? = null,
     onTrashClick: (() -> Unit)? = null,
     tags: List<Tag> = emptyList(),
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
+    onToggleSelection: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Disable swipe for deleted links
@@ -194,10 +207,40 @@ fun LinkCard(
         modifier = modifier
     ) {
         Card(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        if (isSelectionMode) {
+                            onToggleSelection?.invoke()
+                        } else {
+                            onClick()
+                        }
+                    },
+                    onLongClick = {
+                        onLongPress?.invoke()
+                    }
+                )
+                .then(
+                    if (isSelected) {
+                        Modifier.border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            )
     ) {
         Row(
             modifier = Modifier
@@ -206,6 +249,15 @@ fun LinkCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Selection indicator (shown in selection mode)
+            if (isSelectionMode) {
+                Icon(
+                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                    contentDescription = if (isSelected) "Selected" else "Not selected",
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
             // Preview Image with Status Badge Overlay
             Box(
                 modifier = Modifier.size(72.dp)
