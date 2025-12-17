@@ -23,7 +23,7 @@ import com.rejowan.linky.data.local.database.entity.TagEntity
         TagEntity::class,
         LinkTagCrossRef::class
     ],
-    version = 6,
+    version = 1,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
