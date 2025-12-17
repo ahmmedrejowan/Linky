@@ -41,9 +41,24 @@ class PreferencesManager(context: Context) {
         prefs.edit().putBoolean(KEY_SHOW_ARCHIVED_LINKS, show).apply()
     }
 
+    /**
+     * Check if onboarding has been completed
+     */
+    fun hasCompletedOnboarding(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    }
+
+    /**
+     * Mark onboarding as completed
+     */
+    fun setOnboardingCompleted() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "linky_preferences"
         private const val KEY_SHOW_PREVIEW_FETCH_SUGGESTION = "show_preview_fetch_suggestion"
         private const val KEY_SHOW_ARCHIVED_LINKS = "show_archived_links"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
     }
 }
