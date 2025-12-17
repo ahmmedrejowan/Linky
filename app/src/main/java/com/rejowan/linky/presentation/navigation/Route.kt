@@ -156,6 +156,35 @@ sealed class Route {
     @Serializable
     data class BatchImport(val prefillText: String? = null) : Route()
 
+    // ============ VAULT ROUTES ============
+
+    /**
+     * Vault Setup screen
+     * First-time PIN setup for the vault
+     */
+    @Serializable
+    data object VaultSetup : Route()
+
+    /**
+     * Vault Unlock screen
+     * PIN entry to unlock the vault
+     */
+    @Serializable
+    data object VaultUnlock : Route()
+
+    /**
+     * Vault screen
+     * Main vault view showing encrypted links
+     */
+    @Serializable
+    data object Vault : Route()
+
+    /**
+     * Vault Settings screen
+     * Change PIN, auto-lock timeout, clear vault
+     */
+    @Serializable
+    data object VaultSettings : Route()
 
     // ============ AUTH ROUTES (Phase 2) ============
 

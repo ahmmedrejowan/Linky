@@ -20,6 +20,10 @@ import com.rejowan.linky.presentation.feature.settings.sync.SyncScreen
 import com.rejowan.linky.presentation.feature.settings.tags.TagManagementScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
+import com.rejowan.linky.presentation.feature.vault.VaultScreen
+import com.rejowan.linky.presentation.feature.vault.VaultSetupScreen
+import com.rejowan.linky.presentation.feature.vault.VaultSettingsScreen
+import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
 
 /**
  * Parent navigation host for the Linky app
@@ -241,6 +245,63 @@ fun LinkyNavHost(
             // AdvancedSettingsScreen(
             //     onNavigateBack = { navController.popBackStack() }
             // )
+        }
+
+        // ============ VAULT SCREENS ============
+
+        composable<Route.VaultSetup> {
+            VaultSetupScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSetupComplete = {
+                    // After setup, go to vault unlock then vault
+                    navController.navigate(Route.VaultUnlock) {
+                        popUpTo<Route.VaultSetup> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.VaultUnlock> {
+            VaultUnlockScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onUnlockSuccess = {
+                    // After unlock, go to vault
+                    navController.navigate(Route.Vault) {
+                        popUpTo<Route.VaultUnlock> { inclusive = true }
+                    }
+                },
+                onNavigateToSetup = {
+                    // Vault not setup yet, redirect to setup
+                    navController.navigate(Route.VaultSetup) {
+                        popUpTo<Route.VaultUnlock> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.Vault> {
+            VaultScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(Route.VaultSettings) },
+                onLocked = {
+                    // When vault is locked, go back to unlock screen
+                    navController.navigate(Route.VaultUnlock) {
+                        popUpTo<Route.Vault> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.VaultSettings> {
+            VaultSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onVaultCleared = {
+                    // After clearing vault, go back to main
+                    navController.navigate(Route.Main(initialTab = 2)) {
+                        popUpTo<Route.VaultSettings> { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

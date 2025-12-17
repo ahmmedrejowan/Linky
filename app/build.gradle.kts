@@ -124,4 +124,7 @@ dependencies {
     // gson
     implementation(libs.gson)
 
+    // Security Crypto - Encrypted SharedPreferences
+    implementation(libs.androidx.security.crypto)
+
 }

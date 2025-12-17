@@ -7,6 +7,7 @@ import com.rejowan.linky.di.appModule
 import com.rejowan.linky.di.databaseModule
 import com.rejowan.linky.di.repositoryModule
 import com.rejowan.linky.di.useCaseModule
+import com.rejowan.linky.di.vaultModule
 import com.rejowan.linky.di.viewModelModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,7 @@ class LinkyApp : Application() {
                     databaseModule,
                     repositoryModule,
                     useCaseModule,
+                    vaultModule,
                     viewModelModule
                 )
             )

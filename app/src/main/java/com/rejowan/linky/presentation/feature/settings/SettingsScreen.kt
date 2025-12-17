@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
  * @param onNavigateToSync Navigate to Sync settings (Phase 2)
  * @param onNavigateToBatchImport Navigate to Batch Import screen
  * @param onNavigateToTagManagement Navigate to Tag Management screen
+ * @param onNavigateToVault Navigate to Vault screen
  * @param modifier Modifier for styling
  */
 @Composable
@@ -65,6 +66,7 @@ fun SettingsScreen(
     onNavigateToSync: () -> Unit,
     onNavigateToBatchImport: () -> Unit,
     onNavigateToTagManagement: () -> Unit,
+    onNavigateToVault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 1. Tools Section
@@ -84,9 +86,8 @@ fun SettingsScreen(
         SettingsCategory(
             icon = Icons.Filled.Folder,
             title = "Link Vaults",
-            description = "Secure storage for private collections",
-            onClick = { /* Placeholder for Phase 2 */ },
-            badge = "Soon"
+            description = "Secure storage for private links",
+            onClick = onNavigateToVault
         )
     )
 
