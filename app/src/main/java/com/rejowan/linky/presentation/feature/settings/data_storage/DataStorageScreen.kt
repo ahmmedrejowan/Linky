@@ -54,6 +54,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun DataStorageScreen(
     onNavigateToTrash: () -> Unit,
+    onNavigateToDuplicateDetection: () -> Unit,
+    onNavigateToHealthCheck: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
@@ -121,6 +123,22 @@ fun DataStorageScreen(
             CacheCard(
                 isLoading = state.isLoading,
                 onClearCacheClick = { showClearCacheDialog = true }
+            )
+
+            HorizontalDivider()
+
+            // Duplicate Detection Section
+            SectionHeader(text = "Duplicate Detection")
+            DuplicateDetectionCard(
+                onFindDuplicatesClick = onNavigateToDuplicateDetection
+            )
+
+            HorizontalDivider()
+
+            // Link Health Check Section
+            SectionHeader(text = "Link Health Check")
+            HealthCheckCard(
+                onHealthCheckClick = onNavigateToHealthCheck
             )
 
             HorizontalDivider()
@@ -348,6 +366,82 @@ private fun CacheCard(
                 enabled = !isLoading
             ) {
                 Text("Clear Cache")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DuplicateDetectionCard(
+    onFindDuplicatesClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Find Duplicate Links",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                text = "Scan your links to find and remove duplicates. Duplicates are identified by URL, ignoring tracking parameters.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedButton(
+                onClick = onFindDuplicatesClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Find Duplicates")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthCheckCard(
+    onHealthCheckClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Check Link Health",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                text = "Validate your saved links to find broken URLs, slow-loading pages, or SSL errors.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedButton(
+                onClick = onHealthCheckClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Run Health Check")
             }
         }
     }
