@@ -1,6 +1,7 @@
 package com.rejowan.linky.presentation.feature.addlink
 
 import com.rejowan.linky.domain.model.Collection
+import com.rejowan.linky.domain.model.Tag
 
 data class AddEditLinkState(
     val linkId: String? = null,
@@ -24,5 +25,8 @@ data class AddEditLinkState(
     val showCreateCollectionDialog: Boolean = false,
     val newCollectionName: String = "",
     val newCollectionColor: String? = null,
-    val newCollectionIsFavorite: Boolean = false
+    val newCollectionIsFavorite: Boolean = false,
+    // Tags
+    val allTags: List<Tag> = emptyList(),
+    val selectedTags: List<Tag> = emptyList()
 )

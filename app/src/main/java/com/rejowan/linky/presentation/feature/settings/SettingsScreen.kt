@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
  * @param onNavigateToAbout Navigate to About screen
  * @param onNavigateToSync Navigate to Sync settings (Phase 2)
  * @param onNavigateToBatchImport Navigate to Batch Import screen
+ * @param onNavigateToTagManagement Navigate to Tag Management screen
  * @param modifier Modifier for styling
  */
 @Composable
@@ -62,6 +64,7 @@ fun SettingsScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToSync: () -> Unit,
     onNavigateToBatchImport: () -> Unit,
+    onNavigateToTagManagement: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 1. Tools Section
@@ -71,6 +74,12 @@ fun SettingsScreen(
             title = "Batch Import",
             description = "Import multiple links at once from text",
             onClick = onNavigateToBatchImport
+        ),
+        SettingsCategory(
+            icon = Icons.AutoMirrored.Filled.Label,
+            title = "Manage Tags",
+            description = "Create, edit, and organize tags",
+            onClick = onNavigateToTagManagement
         ),
         SettingsCategory(
             icon = Icons.Filled.Folder,

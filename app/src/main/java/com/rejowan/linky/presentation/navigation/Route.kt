@@ -142,6 +142,13 @@ sealed class Route {
     data object SyncSettings : Route()
 
     /**
+     * Tag Management screen
+     * Create, edit, delete tags
+     */
+    @Serializable
+    data object TagManagement : Route()
+
+    /**
      * Batch Import screen
      * Import multiple links at once from pasted text
      * @param prefillText Optional text to pre-fill in the paste field (from share intent)

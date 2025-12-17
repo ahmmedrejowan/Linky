@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.model.Tag
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -61,6 +62,7 @@ import java.util.Locale
  * @param onFavoriteClick Callback when favorite icon is clicked
  * @param onArchiveClick Callback when link is archived via swipe
  * @param onTrashClick Callback when link is moved to trash via swipe
+ * @param tags Optional list of tags associated with the link
  * @param modifier Modifier for styling
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +73,7 @@ fun LinkCard(
     onFavoriteClick: () -> Unit,
     onArchiveClick: (() -> Unit)? = null,
     onTrashClick: (() -> Unit)? = null,
+    tags: List<Tag> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     // Disable swipe for deleted links
@@ -280,6 +283,14 @@ fun LinkCard(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                // Tags Row (if any)
+                if (tags.isNotEmpty()) {
+                    TagChipRow(
+                        tags = tags,
+                        maxRows = 1
+                    )
+                }
 
                 // Timestamp or Deletion Countdown
                 Text(

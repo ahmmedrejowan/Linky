@@ -5,11 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.model.Tag
 import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
 import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
+import com.rejowan.linky.domain.usecase.tag.GetAllTagsUseCase
+import com.rejowan.linky.domain.usecase.tag.GetTagsForLinkUseCase
+import com.rejowan.linky.domain.usecase.tag.SaveTagUseCase
+import com.rejowan.linky.domain.usecase.tag.SetTagsForLinkUseCase
 import com.rejowan.linky.util.CollectionOperation
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.FileStorageManager
@@ -39,7 +44,11 @@ class AddEditLinkViewModel(
     private val saveCollectionUseCase: SaveCollectionUseCase,
     private val linkPreviewFetcher: LinkPreviewFetcher,
     private val fileStorageManager: FileStorageManager,
-    private val preferencesManager: com.rejowan.linky.util.PreferencesManager
+    private val preferencesManager: com.rejowan.linky.util.PreferencesManager,
+    private val getAllTagsUseCase: GetAllTagsUseCase,
+    private val getTagsForLinkUseCase: GetTagsForLinkUseCase,
+    private val saveTagUseCase: SaveTagUseCase,
+    private val setTagsForLinkUseCase: SetTagsForLinkUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddEditLinkState())
@@ -70,6 +79,7 @@ class AddEditLinkViewModel(
         }
 
         loadCollections()
+        loadTags()
 
         // Initialize suggestion card visibility based on preferences
         _state.update { it.copy(showPreviewFetchSuggestion = preferencesManager.shouldShowPreviewFetchSuggestion()) }
@@ -166,6 +176,24 @@ class AddEditLinkViewModel(
                     )
                 }
             }
+            // Tag events
+            is AddEditLinkEvent.OnTagSelected -> {
+                Timber.d("Tag selected: ${event.tag.name}")
+                val currentTags = _state.value.selectedTags.toMutableList()
+                if (!currentTags.any { it.id == event.tag.id }) {
+                    currentTags.add(event.tag)
+                    _state.update { it.copy(selectedTags = currentTags) }
+                }
+            }
+            is AddEditLinkEvent.OnTagRemoved -> {
+                Timber.d("Tag removed: ${event.tag.name}")
+                val currentTags = _state.value.selectedTags.filter { it.id != event.tag.id }
+                _state.update { it.copy(selectedTags = currentTags) }
+            }
+            is AddEditLinkEvent.OnCreateTag -> {
+                Timber.d("Creating tag: ${event.name}")
+                createTag(event.name, event.color)
+            }
         }
     }
 
@@ -180,6 +208,61 @@ class AddEditLinkViewModel(
                     Timber.d("loadCollections: Loaded ${collections.size} collections")
                     _state.update { it.copy(collections = collections) }
                 }
+        }
+    }
+
+    private fun loadTags() {
+        Timber.d("loadTags: Starting to load tags")
+        viewModelScope.launch {
+            getAllTagsUseCase()
+                .catch { e ->
+                    Timber.e(e, "loadTags: Failed to load tags - ${e.message}")
+                }
+                .collect { tags ->
+                    Timber.d("loadTags: Loaded ${tags.size} tags")
+                    _state.update { it.copy(allTags = tags) }
+                }
+        }
+    }
+
+    private fun loadTagsForLink(linkId: String) {
+        Timber.d("loadTagsForLink: Loading tags for link $linkId")
+        viewModelScope.launch {
+            getTagsForLinkUseCase(linkId)
+                .catch { e ->
+                    Timber.e(e, "loadTagsForLink: Failed to load tags for link - ${e.message}")
+                }
+                .collect { tags ->
+                    Timber.d("loadTagsForLink: Loaded ${tags.size} tags for link")
+                    _state.update { it.copy(selectedTags = tags) }
+                }
+        }
+    }
+
+    private fun createTag(name: String, color: String) {
+        Timber.d("createTag: Creating tag | Name: $name | Color: $color")
+        viewModelScope.launch {
+            val tag = Tag(
+                name = name.trim(),
+                color = color
+            )
+
+            when (val result = saveTagUseCase(tag)) {
+                is Result.Success -> {
+                    Timber.d("createTag: Tag created successfully | ID: ${tag.id}")
+                    // Auto-select the new tag
+                    val currentTags = _state.value.selectedTags.toMutableList()
+                    currentTags.add(tag)
+                    _state.update { it.copy(selectedTags = currentTags) }
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "createTag: Failed to create tag")
+                    _state.update { it.copy(error = result.exception.message ?: "Failed to create tag") }
+                }
+                is Result.Loading -> {
+                    // Loading state
+                }
+            }
         }
     }
 
@@ -271,6 +354,8 @@ class AddEditLinkViewModel(
                                 isLoading = false
                             )
                         }
+                        // Load tags for this link
+                        loadTagsForLink(it.id)
                     } ?: run {
                         Timber.w("loadLink: Link not found | LinkId: $linkId")
                         _state.update { it.copy(isLoading = false, error = "Link not found") }
@@ -481,6 +566,12 @@ class AddEditLinkViewModel(
             when (result) {
                 is Result.Success -> {
                     Timber.d("saveLink: Link ${operation.lowercase()}d successfully | ID: ${link.id}")
+
+                    // Save tags for the link
+                    val tagIds = currentState.selectedTags.map { it.id }
+                    Timber.d("saveLink: Saving ${tagIds.size} tags for link")
+                    setTagsForLinkUseCase(linkId, tagIds)
+
                     // Add small delay to allow database changes to propagate through Flows
                     kotlinx.coroutines.delay(150)
                     _state.update { it.copy(isLoading = false) }
@@ -526,4 +617,8 @@ sealed class AddEditLinkEvent {
     data object OnNewCollectionToggleFavorite : AddEditLinkEvent()
     data object OnCreateCollectionConfirm : AddEditLinkEvent()
     data object OnCreateCollectionDismiss : AddEditLinkEvent()
+    // Tag events
+    data class OnTagSelected(val tag: Tag) : AddEditLinkEvent()
+    data class OnTagRemoved(val tag: Tag) : AddEditLinkEvent()
+    data class OnCreateTag(val name: String, val color: String) : AddEditLinkEvent()
 }

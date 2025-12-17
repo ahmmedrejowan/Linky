@@ -72,6 +72,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Collection
+import com.rejowan.linky.presentation.components.TagSelectorField
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -502,6 +503,23 @@ fun AddEditLinkScreen(
                 onCreateNewClick = {
                     viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionClick)
                 })
+
+            // Tags Selection
+            TagSelectorField(
+                selectedTags = state.selectedTags,
+                allTags = state.allTags,
+                onTagSelected = { tag ->
+                    viewModel.onEvent(AddEditLinkEvent.OnTagSelected(tag))
+                },
+                onTagRemoved = { tag ->
+                    viewModel.onEvent(AddEditLinkEvent.OnTagRemoved(tag))
+                },
+                onCreateTag = { name, color ->
+                    viewModel.onEvent(AddEditLinkEvent.OnCreateTag(name, color))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Add to Favourite Toggle
             Row(

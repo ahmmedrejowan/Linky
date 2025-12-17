@@ -26,6 +26,15 @@ import com.rejowan.linky.domain.usecase.snapshot.DeleteSnapshotUseCase
 import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotByIdUseCase
 import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
 import com.rejowan.linky.domain.usecase.snapshot.SaveSnapshotUseCase
+import com.rejowan.linky.domain.usecase.tag.DeleteTagUseCase
+import com.rejowan.linky.domain.usecase.tag.GetAllTagsUseCase
+import com.rejowan.linky.domain.usecase.tag.GetLinksByTagUseCase
+import com.rejowan.linky.domain.usecase.tag.GetTagByIdUseCase
+import com.rejowan.linky.domain.usecase.tag.GetTagsForLinkUseCase
+import com.rejowan.linky.domain.usecase.tag.GetTagsWithLinkCountUseCase
+import com.rejowan.linky.domain.usecase.tag.SaveTagUseCase
+import com.rejowan.linky.domain.usecase.tag.SetTagsForLinkUseCase
+import com.rejowan.linky.domain.usecase.tag.UpdateTagUseCase
 import org.koin.dsl.module
 
 val useCaseModule = module {
@@ -60,4 +69,15 @@ val useCaseModule = module {
     factory { SaveSnapshotUseCase(get()) }
     factory { DeleteSnapshotUseCase(get(), get()) }
     factory { CaptureSnapshotUseCase(get(), get(), get()) }
+
+    // Tag use cases
+    factory { GetAllTagsUseCase(get()) }
+    factory { GetTagByIdUseCase(get()) }
+    factory { GetTagsWithLinkCountUseCase(get()) }
+    factory { GetTagsForLinkUseCase(get()) }
+    factory { GetLinksByTagUseCase(get()) }
+    factory { SaveTagUseCase(get()) }
+    factory { UpdateTagUseCase(get()) }
+    factory { DeleteTagUseCase(get()) }
+    factory { SetTagsForLinkUseCase(get()) }
 }

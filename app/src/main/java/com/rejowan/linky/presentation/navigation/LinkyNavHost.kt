@@ -17,6 +17,7 @@ import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScre
 import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
 import com.rejowan.linky.presentation.feature.settings.sync.SyncScreen
+import com.rejowan.linky.presentation.feature.settings.tags.TagManagementScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
 
@@ -199,6 +200,12 @@ fun LinkyNavHost(
         composable<Route.SyncSettings> {
             SyncScreen(
                 onNavigateToLogin = { navController.navigate(Route.Login) },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.TagManagement> {
+            TagManagementScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

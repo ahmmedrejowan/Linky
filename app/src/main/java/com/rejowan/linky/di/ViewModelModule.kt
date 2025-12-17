@@ -38,7 +38,11 @@ val viewModelModule = module {
             saveCollectionUseCase = get(),
             linkPreviewFetcher = get(),
             fileStorageManager = get(),
-            preferencesManager = get()
+            preferencesManager = get(),
+            getAllTagsUseCase = get(),
+            getTagsForLinkUseCase = get(),
+            saveTagUseCase = get(),
+            setTagsForLinkUseCase = get()
         )
     }
 
@@ -121,6 +125,15 @@ val viewModelModule = module {
             batchSaveLinksUseCase = get(),
             getAllCollectionsUseCase = get(),
             saveCollectionUseCase = get()
+        )
+    }
+
+    viewModel {
+        com.rejowan.linky.presentation.feature.settings.tags.TagManagementViewModel(
+            getTagsWithLinkCountUseCase = get(),
+            saveTagUseCase = get(),
+            updateTagUseCase = get(),
+            deleteTagUseCase = get()
         )
     }
 }
