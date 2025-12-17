@@ -91,14 +91,12 @@ class TagManagementViewModelTest {
     @Test
     fun `OnShowCreateDialog shows create dialog`() = runTest {
         createViewModel()
-        advanceUntilIdle()
+        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.onEvent(TagManagementEvent.OnShowCreateDialog)
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.state.test {
-            val state = awaitItem()
-            assertTrue(state.showCreateDialog)
-        }
+        assertTrue("showCreateDialog should be true", viewModel.state.value.showCreateDialog)
     }
 
     @Test
