@@ -35,4 +35,7 @@ interface LinkRepository {
     fun getAllLinksCount(): Flow<Int>
     fun getFavoriteLinksCount(): Flow<Int>
     fun getArchivedLinksCount(): Flow<Int>
+
+    // Advanced filtering
+    suspend fun getAllActiveUrls(): List<String>
 }

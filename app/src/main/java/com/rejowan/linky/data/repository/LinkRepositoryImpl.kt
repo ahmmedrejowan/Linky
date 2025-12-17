@@ -1,5 +1,6 @@
 package com.rejowan.linky.data.repository
 
+import android.content.Context
 import com.rejowan.linky.data.local.database.dao.LinkDao
 import com.rejowan.linky.data.mapper.LinkMapper.toDomain
 import com.rejowan.linky.data.mapper.LinkMapper.toDomainList
@@ -7,12 +8,14 @@ import com.rejowan.linky.data.mapper.LinkMapper.toEntity
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.util.Result
+import com.rejowan.linky.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
 
 class LinkRepositoryImpl(
-    private val linkDao: LinkDao
+    private val linkDao: LinkDao,
+    private val context: Context
 ) : LinkRepository {
 
     override fun getAllActiveLinks(): Flow<List<Link>> {
@@ -59,6 +62,7 @@ class LinkRepositoryImpl(
         return try {
             val entity = link.toEntity(syncToRemote = false)
             linkDao.insert(entity)
+            WidgetUpdater.updateWidgets(context)
             Result.Success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to save link")
@@ -70,6 +74,7 @@ class LinkRepositoryImpl(
         return try {
             val entity = link.copy(updatedAt = System.currentTimeMillis()).toEntity(syncToRemote = false)
             linkDao.update(entity)
+            WidgetUpdater.updateWidgets(context)
             Result.Success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to update link")
@@ -82,6 +87,7 @@ class LinkRepositoryImpl(
             val link = linkDao.getById(linkId)
             if (link != null) {
                 linkDao.delete(link)
+                WidgetUpdater.updateWidgets(context)
                 Result.Success(Unit)
             } else {
                 Result.Error(Exception("Link not found"))
@@ -95,6 +101,7 @@ class LinkRepositoryImpl(
     override suspend fun softDeleteLink(linkId: String): Result<Unit> {
         return try {
             linkDao.softDelete(linkId)
+            WidgetUpdater.updateWidgets(context)
             Result.Success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to soft delete link")
@@ -105,6 +112,7 @@ class LinkRepositoryImpl(
     override suspend fun restoreLink(linkId: String): Result<Unit> {
         return try {
             linkDao.restore(linkId)
+            WidgetUpdater.updateWidgets(context)
             Result.Success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to restore link")
@@ -146,5 +154,9 @@ class LinkRepositoryImpl(
 
     override fun getArchivedLinksCount(): Flow<Int> {
         return linkDao.getArchivedLinksCount()
+    }
+
+    override suspend fun getAllActiveUrls(): List<String> {
+        return linkDao.getAllActiveUrls()
     }
 }

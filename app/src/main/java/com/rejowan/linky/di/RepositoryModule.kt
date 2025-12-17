@@ -11,7 +11,7 @@ import com.rejowan.linky.domain.repository.TagRepository
 import org.koin.dsl.module
 
 val repositoryModule = module {
-    single<LinkRepository> { LinkRepositoryImpl(get()) }
+    single<LinkRepository> { LinkRepositoryImpl(linkDao = get(), context = get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get()) }
     single<SnapshotRepository> { SnapshotRepositoryImpl(get()) }
     single<TagRepository> { TagRepositoryImpl(get()) }

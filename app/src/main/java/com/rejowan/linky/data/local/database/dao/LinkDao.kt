@@ -110,4 +110,60 @@ interface LinkDao {
 
     @Query("UPDATE links SET syncToRemote = 0 WHERE id = :id")
     suspend fun markSynced(id: String)
+
+    // Widget: Get recent links (non-suspend for widget use)
+    @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 ORDER BY updatedAt DESC LIMIT :limit")
+    fun getRecentLinksForWidget(limit: Int): List<LinkEntity>
+
+    // Advanced Filtering: Get distinct domains with counts
+    @Query("""
+        SELECT url FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0
+    """)
+    suspend fun getAllActiveUrls(): List<String>
+
+    // Advanced Filtering: Get links by date range
+    @Query("""
+        SELECT * FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0
+        AND createdAt >= :startTime
+        ORDER BY isFavorite DESC, updatedAt DESC
+    """)
+    fun getLinksByDateRange(startTime: Long): Flow<List<LinkEntity>>
+
+    // Advanced Filtering: Get links with notes
+    @Query("""
+        SELECT * FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0
+        AND note IS NOT NULL AND note != ''
+        ORDER BY isFavorite DESC, updatedAt DESC
+    """)
+    fun getLinksWithNotes(): Flow<List<LinkEntity>>
+
+    // Advanced Filtering: Get links without notes
+    @Query("""
+        SELECT * FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0
+        AND (note IS NULL OR note = '')
+        ORDER BY isFavorite DESC, updatedAt DESC
+    """)
+    fun getLinksWithoutNotes(): Flow<List<LinkEntity>>
+
+    // Advanced Filtering: Get links with preview image
+    @Query("""
+        SELECT * FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0
+        AND (previewImagePath IS NOT NULL OR previewUrl IS NOT NULL)
+        ORDER BY isFavorite DESC, updatedAt DESC
+    """)
+    fun getLinksWithPreview(): Flow<List<LinkEntity>>
+
+    // Advanced Filtering: Get links without preview image
+    @Query("""
+        SELECT * FROM links
+        WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0
+        AND previewImagePath IS NULL AND previewUrl IS NULL
+        ORDER BY isFavorite DESC, updatedAt DESC
+    """)
+    fun getLinksWithoutPreview(): Flow<List<LinkEntity>>
 }

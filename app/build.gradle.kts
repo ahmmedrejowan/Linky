@@ -127,4 +127,9 @@ dependencies {
     // Security Crypto - Encrypted SharedPreferences
     implementation(libs.androidx.security.crypto)
 
+    // Glance - App Widgets
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+
 }
