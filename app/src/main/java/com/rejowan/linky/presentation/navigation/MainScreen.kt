@@ -124,7 +124,10 @@ fun MainScreen(
                 // 1 URL: Navigate directly to Add Link (current behavior)
                 sharedContent.hasSingleUrl -> {
                     Timber.d("Single URL detected: ${sharedContent.firstUrl}")
-                    parentNavController.navigate(Route.AddEditLink(url = sharedContent.firstUrl))
+                    parentNavController.navigate(Route.AddEditLink(
+                        url = sharedContent.firstUrl,
+                        title = sharedContent.title
+                    ))
                     onSharedContentHandled()
                 }
                 // 2+ URLs: Show bottom sheet with options
@@ -283,7 +286,10 @@ fun MainScreen(
             },
             onAddFirstLinkOnly = {
                 showBatchImportBottomSheet = false
-                parentNavController.navigate(Route.AddEditLink(url = sharedContent.firstUrl))
+                parentNavController.navigate(Route.AddEditLink(
+                    url = sharedContent.firstUrl,
+                    title = sharedContent.title
+                ))
                 onSharedContentHandled()
             },
             onDismiss = {
