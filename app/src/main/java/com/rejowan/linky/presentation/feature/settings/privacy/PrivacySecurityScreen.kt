@@ -22,9 +22,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.rejowan.linky.presentation.feature.settings.about.PrivacyDialog
 
 /**
  * Privacy & Security Screen
@@ -36,6 +41,12 @@ fun PrivacySecurityScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+
+    if (showPrivacyDialog) {
+        PrivacyDialog(onDismiss = { showPrivacyDialog = false })
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -66,7 +77,7 @@ fun PrivacySecurityScreen(
         ) {
         // Privacy Policy Section
         SectionHeader(text = "Privacy")
-        PrivacyCard()
+        PrivacyCard(onViewPrivacyPolicy = { showPrivacyDialog = true })
 
         HorizontalDivider()
 
@@ -105,6 +116,7 @@ private fun SectionHeader(
  */
 @Composable
 private fun PrivacyCard(
+    onViewPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -135,7 +147,7 @@ private fun PrivacyCard(
             )
 
             OutlinedButton(
-                onClick = { /* TODO: Open privacy policy */ },
+                onClick = onViewPrivacyPolicy,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Read Privacy Policy")

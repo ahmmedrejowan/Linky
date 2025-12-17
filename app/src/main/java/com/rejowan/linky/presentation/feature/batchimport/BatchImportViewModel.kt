@@ -120,7 +120,7 @@ class BatchImportViewModel(
             }
 
             is BatchImportEvent.OnAutoFillTitles -> {
-                // TODO: Implement auto-fill with domain names
+                autoFillTitlesWithDomains()
             }
 
             // Step 4: Import
@@ -677,6 +677,58 @@ class BatchImportViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Auto-fill titles with domain names for links that failed to fetch or have no title
+     */
+    private fun autoFillTitlesWithDomains() {
+        _state.update { state ->
+            val updatedResults = state.previewResults.map { result ->
+                when (result) {
+                    is LinkPreviewResult.Success -> {
+                        // If title is blank, use domain
+                        if (result.title.isBlank()) {
+                            result.copy(title = formatDomainAsTitle(result.domain))
+                        } else {
+                            result
+                        }
+                    }
+                    is LinkPreviewResult.Error -> {
+                        // Convert error to success with domain as title
+                        LinkPreviewResult.Success(
+                            url = result.url,
+                            domain = result.domain,
+                            title = formatDomainAsTitle(result.domain),
+                            description = null,
+                            imageUrl = null
+                        )
+                    }
+                    is LinkPreviewResult.Timeout -> {
+                        // Convert timeout to success with domain as title
+                        LinkPreviewResult.Success(
+                            url = result.url,
+                            domain = result.domain,
+                            title = formatDomainAsTitle(result.domain),
+                            description = null,
+                            imageUrl = null
+                        )
+                    }
+                }
+            }
+            state.copy(previewResults = updatedResults)
+        }
+    }
+
+    /**
+     * Format a domain name as a readable title
+     * e.g., "example.com" -> "Example", "github.com" -> "Github"
+     */
+    private fun formatDomainAsTitle(domain: String): String {
+        return domain
+            .removePrefix("www.")
+            .substringBefore(".")
+            .replaceFirstChar { it.uppercase() }
     }
 
     /**

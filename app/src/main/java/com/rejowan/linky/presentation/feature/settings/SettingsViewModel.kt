@@ -2,6 +2,7 @@ package com.rejowan.linky.presentation.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.BuildConfig
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
@@ -68,7 +69,7 @@ class SettingsViewModel(
                         totalLinks = totalLinks,
                         totalCollections = totalCollections,
                         totalStorageUsed = "$storageMB MB",
-                        appVersion = "1.0.0", // TODO: Get from BuildConfig
+                        appVersion = BuildConfig.VERSION_NAME,
                         isLoading = false
                     )
                 }

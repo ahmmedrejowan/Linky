@@ -62,7 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -102,7 +102,7 @@ fun BatchImportScreen(
     val context = LocalContext.current
     val themePreferences = remember { ThemePreferences(context) }
     val coroutineScope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     // ViewModel state
     val state by viewModel.state.collectAsState()
@@ -289,13 +289,16 @@ fun BatchImportScreen(
                 // Paste button
                 OutlinedButton(
                     onClick = {
-                        val clipboardText = clipboardManager.getText()?.text
-                        if (!clipboardText.isNullOrEmpty()) {
-                            // Append to existing text instead of replacing
-                            pastedText = if (pastedText.isEmpty()) {
-                                clipboardText
-                            } else {
-                                pastedText + "\n" + clipboardText
+                        coroutineScope.launch {
+                            val clipEntry = clipboard.getClipEntry()
+                            val clipboardText = clipEntry?.clipData?.getItemAt(0)?.text?.toString()
+                            if (!clipboardText.isNullOrEmpty()) {
+                                // Append to existing text instead of replacing
+                                pastedText = if (pastedText.isEmpty()) {
+                                    clipboardText
+                                } else {
+                                    pastedText + "\n" + clipboardText
+                                }
                             }
                         }
                     },
@@ -1696,9 +1699,6 @@ private fun PreviewFetchingScreen(
                 }
             }
         }
-
-        // Collection Picker
-        // TODO: Implement collection picker
 
         // Preview Results List
         Card(

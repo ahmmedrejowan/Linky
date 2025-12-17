@@ -462,22 +462,41 @@ private fun BackupRestoreCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Data Backup",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Coming Soon",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             Text(
-                text = "Export your data as JSON or import from a backup file",
+                text = "Export your data as JSON or import from a backup file. Cloud sync will also be available in a future update.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             OutlinedButton(
-                onClick = { /* TODO: Implement export */ },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false
             ) {
                 Text("Export All Data")
             }
 
             OutlinedButton(
-                onClick = { /* TODO: Implement import */ },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false
             ) {
                 Text("Import Data")
             }
@@ -500,17 +519,37 @@ private fun DangerZoneCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Delete All Data",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "Coming Soon",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             Text(
-                text = "Permanently delete all your data. This action cannot be undone.",
+                text = "Permanently delete all your data including links, collections, tags, and vault items. This action cannot be undone.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Button(
-                onClick = { /* TODO: Implement delete all */ },
+                onClick = { },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = false,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+                    containerColor = MaterialTheme.colorScheme.error,
+                    disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
                 )
             ) {
                 Text("Delete All Data")

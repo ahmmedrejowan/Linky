@@ -14,9 +14,6 @@ val databaseModule = module {
             AppDatabase.DATABASE_NAME
         )
             .addMigrations(*ALL_MIGRATIONS)
-            // DEV MODE: Allow destructive migration (drops and recreates tables on schema changes)
-            // TODO: Before production, remove fallbackToDestructiveMigration and ensure all migrations are in place
-            .fallbackToDestructiveMigration(true)
             .build()
     }
 
