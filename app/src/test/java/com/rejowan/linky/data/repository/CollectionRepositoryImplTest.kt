@@ -13,18 +13,26 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CollectionRepositoryImplTest {
 
     private lateinit var collectionDao: CollectionDao
     private lateinit var repository: CollectionRepositoryImpl
+    private val testDispatcher = StandardTestDispatcher()
 
     private val testCollectionEntity = CollectionEntity(
         id = "collection-1",
@@ -50,8 +58,14 @@ class CollectionRepositoryImplTest {
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         collectionDao = mockk(relaxed = true)
         repository = CollectionRepositoryImpl(collectionDao)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // ============ Get Operations Tests ============

@@ -13,18 +13,26 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SnapshotRepositoryImplTest {
 
     private lateinit var snapshotDao: SnapshotDao
     private lateinit var repository: SnapshotRepositoryImpl
+    private val testDispatcher = StandardTestDispatcher()
 
     private val testSnapshotEntity = SnapshotEntity(
         id = "snapshot-1",
@@ -56,8 +64,14 @@ class SnapshotRepositoryImplTest {
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         snapshotDao = mockk(relaxed = true)
         repository = SnapshotRepositoryImpl(snapshotDao)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // ============ Get Operations Tests ============
