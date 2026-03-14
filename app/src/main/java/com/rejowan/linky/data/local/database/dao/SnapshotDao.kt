@@ -13,6 +13,10 @@ interface SnapshotDao {
     @Query("SELECT * FROM snapshots WHERE linkId = :linkId ORDER BY createdAt DESC")
     fun getSnapshotsForLink(linkId: String): Flow<List<SnapshotEntity>>
 
+    // Get all snapshots synchronously (for export)
+    @Query("SELECT * FROM snapshots ORDER BY createdAt DESC")
+    suspend fun getAllSnapshotsSync(): List<SnapshotEntity>
+
     @Query("SELECT * FROM snapshots WHERE id = :id")
     suspend fun getById(id: String): SnapshotEntity?
 

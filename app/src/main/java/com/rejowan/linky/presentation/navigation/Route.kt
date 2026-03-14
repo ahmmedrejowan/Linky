@@ -136,12 +136,6 @@ sealed class Route {
     @Serializable
     data object About : Route()
 
-    /**
-     * Sync settings screen (Phase 2)
-     * Account status, sync frequency, sync options
-     */
-    @Serializable
-    data object SyncSettings : Route()
 
     /**
      * Tag Management screen
@@ -211,25 +205,4 @@ sealed class Route {
     @Serializable
     data object Onboarding : Route()
 
-    // ============ AUTH ROUTES (Phase 2) ============
-
-    /**
-     * Welcome/Onboarding screen
-     * Shows benefits of sync and allows offline-only mode
-     */
-    @Serializable
-    data object Welcome : Route()
-
-    /**
-     * Login screen with Email OTP authentication
-     */
-    @Serializable
-    data object Login : Route()
-
-    /**
-     * Sync setup screen after successful login
-     * Allows collection selection and sync frequency configuration
-     */
-    @Serializable
-    data object SyncSetup : Route()
 }

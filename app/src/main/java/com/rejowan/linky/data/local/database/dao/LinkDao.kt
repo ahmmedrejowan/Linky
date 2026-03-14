@@ -15,6 +15,10 @@ interface LinkDao {
     @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllActiveLinks(): Flow<List<LinkEntity>>
 
+    // Get all links synchronously (for export)
+    @Query("SELECT * FROM links ORDER BY updatedAt DESC")
+    suspend fun getAllLinksSync(): List<LinkEntity>
+
     // Get all links (excluding archived, deleted, and hidden from home) - used for "All" filter - favorites first, then by date
     @Query("SELECT * FROM links WHERE deletedAt IS NULL AND isArchived = 0 AND hideFromHome = 0 ORDER BY isFavorite DESC, updatedAt DESC")
     fun getAllLinks(): Flow<List<LinkEntity>>

@@ -1,12 +1,18 @@
 package com.rejowan.linky.presentation.feature.settings
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.BuildConfig
+import com.rejowan.linky.data.export.ImportConflictStrategy
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
+import com.rejowan.linky.domain.usecase.backup.ExportDataUseCase
+import com.rejowan.linky.domain.usecase.backup.ExportState
+import com.rejowan.linky.domain.usecase.backup.ImportDataUseCase
+import com.rejowan.linky.domain.usecase.backup.ImportState
 import com.rejowan.linky.util.ErrorHandler
 import com.rejowan.linky.util.FileStorageManager
 import com.rejowan.linky.util.SettingsOperation
@@ -24,7 +30,9 @@ class SettingsViewModel(
     private val collectionRepository: CollectionRepository,
     private val snapshotRepository: SnapshotRepository,
     private val themePreferences: ThemePreferences,
-    private val fileStorageManager: FileStorageManager
+    private val fileStorageManager: FileStorageManager,
+    private val exportDataUseCase: ExportDataUseCase,
+    private val importDataUseCase: ImportDataUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
@@ -46,6 +54,21 @@ class SettingsViewModel(
             }
             is SettingsEvent.OnRefresh -> {
                 loadSettings()
+            }
+            is SettingsEvent.OnExportData -> {
+                exportData(event.uri, event.includeSnapshots)
+            }
+            is SettingsEvent.OnImportData -> {
+                importData(event.uri, event.conflictStrategy)
+            }
+            is SettingsEvent.OnPreviewImport -> {
+                previewImport(event.uri)
+            }
+            is SettingsEvent.OnDismissExportResult -> {
+                _state.update { it.copy(exportState = ExportUiState.Idle) }
+            }
+            is SettingsEvent.OnDismissImportResult -> {
+                _state.update { it.copy(importState = ImportUiState.Idle) }
             }
         }
     }
@@ -140,10 +163,102 @@ class SettingsViewModel(
             }
         }
     }
+
+    private fun exportData(uri: Uri, includeSnapshots: Boolean) {
+        viewModelScope.launch {
+            _state.update { it.copy(exportState = ExportUiState.Exporting) }
+
+            exportDataUseCase(uri, includeSnapshots)
+                .catch { e ->
+                    Timber.e(e, "Export failed")
+                    _state.update { it.copy(exportState = ExportUiState.Error(e.message ?: "Export failed")) }
+                }
+                .collect { exportState ->
+                    when (exportState) {
+                        is ExportState.Preparing -> {
+                            _state.update { it.copy(exportState = ExportUiState.Exporting) }
+                        }
+                        is ExportState.Progress -> {
+                            // Could update progress UI here
+                        }
+                        is ExportState.Success -> {
+                            Timber.d("Export successful: ${exportState.summary}")
+                            _state.update { it.copy(exportState = ExportUiState.Success(exportState.summary)) }
+                        }
+                        is ExportState.Error -> {
+                            _state.update { it.copy(exportState = ExportUiState.Error(exportState.message)) }
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun previewImport(uri: Uri) {
+        viewModelScope.launch {
+            _state.update { it.copy(importState = ImportUiState.Validating) }
+
+            try {
+                val result = importDataUseCase.preview(uri)
+                result.fold(
+                    onSuccess = { preview ->
+                        _state.update { it.copy(importState = ImportUiState.Preview(preview)) }
+                    },
+                    onFailure = { e ->
+                        _state.update { it.copy(importState = ImportUiState.Error(e.message ?: "Invalid file")) }
+                    }
+                )
+            } catch (e: Exception) {
+                Timber.e(e, "Import preview failed")
+                _state.update { it.copy(importState = ImportUiState.Error(e.message ?: "Failed to read file")) }
+            }
+        }
+    }
+
+    private fun importData(uri: Uri, conflictStrategy: ImportConflictStrategy) {
+        viewModelScope.launch {
+            _state.update { it.copy(importState = ImportUiState.Importing) }
+
+            importDataUseCase(uri, conflictStrategy)
+                .catch { e ->
+                    Timber.e(e, "Import failed")
+                    _state.update { it.copy(importState = ImportUiState.Error(e.message ?: "Import failed")) }
+                }
+                .collect { importState ->
+                    when (importState) {
+                        is ImportState.Validating -> {
+                            _state.update { it.copy(importState = ImportUiState.Validating) }
+                        }
+                        is ImportState.Preview -> {
+                            // Already in importing state, skip preview
+                        }
+                        is ImportState.Importing -> {
+                            _state.update { it.copy(importState = ImportUiState.Importing) }
+                        }
+                        is ImportState.Progress -> {
+                            // Could update progress UI here
+                        }
+                        is ImportState.Success -> {
+                            Timber.d("Import successful: ${importState.summary}")
+                            _state.update { it.copy(importState = ImportUiState.Success(importState.summary)) }
+                            // Refresh statistics
+                            loadSettings()
+                        }
+                        is ImportState.Error -> {
+                            _state.update { it.copy(importState = ImportUiState.Error(importState.message)) }
+                        }
+                    }
+                }
+        }
+    }
 }
 
 sealed class SettingsEvent {
     data class OnThemeChange(val theme: String) : SettingsEvent()
     data object OnClearCache : SettingsEvent()
     data object OnRefresh : SettingsEvent()
+    data class OnExportData(val uri: Uri, val includeSnapshots: Boolean = false) : SettingsEvent()
+    data class OnPreviewImport(val uri: Uri) : SettingsEvent()
+    data class OnImportData(val uri: Uri, val conflictStrategy: ImportConflictStrategy = ImportConflictStrategy.SKIP) : SettingsEvent()
+    data object OnDismissExportResult : SettingsEvent()
+    data object OnDismissImportResult : SettingsEvent()
 }

@@ -35,6 +35,8 @@ import com.rejowan.linky.domain.usecase.tag.GetTagsWithLinkCountUseCase
 import com.rejowan.linky.domain.usecase.tag.SaveTagUseCase
 import com.rejowan.linky.domain.usecase.tag.SetTagsForLinkUseCase
 import com.rejowan.linky.domain.usecase.tag.UpdateTagUseCase
+import com.rejowan.linky.domain.usecase.backup.ExportDataUseCase
+import com.rejowan.linky.domain.usecase.backup.ImportDataUseCase
 import org.koin.dsl.module
 
 val useCaseModule = module {
@@ -80,4 +82,8 @@ val useCaseModule = module {
     factory { UpdateTagUseCase(get()) }
     factory { DeleteTagUseCase(get()) }
     factory { SetTagsForLinkUseCase(get()) }
+
+    // Backup use cases
+    factory { ExportDataUseCase(get()) }
+    factory { ImportDataUseCase(get()) }
 }

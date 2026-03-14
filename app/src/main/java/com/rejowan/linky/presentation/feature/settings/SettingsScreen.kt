@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -50,7 +49,6 @@ import androidx.compose.ui.unit.dp
  * @param onNavigateToAppearance Navigate to Appearance screen
  * @param onNavigateToPrivacySecurity Navigate to Privacy & Security screen
  * @param onNavigateToAbout Navigate to About screen
- * @param onNavigateToSync Navigate to Sync settings (Phase 2)
  * @param onNavigateToBatchImport Navigate to Batch Import screen
  * @param onNavigateToTagManagement Navigate to Tag Management screen
  * @param onNavigateToVault Navigate to Vault screen
@@ -63,7 +61,6 @@ fun SettingsScreen(
     onNavigateToAppearance: () -> Unit,
     onNavigateToPrivacySecurity: () -> Unit,
     onNavigateToAbout: () -> Unit,
-    onNavigateToSync: () -> Unit,
     onNavigateToBatchImport: () -> Unit,
     onNavigateToTagManagement: () -> Unit,
     onNavigateToVault: () -> Unit,
@@ -109,13 +106,6 @@ fun SettingsScreen(
 
     // 3. Data Section
     val dataSection = listOf(
-        SettingsCategory(
-            icon = Icons.Filled.Cloud,
-            title = "Sync",
-            description = "Not logged in • Tap to configure",
-            onClick = onNavigateToSync,
-            badge = "Phase 2"
-        ),
         SettingsCategory(
             icon = Icons.Filled.Storage,
             title = "Data & Storage",

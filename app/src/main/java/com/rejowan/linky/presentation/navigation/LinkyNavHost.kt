@@ -19,7 +19,6 @@ import com.rejowan.linky.presentation.feature.onboarding.OnboardingScreen
 import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionScreen
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
-import com.rejowan.linky.presentation.feature.settings.sync.SyncScreen
 import com.rejowan.linky.presentation.feature.settings.tags.TagManagementScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
@@ -34,7 +33,6 @@ import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
  * Bottom nav screens (Home/Collections/Settings) are in BottomNavHost within MainScreen
  *
  * @param navController The NavHostController for app-level navigation
- * @param isAuthRequired Whether authentication is required (Phase 2)
  * @param showOnboarding Whether to show onboarding flow
  * @param onOnboardingComplete Callback when onboarding is completed
  * @param sharedContent Content shared from another app via ACTION_SEND intent
@@ -43,7 +41,6 @@ import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
 @Composable
 fun LinkyNavHost(
     navController: NavHostController,
-    isAuthRequired: Boolean = false, // Phase 2: checks preferences
     showOnboarding: Boolean = false,
     onOnboardingComplete: () -> Unit = {},
     sharedContent: SharedContent? = null,
@@ -51,7 +48,6 @@ fun LinkyNavHost(
 ) {
     val startDestination: Route = when {
         showOnboarding -> Route.Onboarding
-        isAuthRequired -> Route.Welcome
         else -> Route.Main()
     }
 
@@ -59,50 +55,6 @@ fun LinkyNavHost(
         navController = navController,
         startDestination = startDestination,
     ) {
-        // ============ AUTH GRAPH (Phase 2) ============
-        // TODO: Uncomment and implement in Phase 2
-        /*
-        if (isAuthRequired) {
-            composable<Route.Welcome> {
-                WelcomeScreen(
-                    onContinueOffline = {
-                        navController.navigate(Route.Main()) {
-                            popUpTo<Route.Welcome> { inclusive = true }
-                        }
-                    },
-                    onLoginClick = {
-                        navController.navigate(Route.Login)
-                    }
-                )
-            }
-
-            composable<Route.Login> {
-                LoginScreen(
-                    onLoginSuccess = {
-                        navController.navigate(Route.SyncSetup) {
-                            popUpTo<Route.Welcome> { inclusive = true }
-                        }
-                    },
-                    onSkip = {
-                        navController.navigate(Route.Main()) {
-                            popUpTo<Route.Welcome> { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable<Route.SyncSetup> {
-                SyncSetupScreen(
-                    onComplete = {
-                        navController.navigate(Route.Main()) {
-                            popUpTo<Route.Welcome> { inclusive = true }
-                        }
-                    }
-                )
-            }
-        }
-        */
-
         // ============ ONBOARDING ============
         composable<Route.Onboarding> {
             OnboardingScreen(
@@ -220,13 +172,6 @@ fun LinkyNavHost(
 
         composable<Route.About> {
             AboutScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable<Route.SyncSettings> {
-            SyncScreen(
-                onNavigateToLogin = { navController.navigate(Route.Login) },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

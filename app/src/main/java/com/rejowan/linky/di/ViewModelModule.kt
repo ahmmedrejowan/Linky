@@ -98,7 +98,9 @@ val viewModelModule = module {
             collectionRepository = get(),
             snapshotRepository = get(),
             themePreferences = get(),
-            fileStorageManager = get()
+            fileStorageManager = get(),
+            exportDataUseCase = get(),
+            importDataUseCase = get()
         )
     }
 

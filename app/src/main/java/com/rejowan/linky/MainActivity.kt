@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
 
                 LinkyNavHost(
                     navController = navController,
-                    isAuthRequired = false,
                     showOnboarding = showOnboarding,
                     onOnboardingComplete = {
                         preferencesManager.setOnboardingCompleted()

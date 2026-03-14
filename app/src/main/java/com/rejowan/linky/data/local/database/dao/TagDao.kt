@@ -21,6 +21,14 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name ASC")
     suspend fun getAllTagsOnce(): List<TagEntity>
 
+    // Get all tags synchronously (for export) - alias for getAllTagsOnce
+    @Query("SELECT * FROM tags ORDER BY name ASC")
+    suspend fun getAllTagsSync(): List<TagEntity>
+
+    // Get all link-tag relations synchronously (for export)
+    @Query("SELECT * FROM link_tags")
+    suspend fun getAllLinkTagRelationsSync(): List<LinkTagCrossRef>
+
     @Query("SELECT * FROM tags WHERE id = :id")
     suspend fun getById(id: String): TagEntity?
 
@@ -95,6 +103,12 @@ interface TagDao {
         ORDER BY tags.name ASC
     """)
     fun getTagsWithLinkCount(): Flow<List<TagWithLinkCount>>
+
+    /**
+     * Insert a link-tag cross reference (for import)
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertLinkTagCrossRef(crossRef: LinkTagCrossRef)
 
     /**
      * Add a tag to a link

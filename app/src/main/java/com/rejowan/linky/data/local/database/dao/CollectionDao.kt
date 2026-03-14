@@ -15,6 +15,10 @@ interface CollectionDao {
     @Query("SELECT * FROM collections ORDER BY sortOrder ASC, name ASC")
     fun getAllCollections(): Flow<List<CollectionEntity>>
 
+    // Get all collections synchronously (for export)
+    @Query("SELECT * FROM collections ORDER BY sortOrder ASC, name ASC")
+    suspend fun getAllCollectionsSync(): List<CollectionEntity>
+
     @Query("SELECT * FROM collections WHERE id = :id")
     suspend fun getById(id: String): CollectionEntity?
 

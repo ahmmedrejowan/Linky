@@ -1,0 +1,232 @@
+package com.rejowan.linky.data.export
+
+import android.content.Context
+import android.net.Uri
+import com.rejowan.linky.data.local.database.dao.CollectionDao
+import com.rejowan.linky.data.local.database.dao.LinkDao
+import com.rejowan.linky.data.local.database.dao.SnapshotDao
+import com.rejowan.linky.data.local.database.dao.TagDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import timber.log.Timber
+import java.io.OutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Handles exporting app data to JSON format
+ */
+class ExportManager(
+    private val context: Context,
+    private val linkDao: LinkDao,
+    private val collectionDao: CollectionDao,
+    private val tagDao: TagDao,
+    private val snapshotDao: SnapshotDao
+) {
+    private val json = Json {
+        prettyPrint = true
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+    }
+
+    /**
+     * Export all data to a URI (user-selected file location)
+     */
+    suspend fun exportToUri(
+        uri: Uri,
+        includeSnapshots: Boolean = false,
+        onProgress: (Int) -> Unit = {}
+    ): Result<ExportSummary> = withContext(Dispatchers.IO) {
+        try {
+            onProgress(10)
+
+            // Gather all data
+            val exportData = gatherExportData(includeSnapshots, onProgress)
+
+            onProgress(70)
+
+            // Serialize to JSON
+            val jsonString = json.encodeToString(exportData)
+
+            onProgress(80)
+
+            // Write to file
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
+            } ?: throw IllegalStateException("Could not open output stream")
+
+            onProgress(100)
+
+            val summary = ExportSummary(
+                linksCount = exportData.data.links.size,
+                collectionsCount = exportData.data.collections.size,
+                tagsCount = exportData.data.tags.size,
+                snapshotsCount = exportData.data.snapshots?.size ?: 0,
+                fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
+                filePath = uri.toString()
+            )
+
+            Timber.d("Export completed: ${summary.linksCount} links, ${summary.collectionsCount} collections")
+            Result.success(summary)
+        } catch (e: Exception) {
+            Timber.e(e, "Export failed")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Export to an output stream (for sharing)
+     */
+    suspend fun exportToStream(
+        outputStream: OutputStream,
+        includeSnapshots: Boolean = false,
+        onProgress: (Int) -> Unit = {}
+    ): Result<ExportSummary> = withContext(Dispatchers.IO) {
+        try {
+            onProgress(10)
+
+            val exportData = gatherExportData(includeSnapshots, onProgress)
+
+            onProgress(70)
+
+            val jsonString = json.encodeToString(exportData)
+
+            onProgress(80)
+
+            outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
+
+            onProgress(100)
+
+            val summary = ExportSummary(
+                linksCount = exportData.data.links.size,
+                collectionsCount = exportData.data.collections.size,
+                tagsCount = exportData.data.tags.size,
+                snapshotsCount = exportData.data.snapshots?.size ?: 0,
+                fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
+                filePath = ""
+            )
+
+            Result.success(summary)
+        } catch (e: Exception) {
+            Timber.e(e, "Export to stream failed")
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun gatherExportData(
+        includeSnapshots: Boolean,
+        onProgress: (Int) -> Unit
+    ): ExportData {
+        onProgress(20)
+
+        // Get all links (excluding trashed)
+        val links = linkDao.getAllLinksSync()
+            .filter { it.deletedAt == null }
+            .map { entity ->
+                LinkExport(
+                    id = entity.id,
+                    title = entity.title,
+                    url = entity.url,
+                    description = entity.description,
+                    note = entity.note,
+                    collectionId = entity.collectionId,
+                    previewUrl = entity.previewUrl,
+                    previewImagePath = entity.previewImagePath,
+                    isFavorite = entity.isFavorite,
+                    isArchived = entity.isArchived,
+                    hideFromHome = entity.hideFromHome,
+                    createdAt = entity.createdAt,
+                    updatedAt = entity.updatedAt
+                )
+            }
+
+        onProgress(35)
+
+        // Get all collections
+        val collections = collectionDao.getAllCollectionsSync().map { entity ->
+            CollectionExport(
+                id = entity.id,
+                name = entity.name,
+                icon = entity.icon,
+                color = entity.color,
+                isFavorite = entity.isFavorite,
+                sortOrder = entity.sortOrder,
+                createdAt = entity.createdAt,
+                updatedAt = entity.updatedAt
+            )
+        }
+
+        onProgress(45)
+
+        // Get all tags
+        val tags = tagDao.getAllTagsSync().map { entity ->
+            TagExport(
+                id = entity.id,
+                name = entity.name,
+                color = entity.color,
+                createdAt = entity.createdAt,
+                updatedAt = entity.updatedAt
+            )
+        }
+
+        onProgress(55)
+
+        // Get link-tag relations
+        val linkTagRelations = tagDao.getAllLinkTagRelationsSync().map { crossRef ->
+            LinkTagRelation(
+                linkId = crossRef.linkId,
+                tagId = crossRef.tagId
+            )
+        }
+
+        onProgress(60)
+
+        // Get snapshots if requested
+        val snapshots = if (includeSnapshots) {
+            snapshotDao.getAllSnapshotsSync().map { entity ->
+                SnapshotExport(
+                    id = entity.id,
+                    linkId = entity.linkId,
+                    type = entity.type,
+                    filePath = entity.filePath,
+                    fileSize = entity.fileSize,
+                    title = entity.title,
+                    author = entity.author,
+                    excerpt = entity.excerpt,
+                    wordCount = entity.wordCount,
+                    estimatedReadTime = entity.estimatedReadTime,
+                    createdAt = entity.createdAt
+                )
+            }
+        } else {
+            null
+        }
+
+        onProgress(65)
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+
+        return ExportData(
+            exportDate = dateFormat.format(Date()),
+            data = ExportPayload(
+                links = links,
+                collections = collections,
+                tags = tags,
+                linkTagRelations = linkTagRelations,
+                snapshots = snapshots
+            )
+        )
+    }
+
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            else -> "${bytes / (1024 * 1024)} MB"
+        }
+    }
+}
