@@ -437,3 +437,196 @@ private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
     val daysLeft = (remainingTime / (24 * 60 * 60 * 1000L)).toInt()
     return maxOf(0, daysLeft) // Ensure it's never negative
 }
+
+/**
+ * LinkGridCard component - Grid view variant of LinkCard
+ * Displays link as a vertical card with image on top, title, URL below
+ * Supports selection mode for bulk operations
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun LinkGridCard(
+    link: Link,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
+    onToggleSelection: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        onToggleSelection?.invoke()
+                    } else {
+                        onClick()
+                    }
+                },
+                onLongClick = {
+                    onLongPress?.invoke()
+                }
+            )
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
+    ) {
+        Column {
+            // Preview Image with Status Badge
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+            ) {
+                if (link.previewImagePath != null || link.previewUrl != null) {
+                    AsyncImage(
+                        model = link.previewImagePath ?: link.previewUrl,
+                        contentDescription = "Preview for ${link.title}",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Placeholder when no preview
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = "No preview",
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Selection indicator overlay
+                if (isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                            contentDescription = if (isSelected) "Selected" else "Not selected",
+                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Favorite indicator
+                if (link.isFavorite && !isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = "Favorite",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Status Banner (Deleted/Archived)
+                if (link.isDeleted || link.isArchived) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (link.isDeleted) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                                else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (link.isDeleted) "Deleted" else "Archived",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (link.isDeleted) MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Title
+                Text(
+                    text = link.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // URL
+                Text(
+                    text = link.url.shortenUrl(),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Timestamp
+                Text(
+                    text = if (link.isDeleted) {
+                        val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
+                        "$daysLeft days left"
+                    } else {
+                        link.createdAt.toRelativeTime()
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (link.isDeleted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    }
+}

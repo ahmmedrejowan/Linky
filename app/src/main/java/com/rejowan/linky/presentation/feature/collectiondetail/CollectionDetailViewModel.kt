@@ -444,20 +444,17 @@ class CollectionDetailViewModel(
     private fun sortLinks(links: List<com.rejowan.linky.domain.model.Link>, sortType: com.rejowan.linky.presentation.feature.home.SortType): List<com.rejowan.linky.domain.model.Link> {
         // Apply the selected sort to all links
         val sorted = when (sortType) {
-            com.rejowan.linky.presentation.feature.home.SortType.DATE_ADDED_DESC -> {
+            com.rejowan.linky.presentation.feature.home.SortType.DATE_DESC -> {
                 links.sortedByDescending { it.createdAt }
             }
-            com.rejowan.linky.presentation.feature.home.SortType.DATE_ADDED_ASC -> {
+            com.rejowan.linky.presentation.feature.home.SortType.DATE_ASC -> {
                 links.sortedBy { it.createdAt }
             }
-            com.rejowan.linky.presentation.feature.home.SortType.TITLE_ASC -> {
+            com.rejowan.linky.presentation.feature.home.SortType.NAME_ASC -> {
                 links.sortedBy { it.title.lowercase() }
             }
-            com.rejowan.linky.presentation.feature.home.SortType.TITLE_DESC -> {
+            com.rejowan.linky.presentation.feature.home.SortType.NAME_DESC -> {
                 links.sortedByDescending { it.title.lowercase() }
-            }
-            com.rejowan.linky.presentation.feature.home.SortType.LAST_MODIFIED -> {
-                links.sortedByDescending { it.updatedAt }
             }
         }
 

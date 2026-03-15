@@ -5,7 +5,7 @@ import com.rejowan.linky.domain.model.Link
 data class HomeState(
     val links: List<Link> = emptyList(),
     val filterType: FilterType = FilterType.ALL,
-    val sortType: SortType = SortType.DATE_ADDED_DESC,
+    val sortType: SortType = SortType.DATE_DESC,
     val viewMode: ViewMode = ViewMode.LIST,
     val isLoading: Boolean = false,
     val error: String? = null, // For critical load failures (full-screen error state)
@@ -39,11 +39,10 @@ enum class FilterType {
 }
 
 enum class SortType(val displayName: String) {
-    DATE_ADDED_DESC("Newest first"),
-    DATE_ADDED_ASC("Oldest first"),
-    TITLE_ASC("Title (A-Z)"),
-    TITLE_DESC("Title (Z-A)"),
-    LAST_MODIFIED("Last modified")
+    DATE_DESC("Newest"),
+    DATE_ASC("Oldest"),
+    NAME_ASC("A → Z"),
+    NAME_DESC("Z → A")
 }
 
 enum class ViewMode {

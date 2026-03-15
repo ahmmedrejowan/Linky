@@ -13,14 +13,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -29,6 +42,7 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import java.util.Calendar
 import androidx.compose.material.icons.filled.Add
@@ -81,6 +95,7 @@ import com.rejowan.linky.di.viewModelModule
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
+import com.rejowan.linky.presentation.components.LinkGridCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.compose.koinViewModel
@@ -299,6 +314,7 @@ fun HomeScreen(
         ) {
             HomeContent(
                 state = state,
+                viewMode = state.viewMode,
                 onLinkClick = onLinkClick,
                 onFavoriteClick = { linkId, isFavorite ->
                     viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
@@ -419,6 +435,10 @@ private fun HomeScreenPreview() {
 /**
  * Sort Options Bottom Sheet
  */
+// Accent colors for sort categories
+private val SortAccentPurple = Color(0xFF9575CD)
+private val SortAccentBlue = Color(0xFF64B5F6)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SortOptionsSheet(
@@ -430,57 +450,297 @@ private fun SortOptionsSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 24.dp)
         ) {
-            Text(
-                text = "Sort by",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 8.dp)
+            // Header
+            SortSheetHeader()
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Name Sort Category
+            SortCategoryCard(
+                title = "Alphabetical",
+                description = "Sort by link title",
+                icon = Icons.Outlined.SortByAlpha,
+                accentColor = SortAccentPurple,
+                options = listOf(SortType.NAME_ASC, SortType.NAME_DESC),
+                currentSort = currentSort,
+                onSortSelected = {
+                    onSortSelected(it)
+                    onDismiss()
+                }
             )
 
-            SortType.entries.forEach { sortType ->
-                val isSelected = sortType == currentSort
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Date Sort Category
+            SortCategoryCard(
+                title = "Date Added",
+                description = "Sort by creation time",
+                icon = Icons.Outlined.AccessTime,
+                accentColor = SortAccentBlue,
+                options = listOf(SortType.DATE_DESC, SortType.DATE_ASC),
+                currentSort = currentSort,
+                onSortSelected = {
+                    onSortSelected(it)
+                    onDismiss()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SortSheetHeader(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column {
+            Text(
+                text = "Sort Links",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Choose how to sort your links",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SortCategoryCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    accentColor: Color,
+    options: List<SortType>,
+    currentSort: SortType,
+    onSortSelected: (SortType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hasSelection = options.contains(currentSort)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = if (hasSelection) {
+            accentColor.copy(alpha = 0.06f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Category header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            onSortSelected(sortType)
-                            onDismiss()
-                        },
-                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    color = accentColor.copy(alpha = 0.12f)
                 ) {
-                    Row(
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(6.dp)
+                            .size(16.dp),
+                        tint = accentColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+
+                // Selection indicator
+                if (hasSelection) {
+                    Surface(
+                        shape = CircleShape,
+                        color = accentColor.copy(alpha = 0.15f)
                     ) {
-                        Text(
-                            text = sortType.displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "Selected",
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(14.dp),
+                            tint = accentColor
                         )
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Sort options row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                options.forEach { option ->
+                    SortOptionChip(
+                        option = option,
+                        isSelected = option == currentSort,
+                        accentColor = accentColor,
+                        onClick = { onSortSelected(option) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun SortOptionChip(
+    option: SortType,
+    isSelected: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = tween(200),
+        label = "chip bg"
+    )
+
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.5f)
+        else Color.Transparent,
+        animationSpec = tween(200),
+        label = "chip border"
+    )
+
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(200),
+        label = "chip content"
+    )
+
+    val (chipIcon, chipLabel) = getSortOptionDetails(option)
+
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .then(
+                if (isSelected) Modifier.border(
+                    width = 1.5.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(10.dp)
+                ) else Modifier
+            ),
+        shape = RoundedCornerShape(10.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            // Direction icon
+            Icon(
+                imageVector = chipIcon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = contentColor
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Label
+            Text(
+                text = chipLabel,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                ),
+                color = contentColor
+            )
+
+            // Selected check
+            if (isSelected) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(accentColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "Selected",
+                        modifier = Modifier.size(9.dp),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun getSortOptionDetails(option: SortType): Pair<ImageVector, String> {
+    return when (option) {
+        SortType.NAME_ASC -> Icons.Rounded.ArrowUpward to "A → Z"
+        SortType.NAME_DESC -> Icons.Rounded.ArrowDownward to "Z → A"
+        SortType.DATE_DESC -> Icons.Rounded.ArrowDownward to "Newest"
+        SortType.DATE_ASC -> Icons.Rounded.ArrowUpward to "Oldest"
     }
 }
 
@@ -491,6 +751,7 @@ private fun SortOptionsSheet(
 @Composable
 private fun HomeContent(
     state: HomeState,
+    viewMode: ViewMode,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
     onArchiveClick: (String, Boolean) -> Unit,
@@ -513,10 +774,32 @@ private fun HomeContent(
     onBulkMove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Scroll state for tracking scroll offset
+    // Scroll states for both list and grid
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
 
-    // Report scroll offset to parent for header collapse
+    // Report scroll offset to parent for header collapse (works for both modes)
+    LaunchedEffect(
+        viewMode,
+        listState.firstVisibleItemIndex,
+        listState.firstVisibleItemScrollOffset,
+        gridState.firstVisibleItemIndex,
+        gridState.firstVisibleItemScrollOffset
+    ) {
+        val offset = when (viewMode) {
+            ViewMode.LIST -> {
+                if (listState.firstVisibleItemIndex > 0) 200f
+                else listState.firstVisibleItemScrollOffset.toFloat()
+            }
+            ViewMode.GRID -> {
+                if (gridState.firstVisibleItemIndex > 0) 200f
+                else gridState.firstVisibleItemScrollOffset.toFloat()
+            }
+        }
+        onScrollOffsetChanged(offset)
+    }
+
+    // Legacy offset tracking for list (kept for compatibility)
     LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
         val offset = if (listState.firstVisibleItemIndex > 0) {
             200f // Fully collapsed after first item
@@ -568,51 +851,101 @@ private fun HomeContent(
                 )
             }
 
-            // Links list
+            // Links list or grid
             else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Count header
-                    item(key = "count") {
-                        Text(
-                            text = if (state.links.size == 1) "1 link" else "${state.links.size} links",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
+                when (viewMode) {
+                    ViewMode.LIST -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Count header
+                            item(key = "count") {
+                                Text(
+                                    text = if (state.links.size == 1) "1 link" else "${state.links.size} links",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
+
+                            // Link Items
+                            items(
+                                items = state.links,
+                                key = { it.id }
+                            ) { link ->
+                                LinkCard(
+                                    link = link,
+                                    onClick = { onLinkClick(link.id) },
+                                    onFavoriteClick = {
+                                        onFavoriteClick(link.id, !link.isFavorite)
+                                    },
+                                    onArchiveClick = {
+                                        onArchiveClick(link.id, !link.isArchived)
+                                    },
+                                    onTrashClick = {
+                                        onTrashClick(link.id)
+                                    },
+                                    isSelectionMode = state.isSelectionMode,
+                                    isSelected = state.selectedLinkIds.contains(link.id),
+                                    onLongPress = { onLongPress(link.id) },
+                                    onToggleSelection = { onToggleSelection(link.id) },
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp)
+                                        .animateItem()
+                                )
+                            }
+                        }
                     }
 
-                    // Link Items
-                    items(
-                        items = state.links,
-                        key = { it.id }
-                    ) { link ->
-                        LinkCard(
-                            link = link,
-                            onClick = { onLinkClick(link.id) },
-                            onFavoriteClick = {
-                                onFavoriteClick(link.id, !link.isFavorite)
-                            },
-                            onArchiveClick = {
-                                onArchiveClick(link.id, !link.isArchived)
-                            },
-                            onTrashClick = {
-                                onTrashClick(link.id)
-                            },
-                            isSelectionMode = state.isSelectionMode,
-                            isSelected = state.selectedLinkIds.contains(link.id),
-                            onLongPress = { onLongPress(link.id) },
-                            onToggleSelection = { onToggleSelection(link.id) },
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .animateItem()
-                        )
+                    ViewMode.GRID -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            state = gridState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 8.dp,
+                                bottom = 100.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Count header - spans full width
+                            item(key = "count", span = { GridItemSpan(2) }) {
+                                Text(
+                                    text = if (state.links.size == 1) "1 link" else "${state.links.size} links",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Link Grid Items
+                            items(
+                                items = state.links,
+                                key = { it.id }
+                            ) { link ->
+                                LinkGridCard(
+                                    link = link,
+                                    onClick = { onLinkClick(link.id) },
+                                    onFavoriteClick = {
+                                        onFavoriteClick(link.id, !link.isFavorite)
+                                    },
+                                    isSelectionMode = state.isSelectionMode,
+                                    isSelected = state.selectedLinkIds.contains(link.id),
+                                    onLongPress = { onLongPress(link.id) },
+                                    onToggleSelection = { onToggleSelection(link.id) },
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                        }
                     }
                 }
             }

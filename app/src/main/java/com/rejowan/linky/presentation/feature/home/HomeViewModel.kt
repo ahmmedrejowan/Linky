@@ -393,11 +393,10 @@ class HomeViewModel(
     private fun sortLinks(links: List<Link>, sortType: SortType, filterType: FilterType): List<Link> {
         // Apply the selected sort to all links
         val sorted = when (sortType) {
-            SortType.DATE_ADDED_DESC -> links.sortedByDescending { it.createdAt }
-            SortType.DATE_ADDED_ASC -> links.sortedBy { it.createdAt }
-            SortType.TITLE_ASC -> links.sortedBy { it.title.lowercase() }
-            SortType.TITLE_DESC -> links.sortedByDescending { it.title.lowercase() }
-            SortType.LAST_MODIFIED -> links.sortedByDescending { it.updatedAt }
+            SortType.DATE_DESC -> links.sortedByDescending { it.createdAt }
+            SortType.DATE_ASC -> links.sortedBy { it.createdAt }
+            SortType.NAME_ASC -> links.sortedBy { it.title.lowercase() }
+            SortType.NAME_DESC -> links.sortedByDescending { it.title.lowercase() }
         }
 
         // Prioritize favorites at top only for ALL and ARCHIVED filters
