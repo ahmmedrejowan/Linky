@@ -1,5 +1,7 @@
 package com.rejowan.linky.presentation.feature.collections
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,21 +19,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.SortByAlpha
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -39,12 +51,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,7 +70,10 @@ import com.rejowan.linky.domain.model.CollectionWithLinkCount
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.CollectionCard
+import com.rejowan.linky.presentation.components.CollectionGridCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
+import com.rejowan.linky.presentation.feature.home.ViewMode
+import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
 import androidx.core.graphics.toColorInt
 
@@ -91,6 +108,7 @@ fun CollectionsScreen(
     viewModel: CollectionsViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showSortSheet by remember { mutableStateOf(false) }
 
     // Register create collection action for MainActivity FAB
     LaunchedEffect(Unit) {
@@ -165,19 +183,25 @@ fun CollectionsScreen(
             // Collections list
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Count and Sort Row
-                    CountAndSortRow(
-                        count = state.collections.size,
-                        sortType = state.sortType,
-                        onSortClick = { viewModel.onEvent(CollectionsEvent.OnSortTypeChange(it)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
+                    // Header with title and sort button
+                    CollectionsHeader(
+                        onSortClick = { showSortSheet = true }
                     )
 
-                    // Collections List
-                    CollectionsList(
+                    // View mode toggle row with count
+                    ViewModeRow(
+                        count = state.collections.size,
+                        isGridView = state.viewMode == ViewMode.GRID,
+                        onViewModeToggle = {
+                            val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
+                            viewModel.onEvent(CollectionsEvent.OnViewModeChange(newMode))
+                        }
+                    )
+
+                    // Collections List/Grid
+                    CollectionsContent(
                         collections = state.collections,
+                        viewMode = state.viewMode,
                         onCollectionClick = onCollectionClick,
                         onFavoriteClick = { collectionId ->
                             viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(collectionId))
@@ -201,36 +225,535 @@ fun CollectionsScreen(
             onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissCreateDialog) }
         )
     }
+
+    // Sort Options Sheet
+    if (showSortSheet) {
+        SortOptionsSheet(
+            currentSort = state.sortType,
+            onSortSelected = { viewModel.onEvent(CollectionsEvent.OnSortTypeChange(it)) },
+            onDismiss = { showSortSheet = false }
+        )
+    }
 }
 
 /**
- * Collections list display
+ * Collections header with title and sort button
  */
 @Composable
-private fun CollectionsList(
+private fun CollectionsHeader(
+    onSortClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Collections",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Surface(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onSortClick),
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Sort,
+                contentDescription = "Sort",
+                modifier = Modifier
+                    .padding(8.dp)
+                    .size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * View mode toggle row with count
+ */
+@Composable
+private fun ViewModeRow(
+    count: Int,
+    isGridView: Boolean,
+    onViewModeToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Count display
+        Text(
+            text = if (count == 1) "1 collection" else "$count collections",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // View Mode Toggle
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ViewModeIcon(
+                isSelected = !isGridView,
+                onClick = { if (isGridView) onViewModeToggle() }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ViewList,
+                    contentDescription = "List view",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            ViewModeIcon(
+                isSelected = isGridView,
+                onClick = { if (!isGridView) onViewModeToggle() }
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.GridView,
+                    contentDescription = "Grid view",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ViewModeIcon(
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected)
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        else
+            Color.Transparent,
+        label = "view mode background"
+    )
+    val tint by animateColorAsState(
+        targetValue = if (isSelected)
+            MaterialTheme.colorScheme.onSurface
+        else
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        label = "view mode tint"
+    )
+
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(6.dp),
+        color = backgroundColor,
+        contentColor = tint
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
+    }
+}
+
+/**
+ * Collections content - supports both list and grid view
+ */
+@Composable
+private fun CollectionsContent(
     collections: List<CollectionWithLinkCount>,
+    viewMode: ViewMode,
     onCollectionClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    when (viewMode) {
+        ViewMode.LIST -> {
+            LazyColumn(
+                modifier = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(
+                    items = collections,
+                    key = { it.collection.id }
+                ) { collectionWithCount ->
+                    CollectionCard(
+                        collection = collectionWithCount.collection,
+                        linkCount = collectionWithCount.linkCount,
+                        onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                        onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
+                        linkPreviews = collectionWithCount.linkPreviews,
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+        }
+        ViewMode.GRID -> {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(
+                    items = collections,
+                    key = { it.collection.id }
+                ) { collectionWithCount ->
+                    CollectionGridCard(
+                        collection = collectionWithCount.collection,
+                        linkCount = collectionWithCount.linkCount,
+                        onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                        onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Sort Options Bottom Sheet
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SortOptionsSheet(
+    currentSort: CollectionSortType,
+    onSortSelected: (CollectionSortType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
     ) {
-        items(
-            items = collections,
-            key = { it.collection.id }
-        ) { collectionWithCount ->
-            CollectionCard(
-                collection = collectionWithCount.collection,
-                linkCount = collectionWithCount.linkCount,
-                onClick = { onCollectionClick(collectionWithCount.collection.id) },
-                onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
-                linkPreviews = collectionWithCount.linkPreviews,
-                modifier = Modifier.animateItem()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            // Header
+            SortSheetHeader()
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Name Sort Category
+            SortCategoryCard(
+                title = "Alphabetical",
+                description = "Sort by collection name",
+                icon = Icons.Outlined.SortByAlpha,
+                accentColor = SoftAccents.Purple,
+                options = listOf(CollectionSortType.NAME_ASC, CollectionSortType.NAME_DESC),
+                currentSort = currentSort,
+                onSortSelected = {
+                    onSortSelected(it)
+                    onDismiss()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Date Sort Category
+            SortCategoryCard(
+                title = "Date Created",
+                description = "Sort by creation time",
+                icon = Icons.Outlined.AccessTime,
+                accentColor = SoftAccents.Blue,
+                options = listOf(CollectionSortType.DATE_CREATED_DESC, CollectionSortType.DATE_CREATED_ASC),
+                currentSort = currentSort,
+                onSortSelected = {
+                    onSortSelected(it)
+                    onDismiss()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Link count category
+            SortCategoryCard(
+                title = "Link Count",
+                description = "Sort by number of links",
+                icon = Icons.Outlined.GridView,
+                accentColor = SoftAccents.Teal,
+                options = listOf(CollectionSortType.MOST_LINKS, CollectionSortType.LEAST_LINKS),
+                currentSort = currentSort,
+                onSortSelected = {
+                    onSortSelected(it)
+                    onDismiss()
+                }
             )
         }
+    }
+}
+
+@Composable
+private fun SortSheetHeader(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column {
+            Text(
+                text = "Sort Collections",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Choose how to sort your collections",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SortCategoryCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    accentColor: Color,
+    options: List<CollectionSortType>,
+    currentSort: CollectionSortType,
+    onSortSelected: (CollectionSortType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hasSelection = options.contains(currentSort)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = if (hasSelection) {
+            accentColor.copy(alpha = 0.06f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Category header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = accentColor.copy(alpha = 0.12f)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(6.dp)
+                            .size(16.dp),
+                        tint = accentColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+
+                // Selection indicator
+                if (hasSelection) {
+                    Surface(
+                        shape = CircleShape,
+                        color = accentColor.copy(alpha = 0.15f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "Selected",
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(14.dp),
+                            tint = accentColor
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Sort options row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                options.forEach { option ->
+                    SortOptionChip(
+                        option = option,
+                        isSelected = option == currentSort,
+                        accentColor = accentColor,
+                        onClick = { onSortSelected(option) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SortOptionChip(
+    option: CollectionSortType,
+    isSelected: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = tween(200),
+        label = "chip bg"
+    )
+
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor.copy(alpha = 0.5f)
+        else Color.Transparent,
+        animationSpec = tween(200),
+        label = "chip border"
+    )
+
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(200),
+        label = "chip content"
+    )
+
+    val (chipIcon, chipLabel) = getSortOptionDetails(option)
+
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .then(
+                if (isSelected) Modifier.border(
+                    width = 1.5.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(10.dp)
+                ) else Modifier
+            ),
+        shape = RoundedCornerShape(10.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            // Direction icon
+            Icon(
+                imageVector = chipIcon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = contentColor
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Label
+            Text(
+                text = chipLabel,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                ),
+                color = contentColor
+            )
+
+            // Selected check
+            if (isSelected) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(accentColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = "Selected",
+                        modifier = Modifier.size(9.dp),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun getSortOptionDetails(option: CollectionSortType): Pair<ImageVector, String> {
+    return when (option) {
+        CollectionSortType.NAME_ASC -> Icons.Rounded.ArrowUpward to "A → Z"
+        CollectionSortType.NAME_DESC -> Icons.Rounded.ArrowDownward to "Z → A"
+        CollectionSortType.DATE_CREATED_DESC -> Icons.Rounded.ArrowDownward to "Newest"
+        CollectionSortType.DATE_CREATED_ASC -> Icons.Rounded.ArrowUpward to "Oldest"
+        CollectionSortType.LAST_MODIFIED -> Icons.Rounded.ArrowDownward to "Recent"
+        CollectionSortType.MOST_LINKS -> Icons.Rounded.ArrowDownward to "Most"
+        CollectionSortType.LEAST_LINKS -> Icons.Rounded.ArrowUpward to "Least"
     }
 }
 
@@ -445,81 +968,3 @@ private fun ColorBlock(
     }
 }
 
-/**
- * Count and Sort Row
- * Shows collection count on left and sort button with dropdown on right
- */
-@Composable
-private fun CountAndSortRow(
-    count: Int,
-    sortType: CollectionSortType,
-    onSortClick: (CollectionSortType) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showSortMenu by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Left: Count display
-        Text(
-            text = if (count == 1) "1 collection" else "$count collections",
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        // Right: Sort button with dropdown
-        Box {
-            OutlinedButton(
-                onClick = { showSortMenu = true },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                    contentDescription = "Sort",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = sortType.displayName,
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
-                    contentDescription = "Dropdown",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Dropdown menu with all sort options
-            DropdownMenu(
-                expanded = showSortMenu,
-                onDismissRequest = { showSortMenu = false }
-            ) {
-                CollectionSortType.entries.forEach { sort ->
-                    DropdownMenuItem(
-                        text = { Text(sort.displayName) },
-                        onClick = {
-                            onSortClick(sort)
-                            showSortMenu = false
-                        },
-                        leadingIcon = if (sort == sortType) {
-                            {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = "Selected",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        } else null
-                    )
-                }
-            }
-        }
-    }
-}

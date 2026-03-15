@@ -181,6 +181,88 @@ private fun PreviewThumbnail(
 }
 
 /**
+ * CollectionGridCard - Grid view variant of CollectionCard
+ * Displays collection in a compact vertical layout for grid view
+ */
+@Composable
+fun CollectionGridCard(
+    collection: Collection,
+    linkCount: Int,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Collection Icon
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = "Collection icon",
+                    modifier = Modifier.size(32.dp),
+                    tint = collection.color?.toColor()?.getContrastingColor()
+                        ?: MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Collection Name
+            Text(
+                text = collection.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Link Count
+            Text(
+                text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Favorite Icon
+            IconButton(
+                onClick = onFavoriteClick,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
+                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Convert hex color string to Color
  * Returns null if invalid format
  */

@@ -76,6 +76,9 @@ class CollectionsViewModel(
                 _state.update { it.copy(sortType = event.sortType) }
                 applySorting()
             }
+            is CollectionsEvent.OnViewModeChange -> {
+                _state.update { it.copy(viewMode = event.viewMode) }
+            }
             is CollectionsEvent.OnToggleCollectionFavorite -> {
                 toggleCollectionFavorite(event.collectionId)
             }
@@ -243,6 +246,7 @@ sealed class CollectionsEvent {
     data class OnToggleCollectionFavorite(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
     data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
+    data class OnViewModeChange(val viewMode: com.rejowan.linky.presentation.feature.home.ViewMode) : CollectionsEvent()
 }
 
 sealed class CollectionsUiEvent {

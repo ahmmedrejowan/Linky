@@ -89,6 +89,10 @@ class CollectionDetailViewModel(
                     )
                 }
             }
+            is CollectionDetailEvent.OnViewModeChange -> {
+                Timber.d("onEvent: Changing view mode to ${event.viewMode}")
+                _state.update { it.copy(viewMode = event.viewMode) }
+            }
             is CollectionDetailEvent.OnEditClick -> {
                 _state.value.collection?.let { collection ->
                     _state.update {
@@ -473,6 +477,7 @@ sealed class CollectionDetailEvent {
     data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
     data class OnRestoreLink(val linkId: String) : CollectionDetailEvent()
     data class OnSortTypeChange(val sortType: com.rejowan.linky.presentation.feature.home.SortType) : CollectionDetailEvent()
+    data class OnViewModeChange(val viewMode: com.rejowan.linky.presentation.feature.home.ViewMode) : CollectionDetailEvent()
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
     data class OnEditColorChange(val color: String?) : CollectionDetailEvent()

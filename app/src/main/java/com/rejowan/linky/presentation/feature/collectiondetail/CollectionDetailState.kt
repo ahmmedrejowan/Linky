@@ -3,11 +3,13 @@ package com.rejowan.linky.presentation.feature.collectiondetail
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.presentation.feature.home.SortType
+import com.rejowan.linky.presentation.feature.home.ViewMode
 
 data class CollectionDetailState(
     val collection: Collection? = null,
     val links: List<Link> = emptyList(),
     val sortType: SortType = SortType.DATE_DESC,
+    val viewMode: ViewMode = ViewMode.LIST,
     val isLoading: Boolean = false,
     val error: String? = null,
     // Edit dialog state

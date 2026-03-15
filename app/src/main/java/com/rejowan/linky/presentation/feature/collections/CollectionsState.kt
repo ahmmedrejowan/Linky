@@ -1,12 +1,14 @@
 package com.rejowan.linky.presentation.feature.collections
 
 import com.rejowan.linky.domain.model.CollectionWithLinkCount
+import com.rejowan.linky.presentation.feature.home.ViewMode
 
 data class CollectionsState(
     val collections: List<CollectionWithLinkCount> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val sortType: CollectionSortType = CollectionSortType.DATE_CREATED_DESC,
+    val viewMode: ViewMode = ViewMode.LIST,
     val showCreateDialog: Boolean = false,
     val newCollectionName: String = "",
     val selectedCollectionColor: String? = null,
