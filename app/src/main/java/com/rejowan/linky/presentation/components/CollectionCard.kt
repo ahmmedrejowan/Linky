@@ -182,7 +182,7 @@ private fun PreviewThumbnail(
 
 /**
  * CollectionGridCard - Grid view variant of CollectionCard
- * Displays collection in a compact vertical layout for grid view
+ * Displays collection with a color banner header and details below
  */
 @Composable
 fun CollectionGridCard(
@@ -192,70 +192,85 @@ fun CollectionGridCard(
     onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val collectionColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer
+    val iconTint = collection.color?.toColor()?.getContrastingColor() ?: MaterialTheme.colorScheme.onPrimaryContainer
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Collection Icon
+            // Color banner with folder icon and favorite button
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(collectionColor)
             ) {
+                // Folder icon in center
                 Icon(
                     imageVector = Icons.Default.Folder,
-                    contentDescription = "Collection icon",
-                    modifier = Modifier.size(32.dp),
-                    tint = collection.color?.toColor()?.getContrastingColor()
-                        ?: MaterialTheme.colorScheme.onPrimaryContainer
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .align(Alignment.Center),
+                    tint = iconTint.copy(alpha = 0.9f)
                 )
+
+                // Favorite button in top-right
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (collection.isFavorite)
+                                MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                            else
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        )
+                        .clickable { onFavoriteClick() }
+                        .align(Alignment.TopEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (collection.isFavorite) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Collection Name
-            Text(
-                text = collection.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Link Count
-            Text(
-                text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontWeight = FontWeight.Medium
-                ),
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Favorite Icon
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier.size(32.dp)
+            // Content below banner
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
             ) {
-                Icon(
-                    imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                // Collection Name
+                Text(
+                    text = collection.name,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Link Count
+                Text(
+                    text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
