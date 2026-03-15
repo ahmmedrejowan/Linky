@@ -176,22 +176,6 @@ fun HomeScreen(
                         viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite, silent = true))
                     }
                 }
-                is HomeUiEvent.ShowArchiveToggled -> {
-                    val message = if (event.isArchived) {
-                        "Link archived"
-                    } else {
-                        "Link unarchived"
-                    }
-                    val result = snackbarHostState.showSnackbar(
-                        message = message,
-                        actionLabel = "Undo",
-                        duration = SnackbarDuration.Short
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the archive toggle (silent to prevent another snackbar)
-                        viewModel.onEvent(HomeEvent.OnArchiveLink(event.linkId, !event.isArchived, silent = true))
-                    }
-                }
                 is HomeUiEvent.ShowLinkTrashed -> {
                     val result = snackbarHostState.showSnackbar(
                         message = "Link moved to trash",
@@ -352,8 +336,6 @@ fun HomeScreen(
             onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
             onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
             onDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
-            onArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
-            onUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
             onFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
             onUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
             onMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) },
@@ -951,13 +933,8 @@ private fun EmptyContent(
                 EmptyStates.NoFavorites()
             }
 
-            FilterType.ARCHIVED -> {
-                EmptyStates.NoArchivedLinks()
-            }
-
-            else -> {
-                // Default empty state for any other filter types
-                EmptyStates.NoLinks(onAddLinkClick = onAddLinkClick)
+            FilterType.TRASH -> {
+                EmptyStates.NoTrashedLinks()
             }
         }
     }

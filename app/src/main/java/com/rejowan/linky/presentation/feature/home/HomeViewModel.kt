@@ -74,7 +74,6 @@ class HomeViewModel(
                 _state.update { it.copy(viewMode = event.viewMode) }
             }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite, event.silent)
-            is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving, event.silent)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
             is HomeEvent.OnRestoreLink -> restoreLink(event.linkId)
             is HomeEvent.OnRefresh -> {
@@ -129,8 +128,6 @@ class HomeViewModel(
                 _state.update { it.copy(selectedLinkIds = emptySet()) }
             }
             HomeEvent.OnBulkDelete -> bulkDelete()
-            HomeEvent.OnBulkArchive -> bulkArchive(true)
-            HomeEvent.OnBulkUnarchive -> bulkArchive(false)
             HomeEvent.OnBulkFavorite -> bulkFavorite(true)
             HomeEvent.OnBulkUnfavorite -> bulkFavorite(false)
             HomeEvent.OnShowBulkMoveSheet -> {
@@ -217,7 +214,6 @@ class HomeViewModel(
                     when (filterType) {
                         FilterType.ALL -> getAllLinksUseCase()
                         FilterType.FAVORITES -> getFavoriteLinksUseCase()
-                        FilterType.ARCHIVED -> getArchivedLinksUseCase()
                         FilterType.TRASH -> getTrashedLinksUseCase()
                     }
                 }
@@ -422,17 +418,6 @@ class HomeViewModel(
                     _state.update { it.copy(favoriteLinksCount = count) }
                 }
         }
-
-        // Observe archived count
-        viewModelScope.launch {
-            linkRepository.getArchivedLinksCount()
-                .catch { e ->
-                    Timber.e(e, "Failed to observe archived count")
-                }
-                .collect { count ->
-                    _state.update { it.copy(archivedLinksCount = count) }
-                }
-        }
     }
 
     private fun toggleFavorite(linkId: String, isFavorite: Boolean, silent: Boolean = false) {
@@ -450,25 +435,6 @@ class HomeViewModel(
                 }
                 is Result.Error -> {
                     val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_FAVORITE)
-                    _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
-                }
-                is Result.Loading -> { /* No-op */ }
-            }
-        }
-    }
-
-    private fun archiveLink(linkId: String, isArchiving: Boolean, silent: Boolean = false) {
-        viewModelScope.launch {
-            when (val result = toggleArchiveUseCase(linkId, isArchiving)) {
-                is Result.Success -> {
-                    Timber.d("Toggled archive for link: $linkId, isArchiving: $isArchiving")
-                    // Only emit snackbar event if not silent (not an undo action)
-                    if (!silent) {
-                        _uiEvents.emit(HomeUiEvent.ShowArchiveToggled(linkId, isArchiving))
-                    }
-                }
-                is Result.Error -> {
-                    val errorMessage = ErrorHandler.getLinkErrorMessage(result.exception, LinkOperation.TOGGLE_ARCHIVE)
                     _uiEvents.emit(HomeUiEvent.ShowError(errorMessage))
                 }
                 is Result.Loading -> { /* No-op */ }
@@ -527,24 +493,6 @@ class HomeViewModel(
         }
     }
 
-    private fun bulkArchive(archive: Boolean) {
-        val selectedIds = _state.value.selectedLinkIds.toList()
-        if (selectedIds.isEmpty()) return
-
-        viewModelScope.launch {
-            var successCount = 0
-            selectedIds.forEach { linkId ->
-                when (toggleArchiveUseCase(linkId, archive)) {
-                    is Result.Success -> successCount++
-                    else -> { /* continue with others */ }
-                }
-            }
-            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
-            val action = if (archive) "archived" else "unarchived"
-            _uiEvents.emit(HomeUiEvent.ShowBulkOperationResult("$successCount links $action"))
-        }
-    }
-
     private fun bulkFavorite(favorite: Boolean) {
         val selectedIds = _state.value.selectedLinkIds.toList()
         if (selectedIds.isEmpty()) return
@@ -595,7 +543,6 @@ class HomeViewModel(
 sealed class HomeUiEvent {
     data class ShowError(val message: String) : HomeUiEvent()
     data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : HomeUiEvent()
-    data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : HomeUiEvent()
     data class ShowLinkTrashed(val linkId: String) : HomeUiEvent()
     data class ShowBulkOperationResult(val message: String) : HomeUiEvent()
 }
@@ -605,7 +552,6 @@ sealed class HomeEvent {
     data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
     data class OnViewModeChange(val viewMode: ViewMode) : HomeEvent()
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean, val silent: Boolean = false) : HomeEvent()
-    data class OnArchiveLink(val linkId: String, val isArchiving: Boolean, val silent: Boolean = false) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()
     data class OnRestoreLink(val linkId: String) : HomeEvent()
     data object OnRefresh : HomeEvent()
@@ -623,8 +569,6 @@ sealed class HomeEvent {
     data object OnSelectAll : HomeEvent()
     data object OnDeselectAll : HomeEvent()
     data object OnBulkDelete : HomeEvent()
-    data object OnBulkArchive : HomeEvent()
-    data object OnBulkUnarchive : HomeEvent()
     data object OnBulkFavorite : HomeEvent()
     data object OnBulkUnfavorite : HomeEvent()
     data object OnShowBulkMoveSheet : HomeEvent()

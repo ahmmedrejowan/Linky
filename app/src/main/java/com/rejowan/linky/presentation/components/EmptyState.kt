@@ -1,35 +1,60 @@
 package com.rejowan.linky.presentation.components
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FolderOff
-import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+// Soft accent colors for different states
+private val SoftBlue = Color(0xFF64B5F6)
+private val SoftPurple = Color(0xFF9575CD)
+private val SoftPink = Color(0xFFF06292)
+private val SoftTeal = Color(0xFF4DB6AC)
+private val SoftAmber = Color(0xFFFFB74D)
+
 /**
  * EmptyState component - Displays when there's no data to show
+ * Modern design with floating animation and soft accent colors
  *
  * @param icon The icon to display
  * @param title The main title text
  * @param message The descriptive message
- * @param actionText Optional action button text
- * @param onActionClick Optional action button callback
+ * @param accentColor The accent color for the icon container and button
+ * @param actionLabel Optional action button text
+ * @param onAction Optional action button callback
  * @param modifier Modifier for styling
  */
 @Composable
@@ -37,50 +62,85 @@ fun EmptyState(
     icon: ImageVector,
     title: String,
     message: String,
-    modifier: Modifier = Modifier,
-    actionText: String? = null,
-    onActionClick: (() -> Unit)? = null
+    accentColor: Color = SoftPurple,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
+    // Subtle floating animation for the icon
+    val infiniteTransition = rememberInfiniteTransition(label = "empty state float")
+    val floatOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float offset"
+    )
+
+    // Use top bias to account for header above - content appears in upper-center
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 120.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Icon
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(120.dp),
-            tint = MaterialTheme.colorScheme.outlineVariant
-        )
+        // Soft icon container with floating animation
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .offset(y = (-floatOffset).dp)
+                .size(100.dp)
+                .background(
+                    color = accentColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(28.dp)
+                )
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = accentColor
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Title
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Message
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        // Action Button (optional)
-        if (actionText != null && onActionClick != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onActionClick) {
-                Text(text = actionText)
+        if (actionLabel != null && onAction != null) {
+            Spacer(modifier = Modifier.height(28.dp))
+            Button(
+                onClick = onAction,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor
+                ),
+                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = actionLabel,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
@@ -96,11 +156,25 @@ object EmptyStates {
         modifier: Modifier = Modifier
     ) {
         EmptyState(
-            icon = Icons.Outlined.LinkOff,
+            icon = Icons.Outlined.BookmarkBorder,
             title = "No Links Yet",
-            message = "Start saving your favorite links and they'll appear here",
-            actionText = "Add Your First Link",
-            onActionClick = onAddLinkClick,
+            message = "Start building your link collection by saving your first link",
+            accentColor = SoftBlue,
+            actionLabel = "Add Link",
+            onAction = onAddLinkClick,
+            modifier = modifier
+        )
+    }
+
+    @Composable
+    fun NoFavorites(
+        modifier: Modifier = Modifier
+    ) {
+        EmptyState(
+            icon = Icons.Outlined.FavoriteBorder,
+            title = "No Favorites",
+            message = "Tap the heart icon on any link to add it to your favorites",
+            accentColor = SoftPink,
             modifier = modifier
         )
     }
@@ -114,8 +188,25 @@ object EmptyStates {
             icon = Icons.Outlined.FolderOff,
             title = "No Collections Yet",
             message = "Create collections to organize your links",
-            actionText = "Create Collection",
-            onActionClick = onCreateCollectionClick,
+            accentColor = SoftPurple,
+            actionLabel = "Create Collection",
+            onAction = onCreateCollectionClick,
+            modifier = modifier
+        )
+    }
+
+    @Composable
+    fun EmptyCollection(
+        onAddLinkClick: () -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        EmptyState(
+            icon = Icons.Outlined.FolderOpen,
+            title = "Collection is Empty",
+            message = "Add links to this collection to keep them organized",
+            accentColor = SoftTeal,
+            actionLabel = "Add Link",
+            onAction = onAddLinkClick,
             modifier = modifier
         )
     }
@@ -127,32 +218,9 @@ object EmptyStates {
     ) {
         EmptyState(
             icon = Icons.Outlined.SearchOff,
-            title = "No Results Found",
-            message = "No links match \"$searchQuery\". Try a different search term.",
-            modifier = modifier
-        )
-    }
-
-    @Composable
-    fun NoFavorites(
-        modifier: Modifier = Modifier
-    ) {
-        EmptyState(
-            icon = Icons.Outlined.LinkOff,
-            title = "No Favorites Yet",
-            message = "Tap the heart icon on any link to mark it as a favorite. Favorites appear at the top of your All Links list for quick access.",
-            modifier = modifier
-        )
-    }
-
-    @Composable
-    fun NoArchivedLinks(
-        modifier: Modifier = Modifier
-    ) {
-        EmptyState(
-            icon = Icons.Outlined.LinkOff,
-            title = "No Archived Links",
-            message = "Archive links you want to keep but don't need immediate access to. Archived links are hidden from your main list but can be unarchived anytime.",
+            title = "No Results",
+            message = "No links found matching \"$searchQuery\"",
+            accentColor = SoftAmber,
             modifier = modifier
         )
     }
@@ -162,9 +230,10 @@ object EmptyStates {
         modifier: Modifier = Modifier
     ) {
         EmptyState(
-            icon = Icons.Outlined.LinkOff,
+            icon = Icons.Outlined.BookmarkBorder,
             title = "Trash is Empty",
-            message = "Deleted links will appear here",
+            message = "Deleted links will appear here for 30 days before permanent deletion",
+            accentColor = SoftPurple,
             modifier = modifier
         )
     }

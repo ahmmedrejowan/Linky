@@ -11,7 +11,6 @@ data class HomeState(
     val error: String? = null, // For critical load failures (full-screen error state)
     val allLinksCount: Int = 0,
     val favoriteLinksCount: Int = 0,
-    val archivedLinksCount: Int = 0,
     // Clipboard detection
     val clipboardUrl: String? = null,
     val showClipboardPrompt: Boolean = false,
@@ -34,7 +33,6 @@ data class HomeState(
 enum class FilterType {
     ALL,
     FAVORITES,
-    ARCHIVED,
     TRASH
 }
 

@@ -16,13 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +39,6 @@ import androidx.compose.ui.unit.sp
 // Accent colors for action buttons
 private val SelectionBlue = Color(0xFF2196F3)
 private val AccentRed = Color(0xFFEF5350)
-private val AccentTeal = Color(0xFF26A69A)
 private val AccentPurple = Color(0xFF9575CD)
 private val AccentOrange = Color(0xFFFF9800)
 
@@ -58,8 +55,6 @@ fun BulkActionsBar(
     onSelectAll: () -> Unit,
     onDeselectAll: () -> Unit,
     onDelete: () -> Unit,
-    onArchive: () -> Unit,
-    onUnarchive: () -> Unit,
     onFavorite: () -> Unit,
     onUnfavorite: () -> Unit,
     onMove: () -> Unit,
@@ -166,27 +161,6 @@ fun BulkActionsBar(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Archive / Unarchive based on filter
-                if (filterType == FilterType.ARCHIVED) {
-                    ActionButton(
-                        icon = Icons.Default.Unarchive,
-                        label = "Unarchive",
-                        color = AccentTeal,
-                        enabled = selectedCount > 0,
-                        onClick = onUnarchive,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    ActionButton(
-                        icon = Icons.Default.Archive,
-                        label = "Archive",
-                        color = AccentTeal,
-                        enabled = selectedCount > 0,
-                        onClick = onArchive,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
                 // Favorite / Unfavorite based on filter
                 if (filterType == FilterType.FAVORITES) {
                     ActionButton(
@@ -278,8 +252,6 @@ fun AnimatedBulkActionsBar(
     onSelectAll: () -> Unit,
     onDeselectAll: () -> Unit,
     onDelete: () -> Unit,
-    onArchive: () -> Unit,
-    onUnarchive: () -> Unit,
     onFavorite: () -> Unit,
     onUnfavorite: () -> Unit,
     onMove: () -> Unit,
@@ -300,8 +272,6 @@ fun AnimatedBulkActionsBar(
             onSelectAll = onSelectAll,
             onDeselectAll = onDeselectAll,
             onDelete = onDelete,
-            onArchive = onArchive,
-            onUnarchive = onUnarchive,
             onFavorite = onFavorite,
             onUnfavorite = onUnfavorite,
             onMove = onMove,
