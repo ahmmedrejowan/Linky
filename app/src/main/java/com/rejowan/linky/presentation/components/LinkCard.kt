@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,6 +66,7 @@ import java.util.Locale
  * @param link The link to display
  * @param onClick Callback when card is clicked
  * @param onFavoriteClick Callback when favorite icon is clicked
+ * @param onMoreClick Callback when more icon is clicked (shows info sheet)
  * @param onArchiveClick Callback when link is archived via swipe
  * @param onTrashClick Callback when link is moved to trash via swipe
  * @param tags Optional list of tags associated with the link
@@ -80,6 +82,7 @@ fun LinkCard(
     link: Link,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onMoreClick: () -> Unit,
     onArchiveClick: (() -> Unit)? = null,
     onTrashClick: (() -> Unit)? = null,
     tags: List<Tag> = emptyList(),
@@ -357,15 +360,33 @@ fun LinkCard(
                 )
             }
 
-            // Favorite Icon
-            IconButton(
-                onClick = onFavoriteClick
+            // Action Icons (Favorite + More)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Favorite Icon
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // More Icon
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -442,6 +463,16 @@ private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
  * LinkGridCard component - Grid view variant of LinkCard
  * Displays link as a vertical card with image on top, title, URL below
  * Supports selection mode for bulk operations
+ *
+ * @param link The link to display
+ * @param onClick Callback when card is clicked
+ * @param onFavoriteClick Callback when favorite icon is clicked
+ * @param onMoreClick Callback when more icon is clicked (shows info sheet)
+ * @param isSelectionMode Whether selection mode is active
+ * @param isSelected Whether this link is selected
+ * @param onLongPress Callback when card is long-pressed (enters selection mode)
+ * @param onToggleSelection Callback when selection is toggled
+ * @param modifier Modifier for styling
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -449,6 +480,7 @@ fun LinkGridCard(
     link: Link,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onMoreClick: () -> Unit,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onLongPress: (() -> Unit)? = null,
@@ -526,14 +558,36 @@ fun LinkGridCard(
                     }
                 }
 
-                // Selection indicator overlay
+                // Top-left: Favorite icon (clickable)
+                if (!isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(6.dp)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                            .clickable { onFavoriteClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Top-right: More icon or Selection indicator
                 if (isSelectionMode) {
+                    // Selection indicator overlay
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .padding(6.dp)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
@@ -547,40 +601,39 @@ fun LinkGridCard(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                }
-
-                // Favorite indicator
-                if (link.isFavorite && !isSelectionMode) {
+                } else {
+                    // More icon (clickable)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                            .padding(6.dp)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                            .clickable { onMoreClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Favorite,
-                            contentDescription = "Favorite",
-                            tint = MaterialTheme.colorScheme.error,
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
 
-                // Status Banner (Deleted/Archived)
+                // Status Banner (Deleted/Archived) - at bottom of image
                 if (link.isDeleted || link.isArchived) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
                             .background(
                                 if (link.isDeleted) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
                                 else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
                             )
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = if (link.isDeleted) "Deleted" else "Archived",

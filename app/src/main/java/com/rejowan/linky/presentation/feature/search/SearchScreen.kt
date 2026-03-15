@@ -248,6 +248,7 @@ private fun SearchResultsList(
                 onFavoriteClick = {
                     onFavoriteClick(link.id, !link.isFavorite)
                 },
+                onMoreClick = { onLinkClick(link.id) },
                 modifier = Modifier.animateItem()
             )
         }

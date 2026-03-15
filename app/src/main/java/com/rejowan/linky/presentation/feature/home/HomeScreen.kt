@@ -319,6 +319,10 @@ fun HomeScreen(
                 onFavoriteClick = { linkId, isFavorite ->
                     viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
                 },
+                onMoreClick = { linkId ->
+                    // Navigate to link detail (info sheet)
+                    onLinkClick(linkId)
+                },
                 onArchiveClick = { linkId, isArchiving ->
                     viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
                 },
@@ -754,6 +758,7 @@ private fun HomeContent(
     viewMode: ViewMode,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
+    onMoreClick: (String) -> Unit,
     onArchiveClick: (String, Boolean) -> Unit,
     onTrashClick: (String) -> Unit,
     onAddLinkClick: () -> Unit,
@@ -884,6 +889,7 @@ private fun HomeContent(
                                     onFavoriteClick = {
                                         onFavoriteClick(link.id, !link.isFavorite)
                                     },
+                                    onMoreClick = { onMoreClick(link.id) },
                                     onArchiveClick = {
                                         onArchiveClick(link.id, !link.isArchived)
                                     },
@@ -938,6 +944,7 @@ private fun HomeContent(
                                     onFavoriteClick = {
                                         onFavoriteClick(link.id, !link.isFavorite)
                                     },
+                                    onMoreClick = { onMoreClick(link.id) },
                                     isSelectionMode = state.isSelectionMode,
                                     isSelected = state.selectedLinkIds.contains(link.id),
                                     onLongPress = { onLongPress(link.id) },

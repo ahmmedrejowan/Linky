@@ -509,6 +509,7 @@ private fun LinksList(
                 link = link,
                 onClick = { onLinkClick(link.id) },
                 onFavoriteClick = { onFavoriteClick(link.id) },
+                onMoreClick = { onLinkClick(link.id) },
                 onArchiveClick = { onArchiveClick(link.id) },
                 onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
@@ -546,6 +547,7 @@ private fun LinksListWithArchived(
                 link = link,
                 onClick = { onLinkClick(link.id) },
                 onFavoriteClick = { onFavoriteClick(link.id) },
+                onMoreClick = { onLinkClick(link.id) },
                 onArchiveClick = { onArchiveClick(link.id) },
                 onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
@@ -574,6 +576,7 @@ private fun LinksListWithArchived(
                     link = link,
                     onClick = { onLinkClick(link.id) },
                     onFavoriteClick = { onFavoriteClick(link.id) },
+                    onMoreClick = { onLinkClick(link.id) },
                     onArchiveClick = { onArchiveClick(link.id) },
                     onTrashClick = { onTrashClick(link.id) },
                     modifier = Modifier.animateItem()

@@ -290,6 +290,7 @@ private fun TrashLinkItem(
                 link = link,
                 onClick = onClick,
                 onFavoriteClick = {}, // No favorite action in trash
+                onMoreClick = onClick, // More opens the same detail
                 modifier = Modifier.fillMaxWidth()
             )
 
