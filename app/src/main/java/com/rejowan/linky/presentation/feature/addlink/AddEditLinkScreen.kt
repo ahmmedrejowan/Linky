@@ -449,7 +449,7 @@ private fun UrlInputSection(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // URL Input with icon
+            // Header row with icon and label
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -470,47 +470,65 @@ private fun UrlInputSection(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = onUrlChange,
-                    placeholder = {
-                        Text(
-                            "https://example.com",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = isEnabled,
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                Text(
+                    text = "Link URL",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
                     ),
-                    trailingIcon = {
-                        Row {
-                            if (url.isEmpty()) {
-                                IconButton(onClick = onPasteClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentPaste,
-                                        contentDescription = "Paste",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            } else {
-                                IconButton(onClick = onClearClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear"
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Paste or Clear button
+                if (url.isEmpty()) {
+                    TextButton(onClick = onPasteClick) {
+                        Icon(
+                            imageVector = Icons.Default.ContentPaste,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Paste")
+                    }
+                } else {
+                    IconButton(onClick = onClearClick) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // URL Input - full width, multi-line capable for visibility
+            OutlinedTextField(
+                value = url,
+                onValueChange = onUrlChange,
+                placeholder = {
+                    Text(
+                        "https://example.com/your-link-here",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isEnabled,
+                minLines = 1,
+                maxLines = 3,
+                shape = RoundedCornerShape(12.dp),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                )
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
