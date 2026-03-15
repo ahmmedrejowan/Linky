@@ -5,47 +5,75 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.rejowan.linky.presentation.navigation.LinkyNavHost
 import com.rejowan.linky.presentation.navigation.SharedContent
 import com.rejowan.linky.ui.theme.LinkyTheme
+import com.rejowan.linky.util.PreferencesManager
 import com.rejowan.linky.util.UrlExtractor
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
     private var sharedContent by mutableStateOf<SharedContent?>(null)
-    private lateinit var preferencesManager: com.rejowan.linky.util.PreferencesManager
+    private lateinit var preferencesManager: PreferencesManager
+
+    // Splash screen state
+    private var isReady by mutableStateOf(false)
+    private var showOnboarding by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install splash screen before super.onCreate()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        installSplashScreen()
         enableEdgeToEdge()
 
-        preferencesManager = com.rejowan.linky.util.PreferencesManager(this)
+        // Keep splash screen visible until we're ready
+        splashScreen.setKeepOnScreenCondition { !isReady }
+
+        preferencesManager = PreferencesManager(this)
+
+        // Load preferences in background
+        lifecycleScope.launch {
+            showOnboarding = !preferencesManager.hasCompletedOnboarding()
+            isReady = true
+        }
 
         // Handle incoming share intent
         handleIntent(intent)
 
         setContent {
             LinkyTheme {
-                val navController = rememberNavController()
-                var showOnboarding by remember { mutableStateOf(!preferencesManager.hasCompletedOnboarding()) }
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    if (isReady) {
+                        val navController = rememberNavController()
+                        var onboardingVisible by remember { mutableStateOf(showOnboarding) }
 
-                LinkyNavHost(
-                    navController = navController,
-                    showOnboarding = showOnboarding,
-                    onOnboardingComplete = {
-                        preferencesManager.setOnboardingCompleted()
-                        showOnboarding = false
-                    },
-                    sharedContent = sharedContent,
-                    onSharedContentHandled = { sharedContent = null }
-                )
+                        LinkyNavHost(
+                            navController = navController,
+                            showOnboarding = onboardingVisible,
+                            onOnboardingComplete = {
+                                preferencesManager.setOnboardingCompleted()
+                                onboardingVisible = false
+                            },
+                            sharedContent = sharedContent,
+                            onSharedContentHandled = { sharedContent = null }
+                        )
+                    }
+                }
             }
         }
     }

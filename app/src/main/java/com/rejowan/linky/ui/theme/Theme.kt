@@ -9,53 +9,36 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import org.koin.compose.koinInject
 
+/**
+ * CompositionLocal to access the current dark mode state throughout the app.
+ */
+val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
-private val lightScheme = lightColorScheme(
-    primary = primaryLight,
-    onPrimary = onPrimaryLight,
-    primaryContainer = primaryContainerLight,
-    onPrimaryContainer = onPrimaryContainerLight,
-    secondary = secondaryLight,
-    onSecondary = onSecondaryLight,
-    secondaryContainer = secondaryContainerLight,
-    onSecondaryContainer = onSecondaryContainerLight,
-    tertiary = tertiaryLight,
-    onTertiary = onTertiaryLight,
-    tertiaryContainer = tertiaryContainerLight,
-    onTertiaryContainer = onTertiaryContainerLight,
-    error = errorLight,
-    onError = onErrorLight,
-    errorContainer = errorContainerLight,
-    onErrorContainer = onErrorContainerLight,
-    background = backgroundLight,
-    onBackground = onBackgroundLight,
-    surface = surfaceLight,
-    onSurface = onSurfaceLight,
-    surfaceVariant = surfaceVariantLight,
-    onSurfaceVariant = onSurfaceVariantLight,
-    outline = outlineLight,
-    outlineVariant = outlineVariantLight,
-    scrim = scrimLight,
-    inverseSurface = inverseSurfaceLight,
-    inverseOnSurface = inverseOnSurfaceLight,
-    inversePrimary = inversePrimaryLight,
-    surfaceDim = surfaceDimLight,
-    surfaceBright = surfaceBrightLight,
-    surfaceContainerLowest = surfaceContainerLowestLight,
-    surfaceContainerLow = surfaceContainerLowLight,
-    surfaceContainer = surfaceContainerLight,
-    surfaceContainerHigh = surfaceContainerHighLight,
-    surfaceContainerHighest = surfaceContainerHighestLight,
-)
+/**
+ * Available theme modes for the app.
+ */
+enum class ThemeMode(val displayName: String) {
+    DARK("Dark"),
+    LIGHT("Light"),
+    SYSTEM("System Default")
+}
 
-private val darkScheme = darkColorScheme(
+// ============================================================================
+// DARK COLOR SCHEME
+// ============================================================================
+
+private val darkColorScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     primaryContainer = primaryContainerDark,
@@ -68,68 +51,119 @@ private val darkScheme = darkColorScheme(
     onTertiary = onTertiaryDark,
     tertiaryContainer = tertiaryContainerDark,
     onTertiaryContainer = onTertiaryContainerDark,
-    error = errorDark,
-    onError = onErrorDark,
-    errorContainer = errorContainerDark,
-    onErrorContainer = onErrorContainerDark,
-    background = backgroundDark,
-    onBackground = onBackgroundDark,
-    surface = surfaceDark,
-    onSurface = onSurfaceDark,
-    surfaceVariant = surfaceVariantDark,
-    onSurfaceVariant = onSurfaceVariantDark,
-    outline = outlineDark,
-    outlineVariant = outlineVariantDark,
-    scrim = scrimDark,
-    inverseSurface = inverseSurfaceDark,
-    inverseOnSurface = inverseOnSurfaceDark,
+    error = DarkSurfaces.error,
+    onError = DarkSurfaces.onError,
+    errorContainer = DarkSurfaces.errorContainer,
+    onErrorContainer = DarkSurfaces.onErrorContainer,
+    background = DarkSurfaces.background,
+    onBackground = DarkSurfaces.onBackground,
+    surface = DarkSurfaces.surface,
+    onSurface = DarkSurfaces.onSurface,
+    surfaceVariant = DarkSurfaces.surfaceVariant,
+    onSurfaceVariant = DarkSurfaces.onSurfaceVariant,
+    outline = DarkSurfaces.outline,
+    outlineVariant = DarkSurfaces.outlineVariant,
+    scrim = DarkSurfaces.scrim,
+    inverseSurface = DarkSurfaces.inverseSurface,
+    inverseOnSurface = DarkSurfaces.inverseOnSurface,
     inversePrimary = inversePrimaryDark,
-    surfaceDim = surfaceDimDark,
-    surfaceBright = surfaceBrightDark,
-    surfaceContainerLowest = surfaceContainerLowestDark,
-    surfaceContainerLow = surfaceContainerLowDark,
-    surfaceContainer = surfaceContainerDark,
-    surfaceContainerHigh = surfaceContainerHighDark,
-    surfaceContainerHighest = surfaceContainerHighestDark,
+    surfaceDim = DarkSurfaces.surfaceDim,
+    surfaceBright = DarkSurfaces.surfaceBright,
+    surfaceContainerLowest = DarkSurfaces.surfaceContainerLowest,
+    surfaceContainerLow = DarkSurfaces.surfaceContainerLow,
+    surfaceContainer = DarkSurfaces.surfaceContainer,
+    surfaceContainerHigh = DarkSurfaces.surfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaces.surfaceContainerHighest,
 )
 
+// ============================================================================
+// LIGHT COLOR SCHEME
+// ============================================================================
 
-@Suppress("DEPRECATION")
+private val lightColorScheme = lightColorScheme(
+    primary = primaryLight,
+    onPrimary = onPrimaryLight,
+    primaryContainer = primaryContainerLight,
+    onPrimaryContainer = onPrimaryContainerLight,
+    secondary = secondaryLight,
+    onSecondary = onSecondaryLight,
+    secondaryContainer = secondaryContainerLight,
+    onSecondaryContainer = onSecondaryContainerLight,
+    tertiary = tertiaryLight,
+    onTertiary = onTertiaryLight,
+    tertiaryContainer = tertiaryContainerLight,
+    onTertiaryContainer = onTertiaryContainerLight,
+    error = LightSurfaces.error,
+    onError = LightSurfaces.onError,
+    errorContainer = LightSurfaces.errorContainer,
+    onErrorContainer = LightSurfaces.onErrorContainer,
+    background = LightSurfaces.background,
+    onBackground = LightSurfaces.onBackground,
+    surface = LightSurfaces.surface,
+    onSurface = LightSurfaces.onSurface,
+    surfaceVariant = LightSurfaces.surfaceVariant,
+    onSurfaceVariant = LightSurfaces.onSurfaceVariant,
+    outline = LightSurfaces.outline,
+    outlineVariant = LightSurfaces.outlineVariant,
+    scrim = LightSurfaces.scrim,
+    inverseSurface = LightSurfaces.inverseSurface,
+    inverseOnSurface = LightSurfaces.inverseOnSurface,
+    inversePrimary = inversePrimaryLight,
+    surfaceDim = LightSurfaces.surfaceDim,
+    surfaceBright = LightSurfaces.surfaceBright,
+    surfaceContainerLowest = LightSurfaces.surfaceContainerLowest,
+    surfaceContainerLow = LightSurfaces.surfaceContainerLow,
+    surfaceContainer = LightSurfaces.surfaceContainer,
+    surfaceContainerHigh = LightSurfaces.surfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaces.surfaceContainerHighest,
+)
+
+/**
+ * Linky Theme
+ */
 @Composable
 fun LinkyTheme(
     themePrefHelper: ThemePreferences = koinInject(),
-    content: @Composable() () -> Unit
+    content: @Composable () -> Unit
 ) {
-
     val theme by themePrefHelper.getTheme().collectAsState(initial = "System")
     val dynamicColor by themePrefHelper.isDynamicColorEnabled().collectAsState(initial = false)
 
-    val darkTheme = when (theme) {
+    val systemInDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = when (theme) {
         "Light" -> false
         "Dark" -> true
-        else -> isSystemInDarkTheme()
+        else -> systemInDarkTheme
     }
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (isDarkTheme) {
+                dynamicDarkColorScheme(context)
+            } else {
+                dynamicLightColorScheme(context)
+            }
         }
-
-        darkTheme -> darkScheme
-        else -> lightScheme
+        isDarkTheme -> darkColorScheme
+        else -> lightColorScheme
     }
 
-    val systemUiController = rememberSystemUiController()
-    val useDarkIcons = !darkTheme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !isDarkTheme
+            insetsController.isAppearanceLightNavigationBars = !isDarkTheme
+        }
+    }
 
-    systemUiController.setStatusBarColor(
-        color = colorScheme.surface,
-        darkIcons = useDarkIcons
-    )
-
-    MaterialTheme(
-        colorScheme = colorScheme, typography = AppTypography, content = content
-    )
+    CompositionLocalProvider(LocalIsDarkTheme provides isDarkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }
-
