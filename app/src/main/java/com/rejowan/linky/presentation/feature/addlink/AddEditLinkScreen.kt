@@ -1,6 +1,10 @@
 package com.rejowan.linky.presentation.feature.addlink
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,15 +12,22 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,32 +35,43 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.activity.compose.BackHandler
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,42 +82,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.ClipboardManager
 import android.content.Context
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.presentation.components.TagSelectorField
+import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * Add/Edit Link Screen
- * Allows users to add a new link or edit an existing one
- *
- * Features:
- * - URL input with validation
- * - Fetch preview from URL (Open Graph, Twitter Card, meta tags)
- * - Auto-fetch title and description from preview
- * - Compact preview card (left: image, right: title/description)
- * - Title, description, and note input fields
- * - Collection selection dropdown
- * - Favorite toggle switch
- * - Save icon in TopAppBar (alternative to bottom button)
- * - Focus management (tap outside to hide keyboard)
- * - Loading states for preview fetch and save
- * - Error handling with Snackbar
- *
- * @param linkId Optional link ID for edit mode. Null for add mode
- * @param onNavigateBack Callback to navigate back
- * @param modifier Modifier for styling
- * @param viewModel AddEditLinkViewModel injected via Koin
+ * Add/Edit Link Screen - Redesigned with modern UI
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,13 +117,11 @@ fun AddEditLinkScreen(
     var showBackConfirmDialog by remember { mutableStateOf(false) }
     var linkSaved by remember { mutableStateOf(false) }
 
-    // Check if there's unsaved data
     val hasUnsavedData = remember(state.url, state.title, state.note, state.description, linkSaved) {
         !linkSaved && (state.url.isNotBlank() || state.title.isNotBlank() ||
             state.note.isNotBlank() || state.description.isNotBlank())
     }
 
-    // Collect and handle UI events
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
@@ -130,60 +133,19 @@ fun AddEditLinkScreen(
         }
     }
 
-    // Handle back press with confirmation if there's unsaved data
     BackHandler(enabled = hasUnsavedData) {
         showBackConfirmDialog = true
     }
 
-    // Show error in Snackbar when error state changes
     LaunchedEffect(state.error) {
         state.error?.let { error ->
             snackbarHostState.showSnackbar(error)
-            // Note: Error is cleared automatically by ViewModel after showing
         }
     }
 
     Scaffold(
-        topBar = {
-        TopAppBar(
-            title = {
-            Text(
-                text = if (state.isEditMode) "Edit Link" else "Add Link",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 22.sp
-                )
-            )
-        }, navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Navigate back"
-                )
-            }
-        }, actions = {
-            // Save icon - Alternative to bottom save button for easier access
-            IconButton(
-                onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },
-                enabled = !state.isLoading && state.url.isNotBlank() && state.title.isNotBlank()
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Save link"
-                    )
-                }
-            }
-        }, colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-        )
-    }, snackbarHost = { SnackbarHost(snackbarHostState) },
-        // Focus management: Tap outside text fields to hide keyboard
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null
@@ -191,449 +153,227 @@ fun AddEditLinkScreen(
             focusManager.clearFocus()
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // URL Input
-            OutlinedTextField(
-                value = state.url,
-                onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange(it)) },
-                label = { Text("URL *") },
-                placeholder = { Text("https://example.com") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading,
-                singleLine = true,
-                trailingIcon = {
-                    Row {
-                        // Paste button - pastes from clipboard
-                        if (state.url.isEmpty()) {
-                            IconButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                                    val clipData = clipboard?.primaryClip
-                                    if (clipData != null && clipData.itemCount > 0) {
-                                        val text = clipData.getItemAt(0)?.text?.toString()
-                                        if (!text.isNullOrBlank()) {
-                                            viewModel.onEvent(AddEditLinkEvent.OnUrlChange(text.trim()))
-                                        }
-                                    }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 100.dp)
+            ) {
+                // Custom Header
+                AddEditHeader(
+                    isEditMode = state.isEditMode,
+                    onBackClick = {
+                        if (hasUnsavedData) showBackConfirmDialog = true
+                        else onNavigateBack()
+                    }
+                )
+
+                // Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // URL Section
+                    UrlInputSection(
+                        url = state.url,
+                        onUrlChange = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange(it)) },
+                        onPasteClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            val clipData = clipboard?.primaryClip
+                            if (clipData != null && clipData.itemCount > 0) {
+                                val text = clipData.getItemAt(0)?.text?.toString()
+                                if (!text.isNullOrBlank()) {
+                                    viewModel.onEvent(AddEditLinkEvent.OnUrlChange(text.trim()))
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentPaste,
-                                    contentDescription = "Paste from clipboard"
-                                )
                             }
-                        }
-
-                        // Clear button - clears the URL field
-                        if (state.url.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange("")) }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear URL"
-                                )
-                            }
-                        }
-                    }
-                },
-                supportingText = {
-                    Text(
-                        text = "${state.url.length}/2048",
-                        style = MaterialTheme.typography.bodySmall
+                        },
+                        onClearClick = { viewModel.onEvent(AddEditLinkEvent.OnUrlChange("")) },
+                        onFetchPreview = {
+                            viewModel.onEvent(AddEditLinkEvent.OnFetchPreview)
+                            focusManager.clearFocus()
+                        },
+                        isFetching = state.isFetchingPreview,
+                        isEnabled = !state.isLoading
                     )
-                }
-            )
 
-            // Preview Fetch Suggestion Card
-            if (state.showPreviewFetchSuggestion) {
-                PreviewFetchSuggestionCard(
-                    onDismiss = { viewModel.onEvent(AddEditLinkEvent.OnDismissPreviewSuggestion) }
-                )
-            }
-
-            // Fetch Preview Button - Auto-fetches title, description, and image from URL
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        viewModel.onEvent(AddEditLinkEvent.OnFetchPreview)
-                        focusManager.clearFocus()
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isFetchingPreview && !state.isLoading && state.url.isNotBlank()
-                ) {
-                    if (state.isFetchingPreview) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp), strokeWidth = 2.dp
+                    // Preview Card (when available)
+                    AnimatedVisibility(
+                        visible = !state.isFetchingPreview && (state.previewImagePath != null || state.previewUrl != null),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        PreviewCard(
+                            imageUrl = state.previewImagePath ?: state.previewUrl,
+                            title = state.title,
+                            description = state.description
                         )
-                    } else {
-                        Text("Fetch Preview")
                     }
-                }
-            }
 
-            // Loading skeleton while fetching preview
-            if (state.isFetchingPreview) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Loading Preview Skeleton
+                    AnimatedVisibility(
+                        visible = state.isFetchingPreview,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
                     ) {
-                        // Loading placeholder for image
-                        Box(
-                            modifier = Modifier
-                                .size(70.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-
-                        // Loading text
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Fetching preview...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        PreviewLoadingSkeleton()
                     }
-                }
-            }
 
-            // Compact Preview Card - Shows how the link will appear in home screen
-            // Layout: Left (70dp image/placeholder) | Right (title + description)
-            // Matches LinkCard design from home screen for consistency
-            if (!state.isFetchingPreview && (state.title.isNotBlank() || state.description.isNotBlank() ||
-                state.previewImagePath != null || state.previewUrl != null)) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // Details Section
+                    SectionCard(
+                        title = "Details",
+                        icon = Icons.Filled.Title,
+                        accentColor = SoftAccents.Blue
                     ) {
-                        // Preview Image (left side) - 70dp × 70dp with rounded corners
-                        if (state.previewImagePath != null || state.previewUrl != null) {
-                            AsyncImage(
-                                model = state.previewImagePath ?: state.previewUrl,
-                                contentDescription = "Link preview",
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            // Placeholder when no image
-                            Box(
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = "No preview",
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        // Title
+                        StyledTextField(
+                            value = state.title,
+                            onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnTitleChange(it)) },
+                            label = "Title",
+                            placeholder = "Enter link title",
+                            isRequired = true,
+                            singleLine = true,
+                            enabled = !state.isLoading
+                        )
 
-                        // Content (right side)
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            // Title
-                            if (state.title.isNotBlank()) {
-                                Text(
-                                    text = state.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                            // Description
-                            if (state.description.isNotBlank()) {
-                                Text(
-                                    text = state.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        // Description
+                        StyledTextField(
+                            value = state.description,
+                            onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange(it)) },
+                            label = "Description",
+                            placeholder = "Brief description...",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 3,
+                            enabled = !state.isLoading
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Note
+                        StyledTextField(
+                            value = state.note,
+                            onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnNoteChange(it)) },
+                            label = "Personal Note",
+                            placeholder = "Add a note about this link...",
+                            singleLine = false,
+                            minLines = 3,
+                            maxLines = 5,
+                            enabled = !state.isLoading
+                        )
                     }
+
+                    // Organization Section
+                    SectionCard(
+                        title = "Organization",
+                        icon = Icons.Filled.Folder,
+                        accentColor = SoftAccents.Purple
+                    ) {
+                        // Collection Dropdown
+                        CollectionSelector(
+                            selectedCollectionId = state.selectedCollectionId,
+                            collections = state.collections,
+                            enabled = !state.isLoading,
+                            onCollectionSelected = { viewModel.onEvent(AddEditLinkEvent.OnCollectionSelect(it)) },
+                            onCreateNewClick = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionClick) }
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Tags
+                        TagSelectorField(
+                            selectedTags = state.selectedTags,
+                            allTags = state.allTags,
+                            onTagSelected = { viewModel.onEvent(AddEditLinkEvent.OnTagSelected(it)) },
+                            onTagRemoved = { viewModel.onEvent(AddEditLinkEvent.OnTagRemoved(it)) },
+                            onCreateTag = { name, color ->
+                                viewModel.onEvent(AddEditLinkEvent.OnCreateTag(name, color))
+                            }
+                        )
+                    }
+
+                    // Settings Section
+                    SectionCard(
+                        title = "Settings",
+                        icon = Icons.Filled.Settings,
+                        accentColor = SoftAccents.Teal
+                    ) {
+                        // Favorite Toggle
+                        SettingToggleRow(
+                            icon = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            iconTint = if (state.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.onSurfaceVariant,
+                            title = "Add to Favorites",
+                            subtitle = "Quick access from favorites tab",
+                            checked = state.isFavorite,
+                            onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Hide from Home Toggle
+                        SettingToggleRow(
+                            icon = Icons.Filled.VisibilityOff,
+                            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            title = "Hide from Home",
+                            subtitle = "Only show in collection",
+                            checked = state.hideFromHome,
+                            onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleHideFromHome) },
+                            enabled = state.selectedCollectionId != null
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            // Title Input - Auto-filled by "Fetch Preview" or manually entered
-            OutlinedTextField(
-                value = state.title,
-                onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnTitleChange(it)) },
-                label = { Text("Title *") },
-                placeholder = { Text("Enter link title") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isLoading,
-                singleLine = true,
-                trailingIcon = {
-                    if (state.title.isNotEmpty()) {
-                        IconButton(
-                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnTitleChange("")) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear title"
-                            )
-                        }
-                    }
-                },
-                supportingText = {
-                    Text(
-                        text = "${state.title.length}/200",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            )
-
-            // Description Input - Auto-filled from web metadata or manually entered
-            // Brief summary of the link content (og:description, twitter:description)
-            OutlinedTextField(
-                value = state.description,
-                onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange(it)) },
-                label = { Text("Description (Optional)") },
-                placeholder = { Text("Brief description of the link...") },
+            // Floating Save Button with background overlay
+            Box(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(100.dp),
-                enabled = !state.isLoading,
-                maxLines = 3,
-                trailingIcon = {
-                    if (state.description.isNotEmpty()) {
-                        IconButton(
-                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnDescriptionChange("")) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear description"
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f),
+                                MaterialTheme.colorScheme.background
                             )
-                        }
-                    }
-                },
-                supportingText = {
-                    Text(
-                        text = "${state.description.length}/500",
-                        style = MaterialTheme.typography.bodySmall
+                        )
                     )
-                }
-            )
-
-            // Note Input - Personal notes/comments about the link (user-entered only)
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = { viewModel.onEvent(AddEditLinkEvent.OnNoteChange(it)) },
-                label = { Text("Note (Optional)") },
-                placeholder = { Text("Add a note about this link...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                enabled = !state.isLoading,
-                maxLines = 5,
-                trailingIcon = {
-                    if (state.note.isNotEmpty()) {
-                        IconButton(
-                            onClick = { viewModel.onEvent(AddEditLinkEvent.OnNoteChange("")) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear note"
-                            )
-                        }
-                    }
-                },
-                supportingText = {
-                    Text(
-                        text = "${state.note.length}/5000",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            )
-
-            // Collection Selection Dropdown
-            CollectionDropdown(
-                selectedCollectionId = state.selectedCollectionId,
-                collections = state.collections,
-                enabled = !state.isLoading,
-                onCollectionSelected = { collectionId ->
-                    viewModel.onEvent(AddEditLinkEvent.OnCollectionSelect(collectionId))
-                },
-                onCreateNewClick = {
-                    viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionClick)
-                })
-
-            // Tags Selection
-            TagSelectorField(
-                selectedTags = state.selectedTags,
-                allTags = state.allTags,
-                onTagSelected = { tag ->
-                    viewModel.onEvent(AddEditLinkEvent.OnTagSelected(tag))
-                },
-                onTagRemoved = { tag ->
-                    viewModel.onEvent(AddEditLinkEvent.OnTagRemoved(tag))
-                },
-                onCreateTag = { name, color ->
-                    viewModel.onEvent(AddEditLinkEvent.OnCreateTag(name, color))
-                }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Add to Favourite Toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .windowInsetsPadding(WindowInsets.ime)
             ) {
-                Text(
-                    text = "Add to Favourite",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Switch(
-                    checked = state.isFavorite,
-                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleFavorite) }
+                SaveButton(
+                    isEditMode = state.isEditMode,
+                    isLoading = state.isLoading,
+                    isEnabled = !state.isLoading && state.url.isNotBlank() && state.title.isNotBlank(),
+                    onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Hide from Home toggle (only enabled when collection is selected)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Hide from Home",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "Only show in collection",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = state.hideFromHome,
-                    onCheckedChange = { viewModel.onEvent(AddEditLinkEvent.OnToggleHideFromHome) },
-                    enabled = state.selectedCollectionId != null
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Save Button
-            Button(
-                onClick = { viewModel.onEvent(AddEditLinkEvent.OnSave) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !state.isLoading && state.url.isNotBlank() && state.title.isNotBlank()
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = if (state.isEditMode) "Update Link" else "Save Link",
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            // Required fields note
-            Text(
-                text = "* Required fields",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 
-    // Back Confirmation Dialog
+    // Dialogs
     if (showBackConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showBackConfirmDialog = false },
-            title = {
-                Text(
-                    text = "Discard changes?",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+        DiscardChangesDialog(
+            onDiscard = {
+                showBackConfirmDialog = false
+                onNavigateBack()
             },
-            text = {
-                Text(
-                    text = "You have unsaved changes. Are you sure you want to go back?",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showBackConfirmDialog = false
-                        onNavigateBack()
-                    }
-                ) {
-                    Text("Discard", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showBackConfirmDialog = false }
-                ) {
-                    Text("Cancel")
-                }
-            }
+            onCancel = { showBackConfirmDialog = false }
         )
     }
 
-    // Create Collection Dialog
     if (state.showCreateCollectionDialog) {
         CreateCollectionDialog(
             collectionName = state.newCollectionName,
@@ -648,19 +388,369 @@ fun AddEditLinkScreen(
     }
 }
 
-/**
- * Collection Selection Dropdown
- * Allows users to select a collection or "No Collection"
- *
- * @param selectedCollectionId Currently selected collection ID, null for "No Collection"
- * @param collections List of available collections
- * @param enabled Whether the dropdown is enabled
- * @param onCollectionSelected Callback when collection is selected (null for "No Collection")
- * @param modifier Modifier for styling
- */
+@Composable
+private fun AddEditHeader(
+    isEditMode: Boolean,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBackClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back"
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column {
+            Text(
+                text = if (isEditMode) "Edit Link" else "Add Link",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = if (isEditMode) "Update your saved link" else "Save a new link to your collection",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun UrlInputSection(
+    url: String,
+    onUrlChange: (String) -> Unit,
+    onPasteClick: () -> Unit,
+    onClearClick: () -> Unit,
+    onFetchPreview: () -> Unit,
+    isFetching: Boolean,
+    isEnabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // URL Input with icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Link,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = onUrlChange,
+                    placeholder = {
+                        Text(
+                            "https://example.com",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = isEnabled,
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    trailingIcon = {
+                        Row {
+                            if (url.isEmpty()) {
+                                IconButton(onClick = onPasteClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.ContentPaste,
+                                        contentDescription = "Paste",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = onClearClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Fetch Preview Button
+            Button(
+                onClick = onFetchPreview,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isFetching && isEnabled && url.isNotBlank(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                contentPadding = PaddingValues(vertical = 14.dp)
+            ) {
+                if (isFetching) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Fetching...")
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Fetch Preview", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewCard(
+    imageUrl: String?,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column {
+            // Preview Image
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Link preview",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                if (title.isNotBlank()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewLoadingSkeleton(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp
+                )
+            }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Fetching preview...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(
+    title: String,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Section Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = accentColor.copy(alpha = 0.12f)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(18.dp),
+                        tint = accentColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            content()
+        }
+    }
+}
+
+@Composable
+private fun StyledTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    isRequired: Boolean = false,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    maxLines: Int = 1,
+    enabled: Boolean = true
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = if (isRequired) "$label *" else label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = {
+                Text(
+                    placeholder,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+            singleLine = singleLine,
+            minLines = minLines,
+            maxLines = maxLines,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            )
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CollectionDropdown(
+private fun CollectionSelector(
     selectedCollectionId: String?,
     collections: List<Collection>,
     enabled: Boolean,
@@ -670,96 +760,243 @@ private fun CollectionDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    // Find selected collection name - Optimized with remember to avoid recalculation
-    val selectedCollectionName = remember(selectedCollectionId, collections) {
-        if (selectedCollectionId == null) {
-            "(No Collection)"
-        } else {
-            collections.find { it.id == selectedCollectionId }?.name ?: "(No Collection)"
-        }
+    val selectedCollection = remember(selectedCollectionId, collections) {
+        collections.find { it.id == selectedCollectionId }
     }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded && enabled },
-        modifier = modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = selectedCollectionName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Collection") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
-            enabled = enabled,
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Collection",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp)
         )
 
-        ExposedDropdownMenu(
-            expanded = expanded, onDismissRequest = { expanded = false }) {
-            // "No Collection" option
-            DropdownMenuItem(text = {
-                Text(
-                    text = "(No Collection)", style = MaterialTheme.typography.bodyMedium
-                )
-            }, onClick = {
-                onCollectionSelected(null)
-                expanded = false
-            })
-
-            // Collection options
-            collections.forEach { collection ->
-                DropdownMenuItem(text = {
-                    Text(
-                        text = collection.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded && enabled },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedCollection?.name ?: "No Collection",
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                enabled = enabled,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Folder,
+                        contentDescription = null,
+                        tint = selectedCollection?.color?.let {
+                            try { Color(android.graphics.Color.parseColor(it)) }
+                            catch (e: Exception) { MaterialTheme.colorScheme.primary }
+                        } ?: MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }, onClick = {
-                    onCollectionSelected(collection.id)
-                    expanded = false
-                })
-            }
-
-            // "Create New" option
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Create new collection",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Create New Collection",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                onClick = {
-                    onCreateNewClick()
-                    expanded = false
                 }
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("No Collection") },
+                    onClick = {
+                        onCollectionSelected(null)
+                        expanded = false
+                    }
+                )
+
+                collections.forEach { collection ->
+                    DropdownMenuItem(
+                        text = { Text(collection.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        onClick = {
+                            onCollectionSelected(collection.id)
+                            expanded = false
+                        },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        collection.color?.let {
+                                            try { Color(android.graphics.Color.parseColor(it)) }
+                                            catch (e: Exception) { MaterialTheme.colorScheme.primary }
+                                        } ?: MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                            )
+                        }
+                    )
+                }
+
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Create New", color = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = {
+                        onCreateNewClick()
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingToggleRow(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (checked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else Color.Transparent
+            )
+            .clickable(enabled = enabled) { onCheckedChange() }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = if (enabled) iconTint else iconTint.copy(alpha = 0.4f)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = { onCheckedChange() },
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        )
+    }
+}
+
+@Composable
+private fun SaveButton(
+    isEditMode: Boolean,
+    isLoading: Boolean,
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        enabled = isEnabled,
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isEditMode) "Update Link" else "Save Link",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
             )
         }
     }
 }
 
-/**
- * Create Collection Dialog
- * Allows users to create a new collection with name, color, and favorite status
- * Reused from CollectionsScreen
- */
+@Composable
+private fun DiscardChangesDialog(
+    onDiscard: () -> Unit,
+    onCancel: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Text(
+                text = "Discard changes?",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Text("You have unsaved changes. Are you sure you want to go back?")
+        },
+        confirmButton = {
+            TextButton(onClick = onDiscard) {
+                Text("Discard", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 @Composable
 private fun CreateCollectionDialog(
     collectionName: String,
@@ -769,56 +1006,40 @@ private fun CreateCollectionDialog(
     onColorChange: (String?) -> Unit,
     onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Create Collection",
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
+        title = { Text("Create Collection") },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Collection name input
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = collectionName,
                     onValueChange = onCollectionNameChange,
                     label = { Text("Collection Name") },
-                    placeholder = { Text("Enter collection name") },
+                    placeholder = { Text("Enter name") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                // Color picker
                 Text(
                     text = "Color (Optional)",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                ColorBlockPicker(
+                ColorPicker(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Favorite toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Add to Favourite",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Text("Add to Favorites")
                     Switch(
                         checked = isFavorite,
                         onCheckedChange = { onToggleFavorite() }
@@ -838,195 +1059,65 @@ private fun CreateCollectionDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        },
-        modifier = modifier
+        }
     )
 }
 
-/**
- * Color block picker with visual color rectangles
- * 15 total: 1 no color + 14 colors, arranged in 3 rows of 5
- */
 @Composable
-private fun ColorBlockPicker(
+private fun ColorPicker(
     selectedColor: String?,
     onColorSelected: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = listOf(
-        null,           // No Color - default
-        "#FF6B6B",      // Red
-        "#E74C3C",      // Dark Red
-        "#4ECDC4",      // Teal
-        "#45B7D1",      // Blue
-        "#3498DB",      // Strong Blue
-        "#FFA07A",      // Orange
-        "#E67E22",      // Dark Orange
-        "#98D8C8",      // Green
-        "#2ECC71",      // Emerald Green
-        "#F7B731",      // Yellow
-        "#F39C12",      // Golden Yellow
-        "#5F27CD",      // Purple
-        "#9B59B6",      // Light Purple
-        "#EE5A6F"       // Pink
+        null, "#FF6B6B", "#E74C3C", "#4ECDC4", "#45B7D1",
+        "#3498DB", "#FFA07A", "#E67E22", "#98D8C8", "#2ECC71",
+        "#F7B731", "#F39C12", "#5F27CD", "#9B59B6", "#EE5A6F"
     )
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Row 1: 5 colors
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            colors.take(5).forEach { colorHex ->
-                ColorBlock(
-                    colorHex = colorHex,
-                    isSelected = selectedColor == colorHex,
-                    onClick = { onColorSelected(colorHex) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 2: 5 colors
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            colors.subList(5, 10).forEach { colorHex ->
-                ColorBlock(
-                    colorHex = colorHex,
-                    isSelected = selectedColor == colorHex,
-                    onClick = { onColorSelected(colorHex) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Row 3: 5 colors
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            colors.subList(10, 15).forEach { colorHex ->
-                ColorBlock(
-                    colorHex = colorHex,
-                    isSelected = selectedColor == colorHex,
-                    onClick = { onColorSelected(colorHex) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
-
-/**
- * Individual color block component
- */
-@Composable
-private fun ColorBlock(
-    colorHex: String?,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                color = if (colorHex != null) {
-                    Color(android.graphics.Color.parseColor(colorHex))
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+        colors.chunked(5).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { colorHex ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                colorHex?.let {
+                                    try { Color(android.graphics.Color.parseColor(it)) }
+                                    catch (e: Exception) { MaterialTheme.colorScheme.surfaceVariant }
+                                } ?: MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = if (selectedColor == colorHex) 3.dp else 1.dp,
+                                color = if (selectedColor == colorHex)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { onColorSelected(colorHex) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selectedColor == colorHex) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = if (colorHex != null) Color.White
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
-            )
-            .border(
-                width = if (isSelected) 3.dp else 1.dp,
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                },
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        // Show checkmark for selected color
-        if (isSelected) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
-                tint = if (colorHex != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-/**
- * Suggestion card explaining preview fetch behavior
- */
-@Composable
-private fun PreviewFetchSuggestionCard(
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // Info icon
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = "Information",
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(20.dp)
-            )
-
-            // Content column
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = "About Preview Fetch",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Text(
-                    text = "\"Fetch Preview\" will replace your current title and description with data from the URL. Any changes you've made will be overwritten.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                )
-            }
-
-            // Close button
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(18.dp)
-                )
             }
         }
     }
