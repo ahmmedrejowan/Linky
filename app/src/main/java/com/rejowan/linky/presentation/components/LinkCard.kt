@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
-import com.rejowan.linky.domain.model.Tag
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -55,7 +54,6 @@ import java.util.Locale
  * @param onClick Callback when card is clicked
  * @param onFavoriteClick Callback when favorite icon is clicked
  * @param onMoreClick Callback when more icon is clicked (shows info sheet)
- * @param tags Optional list of tags associated with the link
  * @param isSelectionMode Whether selection mode is active
  * @param isSelected Whether this link is selected
  * @param onLongPress Callback when card is long-pressed (enters selection mode)
@@ -69,7 +67,6 @@ fun LinkCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onMoreClick: () -> Unit,
-    tags: List<Tag> = emptyList(),
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onLongPress: (() -> Unit)? = null,
@@ -201,14 +198,6 @@ fun LinkCard(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                // Tags Row (if any)
-                if (tags.isNotEmpty()) {
-                    TagChipRow(
-                        tags = tags,
-                        maxRows = 1
-                    )
-                }
 
                 // Timestamp or Deletion Countdown
                 Text(

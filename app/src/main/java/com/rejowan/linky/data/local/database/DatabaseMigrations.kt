@@ -13,27 +13,27 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * - Description of changes
  * - Author
  *
- * Current database version: 1 (Initial release)
- *
- * Example migration for future use:
- * ```
- * val MIGRATION_1_2 = object : Migration(1, 2) {
- *     override fun migrate(db: SupportSQLiteDatabase) {
- *         db.execSQL("ALTER TABLE links ADD COLUMN newColumn TEXT DEFAULT NULL")
- *     }
- * }
- * ```
+ * Current database version: 2
  */
 
-// Placeholder for future migrations
-// Add migrations here as the database schema evolves
+/**
+ * Migration 1 to 2: Remove Tags feature
+ * Date: March 2026
+ * Description: Drops tags and link_tag_cross_ref tables as tags feature is removed
+ */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Drop the link-tag relationship table first (foreign key constraint)
+        db.execSQL("DROP TABLE IF EXISTS link_tag_cross_ref")
+        // Drop the tags table
+        db.execSQL("DROP TABLE IF EXISTS tags")
+    }
+}
 
 /**
  * List of all migrations to be applied
  * Add new migrations to this list as they are created
  */
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
-    // Add migrations here, e.g.:
-    // MIGRATION_1_2,
-    // MIGRATION_2_3,
+    MIGRATION_1_2
 )

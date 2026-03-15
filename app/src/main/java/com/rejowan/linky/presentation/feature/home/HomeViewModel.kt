@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import android.net.Uri
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.CollectionRepository
-import com.rejowan.linky.domain.repository.TagRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -40,8 +39,7 @@ class HomeViewModel(
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository,
-    private val collectionRepository: CollectionRepository,
-    private val tagRepository: TagRepository
+    private val collectionRepository: CollectionRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -356,26 +354,6 @@ class HomeViewModel(
                     }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load collection options")
-            }
-        }
-
-        // Load available tags
-        viewModelScope.launch {
-            try {
-                tagRepository.getTagsWithLinkCount()
-                    .collect { tagsWithCount ->
-                        val tagOptions = tagsWithCount.map { tagWithCount ->
-                            TagFilterInfo(
-                                id = tagWithCount.id,
-                                name = tagWithCount.name,
-                                color = tagWithCount.color,
-                                count = tagWithCount.linkCount
-                            )
-                        }
-                        _state.update { it.copy(availableTags = tagOptions) }
-                    }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load tag options")
             }
         }
     }

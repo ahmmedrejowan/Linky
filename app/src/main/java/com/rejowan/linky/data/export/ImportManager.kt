@@ -5,12 +5,9 @@ import android.net.Uri
 import com.rejowan.linky.data.local.database.dao.CollectionDao
 import com.rejowan.linky.data.local.database.dao.LinkDao
 import com.rejowan.linky.data.local.database.dao.SnapshotDao
-import com.rejowan.linky.data.local.database.dao.TagDao
 import com.rejowan.linky.data.local.database.entity.CollectionEntity
 import com.rejowan.linky.data.local.database.entity.LinkEntity
-import com.rejowan.linky.data.local.database.entity.LinkTagCrossRef
 import com.rejowan.linky.data.local.database.entity.SnapshotEntity
-import com.rejowan.linky.data.local.database.entity.TagEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -24,7 +21,6 @@ class ImportManager(
     private val context: Context,
     private val linkDao: LinkDao,
     private val collectionDao: CollectionDao,
-    private val tagDao: TagDao,
     private val snapshotDao: SnapshotDao
 ) {
     private val json = Json {
@@ -45,7 +41,6 @@ class ImportManager(
                 exportDate = exportData.exportDate,
                 totalLinks = exportData.data.links.size,
                 totalCollections = exportData.data.collections.size,
-                totalTags = exportData.data.tags.size,
                 hasSnapshots = exportData.data.snapshots != null,
                 snapshotsCount = exportData.data.snapshots?.size ?: 0
             )
@@ -95,18 +90,7 @@ class ImportManager(
                 errors
             ) { duplicatesSkipped++ }
 
-            onProgress(30)
-
-            // Import tags
-            val tagIdMap = mutableMapOf<String, String>()
-            val tagsImported = importTags(
-                exportData.data.tags,
-                conflictStrategy,
-                tagIdMap,
-                errors
-            ) { duplicatesSkipped++ }
-
-            onProgress(45)
+            onProgress(40)
 
             // Import links (with mapped collection IDs)
             val linkIdMap = mutableMapOf<String, String>()
@@ -118,17 +102,7 @@ class ImportManager(
                 errors
             ) { duplicatesSkipped++ }
 
-            onProgress(65)
-
-            // Import link-tag relations
-            importLinkTagRelations(
-                exportData.data.linkTagRelations,
-                linkIdMap,
-                tagIdMap,
-                errors
-            )
-
-            onProgress(80)
+            onProgress(70)
 
             // Import snapshots if present
             val snapshotsImported = exportData.data.snapshots?.let { snapshots ->
@@ -140,13 +114,12 @@ class ImportManager(
             val summary = ImportSummary(
                 linksImported = linksImported,
                 collectionsImported = collectionsImported,
-                tagsImported = tagsImported,
                 snapshotsImported = snapshotsImported,
                 duplicatesSkipped = duplicatesSkipped,
                 errors = errors
             )
 
-            Timber.d("Import completed: $linksImported links, $collectionsImported collections, $tagsImported tags")
+            Timber.d("Import completed: $linksImported links, $collectionsImported collections")
             Result.success(summary)
         } catch (e: Exception) {
             Timber.e(e, "Import failed")
@@ -212,61 +185,6 @@ class ImportManager(
                 }
             } catch (e: Exception) {
                 errors.add("Failed to import collection '${collection.name}': ${e.message}")
-            }
-        }
-        return imported
-    }
-
-    private suspend fun importTags(
-        tags: List<TagExport>,
-        conflictStrategy: ImportConflictStrategy,
-        idMap: MutableMap<String, String>,
-        errors: MutableList<String>,
-        onDuplicate: () -> Unit
-    ): Int {
-        var imported = 0
-        val existingTags = tagDao.getAllTagsSync()
-        val existingNames = existingTags.map { it.name.lowercase() }.toSet()
-
-        for (tag in tags) {
-            try {
-                val nameExists = tag.name.lowercase() in existingNames
-
-                when {
-                    nameExists && conflictStrategy == ImportConflictStrategy.SKIP -> {
-                        val existing = existingTags.first { it.name.equals(tag.name, ignoreCase = true) }
-                        idMap[tag.id] = existing.id
-                        onDuplicate()
-                    }
-                    nameExists && conflictStrategy == ImportConflictStrategy.REPLACE -> {
-                        val existing = existingTags.first { it.name.equals(tag.name, ignoreCase = true) }
-                        val updated = TagEntity(
-                            id = existing.id,
-                            name = tag.name,
-                            color = tag.color,
-                            createdAt = existing.createdAt,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                        tagDao.update(updated)
-                        idMap[tag.id] = existing.id
-                        imported++
-                    }
-                    else -> {
-                        val newId = UUID.randomUUID().toString()
-                        val entity = TagEntity(
-                            id = newId,
-                            name = tag.name,
-                            color = tag.color,
-                            createdAt = tag.createdAt,
-                            updatedAt = tag.updatedAt
-                        )
-                        tagDao.insert(entity)
-                        idMap[tag.id] = newId
-                        imported++
-                    }
-                }
-            } catch (e: Exception) {
-                errors.add("Failed to import tag '${tag.name}': ${e.message}")
             }
         }
         return imported
@@ -349,27 +267,6 @@ class ImportManager(
             }
         }
         return imported
-    }
-
-    private suspend fun importLinkTagRelations(
-        relations: List<LinkTagRelation>,
-        linkIdMap: Map<String, String>,
-        tagIdMap: Map<String, String>,
-        errors: MutableList<String>
-    ) {
-        for (relation in relations) {
-            try {
-                val newLinkId = linkIdMap[relation.linkId]
-                val newTagId = tagIdMap[relation.tagId]
-
-                if (newLinkId != null && newTagId != null) {
-                    val crossRef = LinkTagCrossRef(linkId = newLinkId, tagId = newTagId)
-                    tagDao.insertLinkTagCrossRef(crossRef)
-                }
-            } catch (e: Exception) {
-                // Silently ignore duplicate relations
-            }
-        }
     }
 
     private suspend fun importSnapshots(

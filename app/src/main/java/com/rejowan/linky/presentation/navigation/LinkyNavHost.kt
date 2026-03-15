@@ -19,7 +19,6 @@ import com.rejowan.linky.presentation.feature.onboarding.OnboardingScreen
 import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionScreen
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
-import com.rejowan.linky.presentation.feature.settings.tags.TagManagementScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
 import com.rejowan.linky.presentation.feature.vault.VaultScreen
@@ -172,12 +171,6 @@ fun LinkyNavHost(
 
         composable<Route.About> {
             AboutScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable<Route.TagManagement> {
-            TagManagementScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

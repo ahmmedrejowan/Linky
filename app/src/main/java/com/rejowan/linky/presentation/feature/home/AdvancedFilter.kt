@@ -7,7 +7,6 @@ data class AdvancedFilter(
     val dateRange: DateRangeFilter = DateRangeFilter.ALL_TIME,
     val domains: Set<String> = emptySet(),
     val collectionIds: Set<String> = emptySet(),
-    val tagIds: Set<String> = emptySet(),
     val hasNote: Boolean? = null, // null = don't filter, true = with notes, false = without notes
     val hasPreview: Boolean? = null // null = don't filter, true = with preview, false = without preview
 ) {
@@ -15,7 +14,6 @@ data class AdvancedFilter(
         get() = dateRange != DateRangeFilter.ALL_TIME ||
                 domains.isNotEmpty() ||
                 collectionIds.isNotEmpty() ||
-                tagIds.isNotEmpty() ||
                 hasNote != null ||
                 hasPreview != null
 
@@ -24,7 +22,6 @@ data class AdvancedFilter(
             if (dateRange != DateRangeFilter.ALL_TIME) 1 else null,
             if (domains.isNotEmpty()) 1 else null,
             if (collectionIds.isNotEmpty()) 1 else null,
-            if (tagIds.isNotEmpty()) 1 else null,
             if (hasNote != null) 1 else null,
             if (hasPreview != null) 1 else null
         ).size
@@ -57,15 +54,5 @@ data class DomainInfo(
 data class CollectionFilterInfo(
     val id: String,
     val name: String,
-    val count: Int
-)
-
-/**
- * Tag info for filter display
- */
-data class TagFilterInfo(
-    val id: String,
-    val name: String,
-    val color: String?,
     val count: Int
 )

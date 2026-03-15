@@ -17,6 +17,6 @@ val appModule = module {
     single { ReaderModeParser() }
 
     // Export/Import managers
-    single { ExportManager(get(), get(), get(), get(), get()) }
-    single { ImportManager(get(), get(), get(), get(), get()) }
+    single { ExportManager(get(), get(), get(), get()) }
+    single { ImportManager(get(), get(), get(), get()) }
 }

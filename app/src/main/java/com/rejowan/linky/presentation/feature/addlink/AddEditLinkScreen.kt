@@ -95,7 +95,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Collection
-import com.rejowan.linky.presentation.components.TagSelectorField
 import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
 
@@ -284,19 +283,6 @@ fun AddEditLinkScreen(
                             enabled = !state.isLoading,
                             onCollectionSelected = { viewModel.onEvent(AddEditLinkEvent.OnCollectionSelect(it)) },
                             onCreateNewClick = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionClick) }
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Tags
-                        TagSelectorField(
-                            selectedTags = state.selectedTags,
-                            allTags = state.allTags,
-                            onTagSelected = { viewModel.onEvent(AddEditLinkEvent.OnTagSelected(it)) },
-                            onTagRemoved = { viewModel.onEvent(AddEditLinkEvent.OnTagRemoved(it)) },
-                            onCreateTag = { name, color ->
-                                viewModel.onEvent(AddEditLinkEvent.OnCreateTag(name, color))
-                            }
                         )
                     }
 

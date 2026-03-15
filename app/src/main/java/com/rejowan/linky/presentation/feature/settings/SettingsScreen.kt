@@ -62,7 +62,6 @@ fun SettingsScreen(
     onNavigateToPrivacySecurity: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToBatchImport: () -> Unit,
-    onNavigateToTagManagement: () -> Unit,
     onNavigateToVault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -73,12 +72,6 @@ fun SettingsScreen(
             title = "Batch Import",
             description = "Import multiple links at once from text",
             onClick = onNavigateToBatchImport
-        ),
-        SettingsCategory(
-            icon = Icons.AutoMirrored.Filled.Label,
-            title = "Manage Tags",
-            description = "Create, edit, and organize tags",
-            onClick = onNavigateToTagManagement
         ),
         SettingsCategory(
             icon = Icons.Filled.Folder,

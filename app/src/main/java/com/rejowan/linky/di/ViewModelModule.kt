@@ -31,8 +31,7 @@ val viewModelModule = module {
             deleteLinkUseCase = get(),
             restoreLinkUseCase = get(),
             linkRepository = get(),
-            collectionRepository = get(),
-            tagRepository = get()
+            collectionRepository = get()
         )
     }
 
@@ -46,11 +45,7 @@ val viewModelModule = module {
             saveCollectionUseCase = get(),
             linkPreviewFetcher = get(),
             fileStorageManager = get(),
-            preferencesManager = get(),
-            getAllTagsUseCase = get(),
-            getTagsForLinkUseCase = get(),
-            saveTagUseCase = get(),
-            setTagsForLinkUseCase = get()
+            preferencesManager = get()
         )
     }
 
@@ -135,15 +130,6 @@ val viewModelModule = module {
             batchSaveLinksUseCase = get(),
             getAllCollectionsUseCase = get(),
             saveCollectionUseCase = get()
-        )
-    }
-
-    viewModel {
-        com.rejowan.linky.presentation.feature.settings.tags.TagManagementViewModel(
-            getTagsWithLinkCountUseCase = get(),
-            saveTagUseCase = get(),
-            updateTagUseCase = get(),
-            deleteTagUseCase = get()
         )
     }
 

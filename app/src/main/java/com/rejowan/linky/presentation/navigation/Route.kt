@@ -136,14 +136,6 @@ sealed class Route {
     @Serializable
     data object About : Route()
 
-
-    /**
-     * Tag Management screen
-     * Create, edit, delete tags
-     */
-    @Serializable
-    data object TagManagement : Route()
-
     /**
      * Duplicate Detection screen
      * Find and manage duplicate links

@@ -21,6 +21,5 @@ val databaseModule = module {
     single { get<AppDatabase>().collectionDao() }
     single { get<AppDatabase>().snapshotDao() }
     single { get<AppDatabase>().configDao() }
-    single { get<AppDatabase>().tagDao() }
     single { get<AppDatabase>().vaultLinkDao() }
 }

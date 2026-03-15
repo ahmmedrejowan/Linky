@@ -392,7 +392,6 @@ fun HomeScreen(
             currentFilter = state.advancedFilter,
             availableDomains = state.availableDomains,
             availableCollections = state.availableCollections,
-            availableTags = state.availableTags,
             onApply = { filter ->
                 viewModel.onEvent(HomeEvent.OnApplyAdvancedFilter(filter))
             },

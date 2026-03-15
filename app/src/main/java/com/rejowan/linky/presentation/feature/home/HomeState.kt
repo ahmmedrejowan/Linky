@@ -20,7 +20,6 @@ data class HomeState(
     val showAdvancedFilterSheet: Boolean = false,
     val availableDomains: List<DomainInfo> = emptyList(),
     val availableCollections: List<CollectionFilterInfo> = emptyList(),
-    val availableTags: List<TagFilterInfo> = emptyList(),
     // Bulk selection
     val isSelectionMode: Boolean = false,
     val selectedLinkIds: Set<String> = emptySet(),

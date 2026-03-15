@@ -125,10 +125,6 @@ fun BottomNavHost(
                     // Navigate using parent controller to BatchImport
                     parentNavController.navigate(Route.BatchImport())
                 },
-                onNavigateToTagManagement = {
-                    // Navigate using parent controller to TagManagement
-                    parentNavController.navigate(Route.TagManagement)
-                },
                 onNavigateToVault = {
                     // Navigate to vault - VaultUnlock will check if setup is needed
                     parentNavController.navigate(Route.VaultUnlock)

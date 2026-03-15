@@ -5,7 +5,6 @@ import android.net.Uri
 import com.rejowan.linky.data.local.database.dao.CollectionDao
 import com.rejowan.linky.data.local.database.dao.LinkDao
 import com.rejowan.linky.data.local.database.dao.SnapshotDao
-import com.rejowan.linky.data.local.database.dao.TagDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -24,7 +23,6 @@ class ExportManager(
     private val context: Context,
     private val linkDao: LinkDao,
     private val collectionDao: CollectionDao,
-    private val tagDao: TagDao,
     private val snapshotDao: SnapshotDao
 ) {
     private val json = Json {
@@ -64,7 +62,6 @@ class ExportManager(
             val summary = ExportSummary(
                 linksCount = exportData.data.links.size,
                 collectionsCount = exportData.data.collections.size,
-                tagsCount = exportData.data.tags.size,
                 snapshotsCount = exportData.data.snapshots?.size ?: 0,
                 fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
                 filePath = uri.toString()
@@ -104,7 +101,6 @@ class ExportManager(
             val summary = ExportSummary(
                 linksCount = exportData.data.links.size,
                 collectionsCount = exportData.data.collections.size,
-                tagsCount = exportData.data.tags.size,
                 snapshotsCount = exportData.data.snapshots?.size ?: 0,
                 fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
                 filePath = ""
@@ -160,30 +156,7 @@ class ExportManager(
             )
         }
 
-        onProgress(45)
-
-        // Get all tags
-        val tags = tagDao.getAllTagsSync().map { entity ->
-            TagExport(
-                id = entity.id,
-                name = entity.name,
-                color = entity.color,
-                createdAt = entity.createdAt,
-                updatedAt = entity.updatedAt
-            )
-        }
-
         onProgress(55)
-
-        // Get link-tag relations
-        val linkTagRelations = tagDao.getAllLinkTagRelationsSync().map { crossRef ->
-            LinkTagRelation(
-                linkId = crossRef.linkId,
-                tagId = crossRef.tagId
-            )
-        }
-
-        onProgress(60)
 
         // Get snapshots if requested
         val snapshots = if (includeSnapshots) {
@@ -215,8 +188,6 @@ class ExportManager(
             data = ExportPayload(
                 links = links,
                 collections = collections,
-                tags = tags,
-                linkTagRelations = linkTagRelations,
                 snapshots = snapshots
             )
         )

@@ -265,7 +265,6 @@ fun DataStorageScreen(
         ImportConfirmDialog(
             linksCount = preview.totalLinks,
             collectionsCount = preview.totalCollections,
-            tagsCount = preview.totalTags,
             hasSnapshots = preview.hasSnapshots,
             onConfirm = { strategy ->
                 showImportConfirmDialog = false
@@ -784,7 +783,6 @@ private fun ExportOptionsDialog(
 private fun ImportConfirmDialog(
     linksCount: Int,
     collectionsCount: Int,
-    tagsCount: Int,
     hasSnapshots: Boolean,
     onConfirm: (ImportConflictStrategy) -> Unit,
     onDismiss: () -> Unit,
@@ -815,7 +813,6 @@ private fun ImportConfirmDialog(
                 ) {
                     Text("- $linksCount links", style = MaterialTheme.typography.bodyMedium)
                     Text("- $collectionsCount collections", style = MaterialTheme.typography.bodyMedium)
-                    Text("- $tagsCount tags", style = MaterialTheme.typography.bodyMedium)
                     if (hasSnapshots) {
                         Text("- Snapshots included", style = MaterialTheme.typography.bodyMedium)
                     }

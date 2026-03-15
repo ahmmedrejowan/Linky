@@ -53,7 +53,6 @@ fun AdvancedFilterSheet(
     currentFilter: AdvancedFilter,
     availableDomains: List<DomainInfo>,
     availableCollections: List<CollectionFilterInfo>,
-    availableTags: List<TagFilterInfo>,
     onApply: (AdvancedFilter) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -174,51 +173,6 @@ fun AdvancedFilterSheet(
                                     }
                                 },
                                 label = { Text("${collection.name} (${collection.count})") },
-                                leadingIcon = if (isSelected) {
-                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                                } else null
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            }
-
-            // Tags Section (only show if there are tags)
-            if (availableTags.isNotEmpty()) {
-                FilterSection(title = "Tags") {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        availableTags.forEach { tag ->
-                            val isSelected = localFilter.tagIds.contains(tag.id)
-                            val tagColor = tag.color?.let {
-                                try { Color(android.graphics.Color.parseColor(it)) }
-                                catch (e: Exception) { MaterialTheme.colorScheme.primary }
-                            } ?: MaterialTheme.colorScheme.primary
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    localFilter = if (isSelected) {
-                                        localFilter.copy(tagIds = localFilter.tagIds - tag.id)
-                                    } else {
-                                        localFilter.copy(tagIds = localFilter.tagIds + tag.id)
-                                    }
-                                },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .clip(CircleShape)
-                                                .background(tagColor)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("${tag.name} (${tag.count})")
-                                    }
-                                },
                                 leadingIcon = if (isSelected) {
                                     { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                                 } else null
