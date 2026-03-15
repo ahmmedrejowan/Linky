@@ -18,9 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
@@ -28,22 +26,13 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,15 +49,12 @@ import java.util.Locale
 
 /**
  * LinkCard component - Displays a link with preview image, title, URL, and actions
- * Supports swipe gestures: swipe right to archive, swipe left to trash
  * Supports selection mode for bulk operations
  *
  * @param link The link to display
  * @param onClick Callback when card is clicked
  * @param onFavoriteClick Callback when favorite icon is clicked
  * @param onMoreClick Callback when more icon is clicked (shows info sheet)
- * @param onArchiveClick Callback when link is archived via swipe
- * @param onTrashClick Callback when link is moved to trash via swipe
  * @param tags Optional list of tags associated with the link
  * @param isSelectionMode Whether selection mode is active
  * @param isSelected Whether this link is selected
@@ -76,15 +62,13 @@ import java.util.Locale
  * @param onToggleSelection Callback when selection is toggled
  * @param modifier Modifier for styling
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LinkCard(
     link: Link,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onMoreClick: () -> Unit,
-    onArchiveClick: (() -> Unit)? = null,
-    onTrashClick: (() -> Unit)? = null,
     tags: List<Tag> = emptyList(),
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
@@ -92,127 +76,10 @@ fun LinkCard(
     onToggleSelection: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    // Disable swipe for deleted links
-    val swipeEnabled = !link.isDeleted
-
-    // Track pending action to execute when user releases finger
-    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            // Store the action when threshold is met, but don't execute yet
-            // Return false to prevent auto-dismiss and make it bounce back
-            // Action executes when user releases (detected in LaunchedEffect)
-            when (value) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // User swiped past threshold for trash
-                    if (swipeEnabled && !link.isDeleted) {
-                        pendingAction = onTrashClick
-                    }
-                    false // Don't auto-dismiss, bounce back
-                }
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // User swiped past threshold for archive
-                    if (swipeEnabled && !link.isDeleted) {
-                        pendingAction = onArchiveClick
-                    }
-                    false // Don't auto-dismiss, bounce back
-                }
-                SwipeToDismissBoxValue.Settled -> false
-            }
-        },
-        // Require 70% swipe distance to trigger action (prevents accidental swipes)
-        positionalThreshold = { distance -> distance * 0.7f }
-    )
-
-    // Execute pending action when user releases and swipe settles back
-    LaunchedEffect(dismissState.currentValue, pendingAction) {
-        // When swipe bounces back to Settled and we have a pending action
-        if (dismissState.currentValue == SwipeToDismissBoxValue.Settled && pendingAction != null) {
-            // User has released finger - execute the action now
-            pendingAction?.invoke()
-            pendingAction = null
-        }
-    }
-
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = swipeEnabled,
-        enableDismissFromEndToStart = swipeEnabled,
-        backgroundContent = {
-            if (swipeEnabled) {
-                // Calculate alpha based on swipe progress for better visual feedback
-                // Progress ranges from 0.0 (no swipe) to 1.0 (full swipe)
-                val swipeProgress = dismissState.progress
-                // Scale alpha from 0.3 to 1.0 as user swipes
-                val backgroundAlpha = (0.3f + (swipeProgress * 0.7f)).coerceIn(0.3f, 1.0f)
-
-                val color = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondaryContainer
-                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                    SwipeToDismissBoxValue.Settled -> MaterialTheme.colorScheme.surface
-                }
-                val icon = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Archive
-                    SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-                    SwipeToDismissBoxValue.Settled -> null
-                }
-                val alignment = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                    SwipeToDismissBoxValue.Settled -> Alignment.Center
-                }
-                // Text label for swipe action
-                val actionText = when (dismissState.dismissDirection) {
-                    SwipeToDismissBoxValue.StartToEnd -> if (link.isArchived) "Unarchive" else "Archive"
-                    SwipeToDismissBoxValue.EndToStart -> "Trash"
-                    SwipeToDismissBoxValue.Settled -> null
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(color.copy(alpha = backgroundAlpha), shape = RoundedCornerShape(12.dp))
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = alignment
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        icon?.let {
-                            Icon(
-                                imageVector = it,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = when (dismissState.dismissDirection) {
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.onSecondaryContainer
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.onErrorContainer
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                }
-                            )
-                        }
-                        actionText?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = when (dismissState.dismissDirection) {
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.onSecondaryContainer
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.onErrorContainer
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        },
+    Card(
         modifier = modifier
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
+            .fillMaxWidth()
+            .combinedClickable(
                     onClick = {
                         if (isSelectionMode) {
                             onToggleSelection?.invoke()
@@ -238,11 +105,7 @@ fun LinkCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                } else {
-                    MaterialTheme.colorScheme.surface
-                }
+                containerColor = MaterialTheme.colorScheme.surface
             )
     ) {
         Row(
@@ -390,7 +253,6 @@ fun LinkCard(
             }
         }
     }
-    }
 }
 
 /**
@@ -516,11 +378,7 @@ fun LinkGridCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column {

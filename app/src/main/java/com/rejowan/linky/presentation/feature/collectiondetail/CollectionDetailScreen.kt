@@ -374,12 +374,6 @@ fun CollectionDetailScreen(
                                 onLinkClick = onLinkClick,
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
-                                },
-                                onArchiveClick = { linkId ->
-                                    viewModel.onEvent(CollectionDetailEvent.OnArchiveLink(linkId))
-                                },
-                                onTrashClick = { linkId ->
-                                    viewModel.onEvent(CollectionDetailEvent.OnTrashLink(linkId))
                                 }
                             )
                         }
@@ -492,8 +486,6 @@ private fun LinksList(
     links: List<Link>,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
-    onArchiveClick: (String) -> Unit,
-    onTrashClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -510,8 +502,6 @@ private fun LinksList(
                 onClick = { onLinkClick(link.id) },
                 onFavoriteClick = { onFavoriteClick(link.id) },
                 onMoreClick = { onLinkClick(link.id) },
-                onArchiveClick = { onArchiveClick(link.id) },
-                onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
             )
         }
@@ -529,8 +519,6 @@ private fun LinksListWithArchived(
     showArchived: Boolean,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
-    onArchiveClick: (String) -> Unit,
-    onTrashClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -548,8 +536,6 @@ private fun LinksListWithArchived(
                 onClick = { onLinkClick(link.id) },
                 onFavoriteClick = { onFavoriteClick(link.id) },
                 onMoreClick = { onLinkClick(link.id) },
-                onArchiveClick = { onArchiveClick(link.id) },
-                onTrashClick = { onTrashClick(link.id) },
                 modifier = Modifier.animateItem()
             )
         }
@@ -577,8 +563,6 @@ private fun LinksListWithArchived(
                     onClick = { onLinkClick(link.id) },
                     onFavoriteClick = { onFavoriteClick(link.id) },
                     onMoreClick = { onLinkClick(link.id) },
-                    onArchiveClick = { onArchiveClick(link.id) },
-                    onTrashClick = { onTrashClick(link.id) },
                     modifier = Modifier.animateItem()
                 )
             }

@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.alpha
 import java.util.Calendar
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -302,7 +303,8 @@ fun HomeScreen(
                 onViewModeToggle = {
                     val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
                     viewModel.onEvent(HomeEvent.OnViewModeChange(newMode))
-                }
+                },
+                enabled = !state.isSelectionMode
             )
 
             // Content Area with Pull-to-Refresh
@@ -323,12 +325,6 @@ fun HomeScreen(
                     onMoreClick = { linkId ->
                         // Navigate to link detail (info sheet)
                         onLinkClick(linkId)
-                    },
-                    onArchiveClick = { linkId, isArchiving ->
-                        viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
-                    },
-                    onTrashClick = { linkId ->
-                        viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
                     },
                     onAddLinkClick = { onAddLinkClick(null) },
                     onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
@@ -771,8 +767,6 @@ private fun HomeContent(
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
     onMoreClick: (String) -> Unit,
-    onArchiveClick: (String, Boolean) -> Unit,
-    onTrashClick: (String) -> Unit,
     onAddLinkClick: () -> Unit,
     onRetry: () -> Unit,
     onSortTypeChange: (SortType) -> Unit,
@@ -874,12 +868,6 @@ private fun HomeContent(
                                         onFavoriteClick(link.id, !link.isFavorite)
                                     },
                                     onMoreClick = { onMoreClick(link.id) },
-                                    onArchiveClick = {
-                                        onArchiveClick(link.id, !link.isArchived)
-                                    },
-                                    onTrashClick = {
-                                        onTrashClick(link.id)
-                                    },
                                     isSelectionMode = state.isSelectionMode,
                                     isSelected = state.selectedLinkIds.contains(link.id),
                                     onLongPress = { onLongPress(link.id) },
@@ -1322,9 +1310,11 @@ private fun CompactFilterRow(
     onFilterSelected: (FilterType) -> Unit,
     isGridView: Boolean,
     onViewModeToggle: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val accentColor = MaterialTheme.colorScheme.primary
+    val disabledAlpha = if (enabled) 1f else 0.5f
 
     val filters = listOf(
         FilterType.ALL to "All",
@@ -1341,14 +1331,16 @@ private fun CompactFilterRow(
         // Filter chips - Left aligned
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.alpha(disabledAlpha)
         ) {
             filters.forEach { (filterType, label) ->
                 CompactFilterChip(
                     title = label,
                     isSelected = selectedFilter == filterType,
                     accentColor = accentColor,
-                    onClick = { onFilterSelected(filterType) }
+                    onClick = { if (enabled) onFilterSelected(filterType) },
+                    enabled = enabled
                 )
             }
         }
@@ -1356,11 +1348,13 @@ private fun CompactFilterRow(
         // View Mode Toggle - Right aligned
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.alpha(disabledAlpha)
         ) {
             ViewModeIcon(
                 isSelected = !isGridView,
-                onClick = { if (isGridView) onViewModeToggle() }
+                onClick = { if (enabled && isGridView) onViewModeToggle() },
+                enabled = enabled
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ViewList,
@@ -1370,7 +1364,8 @@ private fun CompactFilterRow(
             }
             ViewModeIcon(
                 isSelected = isGridView,
-                onClick = { if (!isGridView) onViewModeToggle() }
+                onClick = { if (enabled && !isGridView) onViewModeToggle() },
+                enabled = enabled
             ) {
                 Icon(
                     imageVector = Icons.Outlined.GridView,
@@ -1386,6 +1381,7 @@ private fun CompactFilterRow(
 private fun ViewModeIcon(
     isSelected: Boolean,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -1407,7 +1403,7 @@ private fun ViewModeIcon(
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick),
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(6.dp),
         color = backgroundColor,
         contentColor = tint
@@ -1427,6 +1423,7 @@ private fun CompactFilterChip(
     isSelected: Boolean,
     accentColor: Color,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor by animateColorAsState(
@@ -1441,7 +1438,7 @@ private fun CompactFilterChip(
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick),
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(10.dp),
         color = backgroundColor
     ) {

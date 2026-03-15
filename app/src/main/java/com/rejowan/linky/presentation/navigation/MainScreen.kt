@@ -198,37 +198,18 @@ fun MainScreen(
         else -> "Add link"
     }
 
+    // FAB offset - stays above bottom nav, but visible when nav is hidden
+    val fabBottomPadding by animateDpAsState(
+        targetValue = if (isBottomBarVisible && !isSelectionMode) 100.dp else 24.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "fabBottomPadding"
+    )
+
     // Main layout: Box with Scaffold inside, AnimatedBottomNav outside
     Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            floatingActionButton = {
-                // Only show FAB on Home and Collections screens
-                if (currentRoute != Route.Settings && !isSelectionMode) {
-                    FloatingActionButton(
-                        onClick = {
-                            when (currentRoute) {
-                                is Route.Home -> {
-                                    parentNavController.navigate(Route.AddEditLink())
-                                }
-                                is Route.Collections -> {
-                                    onCreateCollectionClick?.invoke()
-                                }
-                                else -> {
-                                    parentNavController.navigate(Route.AddEditLink())
-                                }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = fabIcon,
-                            contentDescription = fabContentDescription,
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-            },
             // Keep status bar inset, but content bleeds behind bottom bar for cutout effect
             contentWindowInsets = WindowInsets.statusBars
         ) { paddingValues ->
@@ -251,6 +232,35 @@ fun MainScreen(
                     },
                     onSelectionModeChange = { isSelectionMode = it },
                     onExitRequest = { showExitDialog = true }
+                )
+            }
+        }
+
+        // FAB placed outside Scaffold, above bottom nav
+        if (currentRoute != Route.Settings && !isSelectionMode) {
+            FloatingActionButton(
+                onClick = {
+                    when (currentRoute) {
+                        is Route.Home -> {
+                            parentNavController.navigate(Route.AddEditLink())
+                        }
+                        is Route.Collections -> {
+                            onCreateCollectionClick?.invoke()
+                        }
+                        else -> {
+                            parentNavController.navigate(Route.AddEditLink())
+                        }
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = fabBottomPadding)
+            ) {
+                Icon(
+                    imageVector = fabIcon,
+                    contentDescription = fabContentDescription
                 )
             }
         }
