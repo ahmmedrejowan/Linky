@@ -1,5 +1,10 @@
 package com.rejowan.linky.presentation.feature.linkdetail
 
+import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,11 +12,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,20 +27,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Unarchive
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Note
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -42,29 +53,37 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +91,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.Snapshot
-import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -80,25 +98,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Soft accent colors
+private val SoftBlue = Color(0xFF64B5F6)
+private val SoftPink = Color(0xFFF06292)
+private val SoftTeal = Color(0xFF4DB6AC)
+private val SoftPurple = Color(0xFF9575CD)
+
 /**
- * Link Detail Screen
- * Shows full details of a saved link including snapshots
- *
- * Features:
- * - Large preview image
- * - Complete link information (title, URL, note, collection)
- * - Timestamps (created, modified)
- * - Actions: Edit, Favorite, Archive, Delete
- * - Snapshots list
- * - Loading and error states
- *
- * @param linkId The ID of the link to display
- * @param onNavigateBack Callback to navigate back
- * @param onEditClick Callback when edit button is clicked
- * @param onOpenSnapshot Callback when a snapshot is clicked
- * @param onNavigateToCollection Callback when collection is clicked
- * @param modifier Modifier for styling
- * @param viewModel LinkDetailViewModel injected via Koin
+ * Link Detail Screen - Modern redesigned version
+ * Beautiful hero section, floating actions, clean cards
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,12 +121,11 @@ fun LinkDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     var showMoreMenu by remember { mutableStateOf(false) }
-    var showRestoreDialogFromMenu by remember { mutableStateOf(false) }
-    var showPermanentDeleteDialogFromMenu by remember { mutableStateOf(false) }
-    var showArchiveDialog by remember { mutableStateOf(false) }
-    var showUnarchiveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var showPermanentDeleteDialog by remember { mutableStateOf(false) }
 
     // Navigate back on delete
     LaunchedEffect(state.isDeleted) {
@@ -134,226 +141,62 @@ fun LinkDetailScreen(
                 is LinkDetailUiEvent.ShowSuccess -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
-                        duration = androidx.compose.material3.SnackbarDuration.Short
+                        duration = SnackbarDuration.Short
                     )
                 }
                 is LinkDetailUiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
-                        duration = androidx.compose.material3.SnackbarDuration.Long
+                        duration = SnackbarDuration.Long
                     )
                 }
                 is LinkDetailUiEvent.ShowFavoriteToggled -> {
-                    val message = if (event.isFavorite) {
-                        "Added to favorites"
+                    if (event.isFavorite) {
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Added to favorites",
+                            actionLabel = "Undo",
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.onEvent(LinkDetailEvent.OnToggleFavorite(silent = true))
+                        }
                     } else {
-                        "Removed from favorites"
-                    }
-                    val result = snackbarHostState.showSnackbar(
-                        message = message,
-                        actionLabel = "Undo",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
-                    )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle (silent to prevent another snackbar)
-                        viewModel.onEvent(LinkDetailEvent.OnToggleFavorite(silent = true))
+                        Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show()
                     }
                 }
                 is LinkDetailUiEvent.ShowArchiveToggled -> {
-                    val message = if (event.isArchived) {
-                        "Link archived"
-                    } else {
-                        "Link unarchived"
-                    }
-                    val result = snackbarHostState.showSnackbar(
-                        message = message,
-                        actionLabel = "Undo",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
-                    )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the archive toggle (silent to prevent another snackbar)
-                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink(silent = true))
-                    }
+                    val message = if (event.isArchived) "Link archived" else "Link unarchived"
+                    snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
                 }
                 is LinkDetailUiEvent.ShowLinkTrashed -> {
                     val result = snackbarHostState.showSnackbar(
                         message = "Link moved to trash",
                         actionLabel = "Undo",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
+                        duration = SnackbarDuration.Short
                     )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the trash action by restoring (silent to prevent another snackbar)
+                    if (result == SnackbarResult.ActionPerformed) {
                         viewModel.onEvent(LinkDetailEvent.OnRestoreLink(silent = true))
                     }
                 }
                 is LinkDetailUiEvent.ShowLinkRestored -> {
-                    val result = snackbarHostState.showSnackbar(
+                    snackbarHostState.showSnackbar(
                         message = "Link restored",
-                        actionLabel = "Undo",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
+                        duration = SnackbarDuration.Short
                     )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the restore by moving back to trash (silent to prevent another snackbar)
-                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink(silent = true))
-                    }
                 }
                 is LinkDetailUiEvent.ShowLinkDeleted -> {
-                    val result = snackbarHostState.showSnackbar(
+                    snackbarHostState.showSnackbar(
                         message = "Link permanently deleted",
-                        actionLabel = "Undo",
-                        duration = androidx.compose.material3.SnackbarDuration.Short
+                        duration = SnackbarDuration.Short
                     )
-                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        // Undo the permanent delete by restoring (silent to prevent another snackbar)
-                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink(silent = true))
-                    }
                 }
             }
         }
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Link Details",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
-                    }
-                },
-                actions = {
-                    // Only show Edit and Favorite actions if link is NOT deleted
-                    if (state.link?.isDeleted != true) {
-                        // Edit button
-                        IconButton(
-                            onClick = { state.link?.let { onEditClick(it.id) } },
-                            enabled = state.link != null
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Edit,
-                                contentDescription = "Edit link"
-                            )
-                        }
-
-                        // Favorite toggle
-                        IconButton(
-                            onClick = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite()) },
-                            enabled = state.link != null
-                        ) {
-                            Icon(
-                                imageVector = if (state.link?.isFavorite == true) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                                contentDescription = if (state.link?.isFavorite == true) "Remove from favorites" else "Add to favorites",
-                                tint = if (state.link?.isFavorite == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // More options menu
-                    Box {
-                        IconButton(
-                            onClick = { showMoreMenu = true },
-                            enabled = state.link != null
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = "More options"
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
-                        ) {
-                            // Show different options based on deletion state
-                            if (state.link?.isDeleted == true) {
-                                // Restore option for deleted links
-                                DropdownMenuItem(
-                                    text = { Text("Restore") },
-                                    onClick = {
-                                        showRestoreDialogFromMenu = true
-                                        showMoreMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Filled.RestoreFromTrash,
-                                            contentDescription = "Restore from trash"
-                                        )
-                                    }
-                                )
-
-                                // Permanent Delete option for deleted links
-                                DropdownMenuItem(
-                                    text = { Text("Delete Permanently", color = MaterialTheme.colorScheme.error) },
-                                    onClick = {
-                                        showPermanentDeleteDialogFromMenu = true
-                                        showMoreMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = "Delete permanently",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                )
-                            } else {
-                                // Normal options for non-deleted links
-                                // Archive/Unarchive
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (state.link?.isArchived == true) "Unarchive" else "Archive"
-                                        )
-                                    },
-                                    onClick = {
-                                        if (state.link?.isArchived == true) {
-                                            showUnarchiveDialog = true
-                                        } else {
-                                            showArchiveDialog = true
-                                        }
-                                        showMoreMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = if (state.link?.isArchived == true) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                                            contentDescription = if (state.link?.isArchived == true) "Unarchive" else "Archive"
-                                        )
-                                    }
-                                )
-
-                                // Delete (soft delete)
-                                DropdownMenuItem(
-                                    text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                                    onClick = {
-                                        showDeleteDialog = true
-                                        showMoreMenu = false
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { paddingValues ->
         Box(
@@ -362,29 +205,26 @@ fun LinkDetailScreen(
                 .padding(paddingValues)
         ) {
             when {
-                // Loading state
                 state.isLoading -> {
                     LoadingIndicator(message = "Loading link...")
                 }
 
-                // Link content
                 state.link != null -> {
-                    LinkContent(
+                    LinkDetailContent(
                         link = state.link!!,
                         collection = state.collection,
                         snapshots = state.snapshots,
                         isCapturingSnapshot = state.isCapturingSnapshot,
-                        onOpenUrl = { url ->
-                            // Open URL in browser
-                        },
+                        onNavigateBack = onNavigateBack,
+                        onEditClick = { onEditClick(state.link!!.id) },
                         onOpenSnapshot = onOpenSnapshot,
                         onNavigateToCollection = onNavigateToCollection,
+                        onToggleFavorite = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite()) },
                         onCreateSnapshot = { viewModel.onEvent(LinkDetailEvent.OnCreateSnapshot) },
-                        onDeleteSnapshot = { snapshotId ->
-                            viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(snapshotId))
-                        },
-                        onRestoreLink = { viewModel.onEvent(LinkDetailEvent.OnRestoreLink()) },
-                        onPermanentlyDeleteLink = { viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink()) },
+                        onDeleteSnapshot = { viewModel.onEvent(LinkDetailEvent.OnDeleteSnapshot(it)) },
+                        onDeleteLink = { showDeleteDialog = true },
+                        onRestoreLink = { showRestoreDialog = true },
+                        onPermanentDelete = { showPermanentDeleteDialog = true },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -392,513 +232,801 @@ fun LinkDetailScreen(
         }
     }
 
-    // Restore confirmation dialog (from menu)
-    if (showRestoreDialogFromMenu) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showRestoreDialogFromMenu = false },
-            title = { Text("Restore Link?") },
-            text = { Text("This link will be restored from trash and moved back to your active links.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnRestoreLink())
-                        showRestoreDialogFromMenu = false
-                    }
-                ) {
-                    Text("Restore")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestoreDialogFromMenu = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Permanent delete confirmation dialog (from menu)
-    if (showPermanentDeleteDialogFromMenu) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showPermanentDeleteDialogFromMenu = false },
-            title = { Text("Delete Permanently?") },
-            text = { Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink())
-                        showPermanentDeleteDialogFromMenu = false
-                    }
-                ) {
-                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermanentDeleteDialogFromMenu = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Archive confirmation dialog
-    if (showArchiveDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showArchiveDialog = false },
-            title = { Text("Archive Link?") },
-            text = { Text("This link will be archived and hidden from your main view. You can unarchive it anytime from the Archived section.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink())
-                        showArchiveDialog = false
-                    }
-                ) {
-                    Text("Archive")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showArchiveDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Unarchive confirmation dialog
-    if (showUnarchiveDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showUnarchiveDialog = false },
-            title = { Text("Unarchive Link?") },
-            text = { Text("This link will be unarchived and moved back to your active links.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnArchiveLink())
-                        showUnarchiveDialog = false
-                    }
-                ) {
-                    Text("Unarchive")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUnarchiveDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Delete confirmation dialog (soft delete)
+    // Delete confirmation bottom sheet
     if (showDeleteDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Move to Trash?") },
-            text = { Text("This link will be moved to trash. You can restore it within 30 days or it will be automatically deleted.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onEvent(LinkDetailEvent.OnDeleteLink())
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Move to Trash", color = MaterialTheme.colorScheme.error)
-                }
+        ConfirmationBottomSheet(
+            icon = Icons.Outlined.Delete,
+            iconColor = MaterialTheme.colorScheme.error,
+            title = "Move to Trash?",
+            message = "This link will be moved to trash. You can restore it within 30 days.",
+            confirmText = "Move to Trash",
+            confirmColor = MaterialTheme.colorScheme.error,
+            onConfirm = {
+                viewModel.onEvent(LinkDetailEvent.OnDeleteLink())
+                showDeleteDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    // Restore confirmation bottom sheet
+    if (showRestoreDialog) {
+        ConfirmationBottomSheet(
+            icon = Icons.Filled.RestoreFromTrash,
+            iconColor = SoftTeal,
+            title = "Restore Link?",
+            message = "This link will be restored from trash and moved back to your links.",
+            confirmText = "Restore",
+            confirmColor = SoftTeal,
+            onConfirm = {
+                viewModel.onEvent(LinkDetailEvent.OnRestoreLink())
+                showRestoreDialog = false
+            },
+            onDismiss = { showRestoreDialog = false }
+        )
+    }
+
+    // Permanent delete bottom sheet
+    if (showPermanentDeleteDialog) {
+        ConfirmationBottomSheet(
+            icon = Icons.Filled.Delete,
+            iconColor = MaterialTheme.colorScheme.error,
+            title = "Delete Permanently?",
+            message = "This will permanently delete this link and all its snapshots. This action cannot be undone.",
+            confirmText = "Delete Forever",
+            confirmColor = MaterialTheme.colorScheme.error,
+            onConfirm = {
+                viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink())
+                showPermanentDeleteDialog = false
+            },
+            onDismiss = { showPermanentDeleteDialog = false }
         )
     }
 }
 
-/**
- * Link content display with new layout
- */
 @Composable
-private fun LinkContent(
+private fun LinkDetailContent(
     link: Link,
     collection: com.rejowan.linky.domain.model.Collection?,
     snapshots: List<Snapshot>,
     isCapturingSnapshot: Boolean,
-    onOpenUrl: (String) -> Unit,
+    onNavigateBack: () -> Unit,
+    onEditClick: () -> Unit,
     onOpenSnapshot: (String) -> Unit,
     onNavigateToCollection: (String) -> Unit,
+    onToggleFavorite: () -> Unit,
     onCreateSnapshot: () -> Unit,
     onDeleteSnapshot: (String) -> Unit,
+    onDeleteLink: () -> Unit,
     onRestoreLink: () -> Unit,
-    onPermanentlyDeleteLink: () -> Unit,
+    onPermanentDelete: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
-    var descriptionExpanded by remember { mutableStateOf(false) }
-    var noteExpanded by remember { mutableStateOf(false) }
-    var snapshotsExpanded by remember { mutableStateOf(false) }
-    var showRestoreDialog by remember { mutableStateOf(false) }
-    var showPermanentDeleteDialog by remember { mutableStateOf(false) }
-
-    // Launch coroutine scope for snackbar
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .verticalScroll(scrollState)
     ) {
-        // Status Cards (Deleted takes priority over Archived)
-        if (link.isDeleted || link.isArchived) {
-            Column(
+        // Hero Section with Image
+        HeroSection(
+            link = link,
+            onNavigateBack = onNavigateBack,
+            onEditClick = onEditClick,
+            onToggleFavorite = onToggleFavorite
+        )
+
+        // Content Section
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // URL with click to copy
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        clipboardManager.setText(AnnotatedString(link.url))
+                        Toast.makeText(context, "URL copied", Toast.LENGTH_SHORT).show()
+                    },
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                if (link.isDeleted) {
-                    val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
-                    StatusBanner(
-                        message = "This link has been moved to trash. You can restore it or it'll be automatically deleted after $daysLeft days.",
-                        backgroundColor = MaterialTheme.colorScheme.errorContainer,
-                        textColor = MaterialTheme.colorScheme.onErrorContainer,
-                        iconColor = MaterialTheme.colorScheme.error
+                Text(
+                    text = link.url,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+
+            // Trash Status Banner
+            if (link.isDeleted) {
+                TrashStatusBanner(
+                    deletedAt = link.deletedAt ?: 0,
+                    onRestore = onRestoreLink,
+                    onPermanentDelete = onPermanentDelete
+                )
+            }
+
+            // Quick Actions Row
+            if (!link.isDeleted) {
+                QuickActionsRow(
+                    onOpenInBrowser = { uriHandler.openUri(link.url) },
+                    onShare = {
+                        val shareIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            putExtra(android.content.Intent.EXTRA_TEXT, link.url)
+                            type = "text/plain"
+                        }
+                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
+                    },
+                    onCopy = {
+                        clipboardManager.setText(AnnotatedString(link.url))
+                        Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                    },
+                    onDelete = onDeleteLink
+                )
+            }
+
+            // Collection Card
+            collection?.let {
+                CollectionCard(
+                    collection = it,
+                    onClick = { onNavigateToCollection(it.id) }
+                )
+            }
+
+            // Description Section
+            if (!link.description.isNullOrBlank()) {
+                InfoSection(
+                    icon = Icons.Outlined.Description,
+                    title = "Description",
+                    content = link.description,
+                    accentColor = SoftBlue
+                )
+            }
+
+            // Note Section
+            if (!link.note.isNullOrBlank()) {
+                InfoSection(
+                    icon = Icons.Outlined.Note,
+                    title = "Note",
+                    content = link.note,
+                    accentColor = SoftTeal
+                )
+            }
+
+            // Timestamps Card
+            TimestampsCard(
+                createdAt = link.createdAt,
+                updatedAt = link.updatedAt
+            )
+
+            // Snapshots Section
+            SnapshotsSection(
+                snapshots = snapshots,
+                isCapturing = isCapturingSnapshot,
+                isDeleted = link.isDeleted,
+                onCreateSnapshot = onCreateSnapshot,
+                onOpenSnapshot = onOpenSnapshot,
+                onDeleteSnapshot = onDeleteSnapshot
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun HeroSection(
+    link: Link,
+    onNavigateBack: () -> Unit,
+    onEditClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(280.dp)
+    ) {
+        // Background Image or Placeholder
+        if (link.previewImagePath != null || link.previewUrl != null) {
+            AsyncImage(
+                model = link.previewImagePath ?: link.previewUrl,
+                contentDescription = "Link preview",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // Gradient placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                SoftPurple.copy(alpha = 0.3f),
+                                SoftBlue.copy(alpha = 0.3f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        // Gradient overlay - darker at bottom for title visibility
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.5f),
+                            Color.Black.copy(alpha = 0.1f),
+                            Color.Black.copy(alpha = 0.4f),
+                            Color.Black.copy(alpha = 0.85f)
+                        ),
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY
                     )
+                )
+        )
 
-                    // Restore and Delete buttons
-                    Row(
+        // Top Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = statusBarPadding.calculateTopPadding())
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back Button
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.3f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
+            }
+
+            // Action Buttons
+            if (!link.isDeleted) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Edit Button
+                    IconButton(
+                        onClick = onEditClick,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            .size(40.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.3f),
+                                shape = CircleShape
+                            )
                     ) {
-                        // Restore button
-                        OutlinedButton(
-                            onClick = { showRestoreDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.RestoreFromTrash,
-                                contentDescription = "Restore",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Restore")
-                        }
-
-                        // Delete permanently button
-                        OutlinedButton(
-                            onClick = { showPermanentDeleteDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = "Delete permanently",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Delete")
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit",
+                            tint = Color.White
+                        )
                     }
-                } else if (link.isArchived) {
-                    // Only show archived status if NOT deleted
-                    StatusBanner(
-                        message = "This link has been archived. It's hidden from your main view but still accessible.",
-                        backgroundColor = Color(0xFFFFF3CD), // Yellowish background
-                        textColor = Color(0xFF856404), // Dark yellow text
-                        iconColor = Color(0xFFFFC107) // Amber icon
+
+                    // Favorite Button
+                    FavoriteButton(
+                        isFavorite = link.isFavorite,
+                        onClick = onToggleFavorite
                     )
                 }
             }
         }
 
-        // Preview Image (if available)
-        if (link.previewImagePath != null || link.previewUrl != null) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(200.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                AsyncImage(
-                    model = link.previewImagePath ?: link.previewUrl,
-                    contentDescription = "Link preview image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-        }
-
-        // Title and URL Section
+        // Title at bottom
         Column(
             modifier = Modifier
+                .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(20.dp)
         ) {
             Text(
                 text = link.title,
                 style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteButton(
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isFavorite) 1.1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "favorite scale"
+    )
+
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .size(40.dp)
+            .scale(scale)
+            .background(
+                color = if (isFavorite) SoftPink.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.3f),
+                shape = CircleShape
+            )
+    ) {
+        Icon(
+            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+            tint = Color.White
+        )
+    }
+}
+
+@Composable
+private fun QuickActionsRow(
+    onOpenInBrowser: () -> Unit,
+    onShare: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        QuickActionButton(
+            icon = Icons.Filled.OpenInBrowser,
+            label = "Open",
+            color = SoftBlue,
+            onClick = onOpenInBrowser
+        )
+        QuickActionButton(
+            icon = Icons.Filled.Share,
+            label = "Share",
+            color = SoftTeal,
+            onClick = onShare
+        )
+        QuickActionButton(
+            icon = Icons.Filled.ContentCopy,
+            label = "Copy",
+            color = SoftPurple,
+            onClick = onCopy
+        )
+        QuickActionButton(
+            icon = Icons.Outlined.Delete,
+            label = "Delete",
+            color = MaterialTheme.colorScheme.error,
+            onClick = onDelete
+        )
+    }
+}
+
+@Composable
+private fun QuickActionButton(
+    icon: ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = color.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(14.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun TrashStatusBanner(
+    deletedAt: Long,
+    onRestore: () -> Unit,
+    onPermanentDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val daysLeft = calculateDaysUntilAutoDelete(deletedAt)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "In Trash",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Auto-deletes in $daysLeft days",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    onClick = onRestore,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.RestoreFromTrash,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Restore",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = onPermanentDelete,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.error,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onError,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Delete",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollectionCard(
+    collection: com.rejowan.linky.domain.model.Collection,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val collectionColor = parseColor(collection.color)
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        color = collectionColor.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = collectionColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    tint = collectionColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Collection",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = collection.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = collectionColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoSection(
+    icon: ImageVector,
+    title: String,
+    content: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = accentColor.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accentColor
+                )
+            }
 
             Text(
-                text = link.url,
+                text = content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = if (isExpanded) Int.MAX_VALUE else 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { isExpanded = !isExpanded }
+            )
+
+            if (content.length > 200) {
+                Text(
+                    text = if (isExpanded) "Show less" else "Show more",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accentColor,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { isExpanded = !isExpanded }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimestampsCard(
+    createdAt: Long,
+    updatedAt: Long,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TimestampRow(
+                icon = Icons.Outlined.CalendarToday,
+                label = "Created",
+                timestamp = createdAt
+            )
+            if (updatedAt != createdAt) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                TimestampRow(
+                    icon = Icons.Outlined.AccessTime,
+                    label = "Updated",
+                    timestamp = updatedAt
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimestampRow(
+    icon: ImageVector,
+    label: String,
+    timestamp: Long,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Text(
+            text = formatTimestamp(timestamp),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
 
-        // Action Buttons Row
+@Composable
+private fun SnapshotsSection(
+    snapshots: List<Snapshot>,
+    isCapturing: Boolean,
+    isDeleted: Boolean,
+    onCreateSnapshot: () -> Unit,
+    onOpenSnapshot: (String) -> Unit,
+    onDeleteSnapshot: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Share button
-            OutlinedButton(
-                onClick = {
-                    val shareIntent = android.content.Intent().apply {
-                        action = android.content.Intent.ACTION_SEND
-                        putExtra(android.content.Intent.EXTRA_TEXT, link.url)
-                        type = "text/plain"
-                    }
-                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Share link"))
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Share")
-            }
-
-            // Copy button
-            OutlinedButton(
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(link.url))
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Link copied")
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Copy")
-            }
-        }
-
-        // Open in Browser button
-        Button(
-            onClick = { uriHandler.openUri(link.url) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.OpenInBrowser,
-                contentDescription = "Open in browser",
-                modifier = Modifier.size(18.dp)
+            Text(
+                text = "Snapshots",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Open in Browser")
-        }
 
-        // Metadata Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Collection (if assigned)
-                collection?.let { coll ->
-                    Card(
-                        onClick = { onNavigateToCollection(coll.id) },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .background(
-                                        color = parseColor(coll.color),
-                                        shape = CircleShape
-                                    )
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Collection",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = coll.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Timestamps
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            if (!isDeleted) {
+                Surface(
+                    onClick = onCreateSnapshot,
+                    enabled = !isCapturing,
+                    color = SoftPurple,
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Created",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Icon(
+                            imageVector = Icons.Outlined.CameraAlt,
+                            contentDescription = null,
+                            tint = if (isCapturing) Color.White.copy(alpha = 0.5f) else Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = formatTimestamp(link.createdAt),
-                            style = MaterialTheme.typography.bodyMedium
+                            text = if (isCapturing) "Capturing..." else "Capture",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isCapturing) Color.White.copy(alpha = 0.5f) else Color.White
                         )
-                    }
-
-                    if (link.updatedAt != link.createdAt) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Updated",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = formatTimestamp(link.updatedAt),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
                     }
                 }
             }
         }
 
-        // Description Section
-        if (!link.description.isNullOrBlank()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                ExpandableTextSection(
-                    text = link.description,
-                    maxLines = 2,
-                    isExpanded = descriptionExpanded,
-                    onToggleExpand = { descriptionExpanded = !descriptionExpanded }
-                )
-            }
-        }
-
-        // Note Section
-        if (!link.note.isNullOrBlank()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Note",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                ExpandableTextSection(
-                    text = link.note,
-                    maxLines = 4,
-                    isExpanded = noteExpanded,
-                    onToggleExpand = { noteExpanded = !noteExpanded }
-                )
-            }
-        }
-
-        // Snapshots Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Header
-            Row(
+        if (snapshots.isEmpty()) {
+            // Empty state
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    text = "Snapshots (${snapshots.size})",
-                    style = MaterialTheme.typography.titleLarge
-                )
-
-                TextButton(
-                    onClick = onCreateSnapshot,
-                    enabled = !isCapturingSnapshot && !link.isDeleted
-                ) {
-                    if (isCapturingSnapshot) {
-                        Text("Capturing...")
-                    } else {
-                        Text("Capture")
-                    }
-                }
-            }
-
-            // Content
-            if (snapshots.isEmpty()) {
-                // Empty state
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -906,98 +1034,26 @@ private fun LinkContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Capture a clean, readable version of this page for offline reading",
+                        text = "Capture a readable version for offline access",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
                     )
                 }
-            } else {
-                // Show max 3 snapshots, or all if expanded
-                val displaySnapshots = if (snapshotsExpanded) snapshots else snapshots.take(3)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    displaySnapshots.forEach { snapshot ->
-                        SnapshotCard(
-                            snapshot = snapshot,
-                            onClick = { onOpenSnapshot(snapshot.id) },
-                            onDeleteClick = { onDeleteSnapshot(snapshot.id) }
-                        )
-                    }
-                }
-
-                // See More / Hide button
-                if (snapshots.size > 3) {
-                    TextButton(
-                        onClick = { snapshotsExpanded = !snapshotsExpanded },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = if (snapshotsExpanded) "Show Less" else "See More (${snapshots.size - 3} more)",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-                }
+            }
+        } else {
+            snapshots.forEach { snapshot ->
+                SnapshotCard(
+                    snapshot = snapshot,
+                    onClick = { onOpenSnapshot(snapshot.id) },
+                    onDeleteClick = { onDeleteSnapshot(snapshot.id) }
+                )
             }
         }
     }
-
-    // Restore confirmation dialog
-    if (showRestoreDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showRestoreDialog = false },
-            title = { Text("Restore Link?") },
-            text = { Text("This link will be restored from trash and moved back to your active links.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRestoreLink()
-                        showRestoreDialog = false
-                    }
-                ) {
-                    Text("Restore")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestoreDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Permanent delete confirmation dialog
-    if (showPermanentDeleteDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showPermanentDeleteDialog = false },
-            title = { Text("Delete Permanently?") },
-            text = { Text("This will permanently delete this link. This action cannot be undone. All snapshots associated with this link will also be deleted.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onPermanentlyDeleteLink()
-                        showPermanentDeleteDialog = false
-                    }
-                ) {
-                    Text("Delete Permanently", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermanentDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }
 
-/**
- * Snapshot card for displaying snapshot information with reader mode metadata
- */
 @Composable
 private fun SnapshotCard(
     snapshot: Snapshot,
@@ -1007,31 +1063,27 @@ private fun SnapshotCard(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Card(
+    Surface(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        onClick = onClick
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                // Title (from reader mode)
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = snapshot.title ?: "Untitled Snapshot",
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Excerpt
                 if (snapshot.excerpt != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = snapshot.excerpt,
                         style = MaterialTheme.typography.bodySmall,
@@ -1039,222 +1091,202 @@ private fun SnapshotCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Metadata row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Word count & read time
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (snapshot.wordCount != null && snapshot.estimatedReadTime != null) {
                         Text(
-                            text = "${snapshot.wordCount} words · ${snapshot.estimatedReadTime} min read",
+                            text = "${snapshot.estimatedReadTime} min read",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = SoftPurple,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Text(
+                        text = formatFileSize(snapshot.fileSize),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Timestamp & size
-                Text(
-                    text = "${formatTimestamp(snapshot.createdAt)} · ${formatFileSize(snapshot.fileSize)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
-            // Delete button
             IconButton(
-                onClick = { showDeleteDialog = true }
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Outlined.Delete,
                     contentDescription = "Delete snapshot",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Snapshot?") },
-            text = { Text("This will permanently delete this snapshot. This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDeleteClick()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+        ConfirmationBottomSheet(
+            icon = Icons.Outlined.Delete,
+            iconColor = MaterialTheme.colorScheme.error,
+            title = "Delete Snapshot?",
+            message = "This will permanently delete this snapshot.",
+            confirmText = "Delete",
+            confirmColor = MaterialTheme.colorScheme.error,
+            onConfirm = {
+                onDeleteClick()
+                showDeleteDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteDialog = false }
         )
     }
 }
 
-/**
- * Format timestamp to readable date
- */
-private fun formatTimestamp(timestamp: Long): String {
-    val date = Date(timestamp)
-    val formatter = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
-    return formatter.format(date)
-}
-
-/**
- * Format file size to human-readable format
- */
-private fun formatFileSize(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    val mb = kb / 1024.0
-    if (mb < 1024) return "%.1f MB".format(mb)
-    val gb = mb / 1024.0
-    return "%.1f GB".format(gb)
-}
-
-/**
- * Expandable text section with See More/Hide functionality
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExpandableTextSection(
-    text: String,
-    maxLines: Int,
-    isExpanded: Boolean,
-    onToggleExpand: () -> Unit,
-    modifier: Modifier = Modifier
+private fun ConfirmationBottomSheet(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    message: String,
+    confirmText: String,
+    confirmColor: Color = MaterialTheme.colorScheme.primary,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isExpanded) {
-                // Show full text
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                // Hide button
-                TextButton(
-                    onClick = onToggleExpand,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Show Less")
-                }
-            } else {
-                // Show truncated text
-                var showSeeMore by remember { mutableStateOf(false) }
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = maxLines,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textLayoutResult ->
-                        showSeeMore = textLayoutResult.hasVisualOverflow
-                    }
-                )
-                // See More button (only if text is truncated)
-                if (showSeeMore) {
-                    TextButton(
-                        onClick = onToggleExpand,
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("See More")
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Parse color string to Color
- * Supports hex colors (#RRGGBB) and falls back to primary color
- */
-private fun parseColor(colorString: String?): Color {
-    if (colorString == null) return Color(0xFF6200EE) // Default primary color
-
-    return try {
-        val cleanColor = colorString.removePrefix("#")
-        val colorInt = cleanColor.toLong(16)
-        Color(colorInt or 0xFF000000) // Ensure alpha is set
-    } catch (_: Exception) {
-        Color(0xFF6200EE) // Default primary color on error
-    }
-}
-
-/**
- * Status banner for archived/deleted links
- */
-@Composable
-private fun StatusBanner(
-    message: String,
-    backgroundColor: Color,
-    textColor: Color,
-    iconColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Icon
-            Icon(
-                imageVector = Icons.Filled.Archive,
-                contentDescription = "Status",
-                tint = iconColor,
-                modifier = Modifier.size(20.dp)
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(
+                        color = iconColor.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(20.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Title
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Message
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = textColor,
-                modifier = Modifier.weight(1f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Cancel button
+                Surface(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 14.dp)
+                    )
+                }
+
+                // Confirm button
+                Surface(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    color = confirmColor,
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(
+                        text = confirmText,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 14.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-/**
- * Calculate days remaining until auto-deletion (30 days from deletedAt)
- */
+private fun formatTimestamp(timestamp: Long): String {
+    val date = Date(timestamp)
+    val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return formatter.format(date)
+}
+
+private fun formatFileSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "%.1f KB".format(kb)
+    val mb = kb / 1024.0
+    return "%.1f MB".format(mb)
+}
+
+private fun parseColor(colorString: String?): Color {
+    if (colorString == null) return Color(0xFF6200EE)
+    return try {
+        val cleanColor = colorString.removePrefix("#")
+        val colorInt = cleanColor.toLong(16)
+        Color(colorInt or 0xFF000000)
+    } catch (_: Exception) {
+        Color(0xFF6200EE)
+    }
+}
+
 private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
     val now = System.currentTimeMillis()
-    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L) // 30 days in milliseconds
+    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L)
     val remainingTime = deletionTime - now
     val daysLeft = (remainingTime / (24 * 60 * 60 * 1000L)).toInt()
-    return maxOf(0, daysLeft) // Ensure it's never negative
+    return maxOf(0, daysLeft)
 }
