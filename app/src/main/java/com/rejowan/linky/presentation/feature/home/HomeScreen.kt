@@ -49,7 +49,15 @@ import java.util.Calendar
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.rejowan.linky.domain.model.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -84,6 +92,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -102,6 +111,10 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.KoinApplication
 import timber.log.Timber
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.material3.HorizontalDivider
 
 /**
  * Home Screen - Main entry point showing all saved links
@@ -161,19 +174,19 @@ fun HomeScreen(
                     )
                 }
                 is HomeUiEvent.ShowFavoriteToggled -> {
-                    val message = if (event.isFavorite) {
-                        "Added to favorites"
+                    if (event.isFavorite) {
+                        // Added to favorites - show snackbar with undo
+                        val result = snackbarHostState.showSnackbar(
+                            message = "Added to favorites",
+                            actionLabel = "Undo",
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, false, silent = true))
+                        }
                     } else {
-                        "Removed from favorites"
-                    }
-                    val result = snackbarHostState.showSnackbar(
-                        message = message,
-                        actionLabel = "Undo",
-                        duration = SnackbarDuration.Short
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle (silent to prevent another snackbar)
-                        viewModel.onEvent(HomeEvent.OnToggleFavorite(event.linkId, !event.isFavorite, silent = true))
+                        // Removed from favorites - show toast
+                        Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show()
                     }
                 }
                 is HomeUiEvent.ShowLinkTrashed -> {
@@ -270,6 +283,10 @@ fun HomeScreen(
     // Sort options sheet state
     var showSortSheet by remember { mutableStateOf(false) }
 
+    // Link info bottom sheet state
+    var selectedLinkForInfo by remember { mutableStateOf<String?>(null) }
+    val selectedLink = selectedLinkForInfo?.let { id -> state.links.find { it.id == id } }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Collapsing Header with Search Bar
@@ -307,8 +324,8 @@ fun HomeScreen(
                         viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
                     },
                     onMoreClick = { linkId ->
-                        // Navigate to link detail (info sheet)
-                        onLinkClick(linkId)
+                        // Show link info bottom sheet
+                        selectedLinkForInfo = linkId
                     },
                     onAddLinkClick = { onAddLinkClick(null) },
                     onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
@@ -394,6 +411,32 @@ fun HomeScreen(
             },
             onDismiss = {
                 viewModel.onEvent(HomeEvent.OnDismissBulkMoveSheet)
+            }
+        )
+    }
+
+    // Link Info Bottom Sheet
+    if (selectedLink != null) {
+        LinkInfoBottomSheet(
+            link = selectedLink,
+            onOpenClick = {
+                // Open link in browser
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(selectedLink.url))
+                context.startActivity(intent)
+            },
+            onEditClick = {
+                selectedLinkForInfo = null
+                onLinkClick(selectedLink.id)
+            },
+            onFavoriteClick = {
+                viewModel.onEvent(HomeEvent.OnToggleFavorite(selectedLink.id, !selectedLink.isFavorite))
+            },
+            onDeleteClick = {
+                viewModel.onEvent(HomeEvent.OnDeleteLink(selectedLink.id))
+                selectedLinkForInfo = null
+            },
+            onDismiss = {
+                selectedLinkForInfo = null
             }
         )
     }
@@ -1426,6 +1469,194 @@ private fun CompactFilterChip(
             ),
             color = textColor,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LinkInfoBottomSheet(
+    link: Link,
+    onOpenClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            // Preview Image
+            if (link.previewImagePath != null || link.previewUrl != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    AsyncImage(
+                        model = link.previewImagePath ?: link.previewUrl,
+                        contentDescription = "Link preview",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Title
+            Text(
+                text = link.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // URL
+            Text(
+                text = link.url,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Description
+            if (!link.description.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = link.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Note
+            if (!link.note.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = link.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Created date
+            Text(
+                text = "Added ${dateFormatter.format(Date(link.createdAt))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Open in browser
+                LinkInfoActionButton(
+                    icon = Icons.Filled.OpenInBrowser,
+                    label = "Open",
+                    onClick = {
+                        onOpenClick()
+                        onDismiss()
+                    }
+                )
+
+                // Edit
+                LinkInfoActionButton(
+                    icon = Icons.Filled.Edit,
+                    label = "Edit",
+                    onClick = {
+                        onEditClick()
+                    }
+                )
+
+                // Favorite toggle
+                LinkInfoActionButton(
+                    icon = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    label = if (link.isFavorite) "Unfavorite" else "Favorite",
+                    tint = if (link.isFavorite) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = {
+                        onFavoriteClick()
+                    }
+                )
+
+                // Delete
+                LinkInfoActionButton(
+                    icon = Icons.Filled.Delete,
+                    label = "Delete",
+                    tint = MaterialTheme.colorScheme.error,
+                    onClick = {
+                        onDeleteClick()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkInfoActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = tint
         )
     }
 }

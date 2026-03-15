@@ -223,32 +223,34 @@ fun LinkCard(
                 )
             }
 
-            // Action Icons (Favorite + More)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Favorite Icon
-                IconButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier.size(40.dp)
+            // Action Icons (Favorite + More) - hidden during selection mode
+            if (!isSelectionMode) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    // Favorite Icon
+                    IconButton(
+                        onClick = onFavoriteClick,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                // More Icon
-                IconButton(
-                    onClick = onMoreClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // More Icon
+                    IconButton(
+                        onClick = onMoreClick,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
