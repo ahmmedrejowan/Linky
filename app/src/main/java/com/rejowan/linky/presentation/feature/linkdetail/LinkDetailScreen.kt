@@ -54,6 +54,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -308,6 +311,8 @@ private fun LinkDetailContent(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    var showFullScreenImage by remember { mutableStateOf(false) }
+    val hasImage = link.previewImagePath != null || link.previewUrl != null
 
     Column(
         modifier = modifier
@@ -319,7 +324,8 @@ private fun LinkDetailContent(
             link = link,
             onNavigateBack = onNavigateBack,
             onEditClick = onEditClick,
-            onToggleFavorite = onToggleFavorite
+            onToggleFavorite = onToggleFavorite,
+            onImageClick = { if (hasImage) showFullScreenImage = true }
         )
 
         // Content Section
@@ -427,6 +433,14 @@ private fun LinkDetailContent(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+
+    // Full Screen Image Viewer
+    if (showFullScreenImage && hasImage) {
+        FullScreenImageViewer(
+            imageUrl = link.previewImagePath ?: link.previewUrl ?: "",
+            onDismiss = { showFullScreenImage = false }
+        )
+    }
 }
 
 @Composable
@@ -435,9 +449,11 @@ private fun HeroSection(
     onNavigateBack: () -> Unit,
     onEditClick: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onImageClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues()
+    val hasImage = link.previewImagePath != null || link.previewUrl != null
 
     Box(
         modifier = modifier
@@ -445,11 +461,13 @@ private fun HeroSection(
             .height(280.dp)
     ) {
         // Background Image or Placeholder
-        if (link.previewImagePath != null || link.previewUrl != null) {
+        if (hasImage) {
             AsyncImage(
                 model = link.previewImagePath ?: link.previewUrl,
                 contentDescription = "Link preview",
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(onClick = onImageClick),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -1253,6 +1271,62 @@ private fun ConfirmationBottomSheet(
                         modifier = Modifier.padding(vertical = 14.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullScreenImageViewer(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            // Image
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Full screen preview",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                        top = WindowInsets.statusBars
+                            .asPaddingValues()
+                            .calculateTopPadding() + 8.dp,
+                        end = 8.dp
+                    )
+                    .size(44.dp)
+                    .background(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = CircleShape
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     }
