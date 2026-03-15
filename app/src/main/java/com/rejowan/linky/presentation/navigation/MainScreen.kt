@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
@@ -160,6 +164,22 @@ fun MainScreen(
         label = "bottomBarOffset"
     )
 
+    // Nested scroll connection for hiding bottom bar on scroll
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                // Show bottom bar when scrolling up, hide when scrolling down
+                if (delta > 10) {
+                    isBottomBarVisible = true
+                } else if (delta < -10) {
+                    isBottomBarVisible = false
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     // Get current route for FAB logic
     val currentRoute: Route? = when (selectedNavIndex) {
         0 -> Route.Home
@@ -179,7 +199,7 @@ fun MainScreen(
     }
 
     // Main layout: Box with Scaffold inside, AnimatedBottomNav outside
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().nestedScroll(nestedScrollConnection)) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },

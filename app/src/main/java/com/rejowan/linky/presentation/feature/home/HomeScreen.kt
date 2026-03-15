@@ -285,73 +285,85 @@ fun HomeScreen(
     // Sort options sheet state
     var showSortSheet by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Collapsing Header with Search Bar
-        HomeHeader(
-            collapseProgress = headerCollapseProgress,
-            onSearchClick = onSearchClick,
-            onSortClick = { showSortSheet = true }
-        )
-
-        // Filter Chips Row with View Mode Toggle
-        CompactFilterRow(
-            selectedFilter = state.filterType,
-            onFilterSelected = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            isGridView = state.viewMode == ViewMode.GRID,
-            onViewModeToggle = {
-                val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
-                viewModel.onEvent(HomeEvent.OnViewModeChange(newMode))
-            }
-        )
-
-        // Content Area with Pull-to-Refresh
-        PullToRefreshBox(
-            isRefreshing = state.isLoading && state.links.isNotEmpty(),
-            onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
-            modifier = Modifier
-                .fillMaxSize()
-                .weight(1f)
-        ) {
-            HomeContent(
-                state = state,
-                viewMode = state.viewMode,
-                onLinkClick = onLinkClick,
-                onFavoriteClick = { linkId, isFavorite ->
-                    viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
-                },
-                onMoreClick = { linkId ->
-                    // Navigate to link detail (info sheet)
-                    onLinkClick(linkId)
-                },
-                onArchiveClick = { linkId, isArchiving ->
-                    viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
-                },
-                onTrashClick = { linkId ->
-                    viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
-                },
-                onAddLinkClick = { onAddLinkClick(null) },
-                onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
-                onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
-                onScrollOffsetChanged = { offset -> headerScrollOffset = offset },
-                // Bulk selection callbacks
-                onLongPress = { linkId ->
-                    viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
-                    viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
-                },
-                onToggleSelection = { linkId ->
-                    viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
-                },
-                onExitSelectionMode = { viewModel.onEvent(HomeEvent.OnExitSelectionMode) },
-                onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
-                onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
-                onBulkDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
-                onBulkArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
-                onBulkUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
-                onBulkFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
-                onBulkUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
-                onBulkMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Collapsing Header with Search Bar
+            HomeHeader(
+                collapseProgress = headerCollapseProgress,
+                onSearchClick = onSearchClick,
+                onSortClick = { showSortSheet = true }
             )
+
+            // Filter Chips Row with View Mode Toggle
+            CompactFilterRow(
+                selectedFilter = state.filterType,
+                onFilterSelected = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
+                isGridView = state.viewMode == ViewMode.GRID,
+                onViewModeToggle = {
+                    val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
+                    viewModel.onEvent(HomeEvent.OnViewModeChange(newMode))
+                }
+            )
+
+            // Content Area with Pull-to-Refresh
+            PullToRefreshBox(
+                isRefreshing = state.isLoading && state.links.isNotEmpty(),
+                onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                HomeContent(
+                    state = state,
+                    viewMode = state.viewMode,
+                    onLinkClick = onLinkClick,
+                    onFavoriteClick = { linkId, isFavorite ->
+                        viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+                    },
+                    onMoreClick = { linkId ->
+                        // Navigate to link detail (info sheet)
+                        onLinkClick(linkId)
+                    },
+                    onArchiveClick = { linkId, isArchiving ->
+                        viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
+                    },
+                    onTrashClick = { linkId ->
+                        viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
+                    },
+                    onAddLinkClick = { onAddLinkClick(null) },
+                    onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
+                    onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
+                    onScrollOffsetChanged = { offset -> headerScrollOffset = offset },
+                    // Bulk selection callbacks
+                    onLongPress = { linkId ->
+                        viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
+                        viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+                    },
+                    onToggleSelection = { linkId ->
+                        viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+                    }
+                )
+            }
         }
+
+        // Selection Action Bar at the bottom (overlays content)
+        AnimatedBulkActionsBar(
+            visible = state.isSelectionMode,
+            selectedCount = state.selectedCount,
+            allSelected = state.allSelected,
+            filterType = state.filterType,
+            onClose = { viewModel.onEvent(HomeEvent.OnExitSelectionMode) },
+            onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
+            onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
+            onDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
+            onArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
+            onUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
+            onFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
+            onUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
+            onMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) },
+            totalCount = state.links.size,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     // Sort Options Sheet
@@ -765,18 +777,9 @@ private fun HomeContent(
     onRetry: () -> Unit,
     onSortTypeChange: (SortType) -> Unit,
     onScrollOffsetChanged: (Float) -> Unit,
-    // Bulk selection callbacks
+    // Selection callbacks
     onLongPress: (String) -> Unit,
     onToggleSelection: (String) -> Unit,
-    onExitSelectionMode: () -> Unit,
-    onSelectAll: () -> Unit,
-    onDeselectAll: () -> Unit,
-    onBulkDelete: () -> Unit,
-    onBulkArchive: () -> Unit,
-    onBulkUnarchive: () -> Unit,
-    onBulkFavorite: () -> Unit,
-    onBulkUnfavorite: () -> Unit,
-    onBulkMove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Scroll states for both list and grid
@@ -815,25 +818,6 @@ private fun HomeContent(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Bulk Actions Bar - shown when in selection mode
-        if (state.isSelectionMode) {
-            BulkActionsBar(
-                selectedCount = state.selectedCount,
-                allSelected = state.allSelected,
-                filterType = state.filterType,
-                onClose = onExitSelectionMode,
-                onSelectAll = onSelectAll,
-                onDeselectAll = onDeselectAll,
-                onDelete = onBulkDelete,
-                onArchive = onBulkArchive,
-                onUnarchive = onBulkUnarchive,
-                onFavorite = onBulkFavorite,
-                onUnfavorite = onBulkUnfavorite,
-                onMove = onBulkMove,
-                totalCount = state.links.size
-            )
-        }
-
         // Content area - changes based on state
         when {
             // Loading state (initial load only)
