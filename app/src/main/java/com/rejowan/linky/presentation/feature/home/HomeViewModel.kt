@@ -70,6 +70,9 @@ class HomeViewModel(
                 // Re-apply sorting to current links
                 applySorting()
             }
+            is HomeEvent.OnViewModeChange -> {
+                _state.update { it.copy(viewMode = event.viewMode) }
+            }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite, event.silent)
             is HomeEvent.OnArchiveLink -> archiveLink(event.linkId, event.isArchiving, event.silent)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
@@ -610,6 +613,7 @@ sealed class HomeUiEvent {
 sealed class HomeEvent {
     data class OnFilterTypeChange(val filterType: FilterType) : HomeEvent()
     data class OnSortTypeChange(val sortType: SortType) : HomeEvent()
+    data class OnViewModeChange(val viewMode: ViewMode) : HomeEvent()
     data class OnToggleFavorite(val linkId: String, val isFavorite: Boolean, val silent: Boolean = false) : HomeEvent()
     data class OnArchiveLink(val linkId: String, val isArchiving: Boolean, val silent: Boolean = false) : HomeEvent()
     data class OnDeleteLink(val linkId: String) : HomeEvent()

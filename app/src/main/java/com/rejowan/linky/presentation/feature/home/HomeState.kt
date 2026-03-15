@@ -6,6 +6,7 @@ data class HomeState(
     val links: List<Link> = emptyList(),
     val filterType: FilterType = FilterType.ALL,
     val sortType: SortType = SortType.DATE_ADDED_DESC,
+    val viewMode: ViewMode = ViewMode.LIST,
     val isLoading: Boolean = false,
     val error: String? = null, // For critical load failures (full-screen error state)
     val allLinksCount: Int = 0,
@@ -43,4 +44,9 @@ enum class SortType(val displayName: String) {
     TITLE_ASC("Title (A-Z)"),
     TITLE_DESC("Title (Z-A)"),
     LAST_MODIFIED("Last modified")
+}
+
+enum class ViewMode {
+    LIST,
+    GRID
 }
