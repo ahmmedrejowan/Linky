@@ -830,7 +830,7 @@ private fun HomeContent(
                 onFavorite = onBulkFavorite,
                 onUnfavorite = onBulkUnfavorite,
                 onMove = onBulkMove,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                totalCount = state.links.size
             )
         }
 
