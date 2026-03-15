@@ -21,6 +21,7 @@ import com.rejowan.linky.presentation.feature.settings.SettingsScreen
  * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param onCreateCollectionClick Callback to set the create collection action for FAB
  * @param onSearchClick Callback to navigate to search screen
+ * @param onSelectionModeChange Callback when selection mode changes (to hide/show bottom nav)
  */
 @Composable
 fun BottomNavHost(
@@ -30,6 +31,7 @@ fun BottomNavHost(
     lastShareIntentHandledTime: Long = 0L,
     onCreateCollectionClick: (() -> Unit) -> Unit,
     onSearchClick: () -> Unit = {},
+    onSelectionModeChange: (Boolean) -> Unit = {},
     onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -60,6 +62,7 @@ fun BottomNavHost(
                     navController.navigate(Route.Settings)
                 },
                 onSearchClick = onSearchClick,
+                onSelectionModeChange = onSelectionModeChange,
                 onExitRequest = onExitRequest
             )
         }

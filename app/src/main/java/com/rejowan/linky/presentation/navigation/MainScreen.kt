@@ -1,13 +1,20 @@
 package com.rejowan.linky.presentation.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,22 +29,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rejowan.linky.presentation.components.AnimatedBottomNav
 import com.rejowan.linky.presentation.components.NavItem
@@ -45,8 +56,7 @@ import timber.log.Timber
 
 /**
  * Main screen - Container for the bottom navigation experience
- * This screen has its own Scaffold with TopAppBar, SnackbarHost, bottom bar, and FAB
- * It contains the BottomNavHost (nested navigation for Home/Collections/Settings)
+ * Uses Box layout with AnimatedBottomNav placed outside Scaffold for cutout effect
  *
  * @param parentNavController Parent NavController for navigating outside bottom nav
  * @param initialTab The initial tab to navigate to (0=Home, 1=Collections, 2=Settings), null=remember last
@@ -65,10 +75,15 @@ fun MainScreen(
 ) {
     // Local nav controller for bottom nav (nested navigation)
     val bottomNavController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Selected nav index
+    var selectedNavIndex by rememberSaveable { mutableIntStateOf(initialTab ?: 0) }
 
     // Navigate to initial tab if specified
     LaunchedEffect(initialTab) {
-        if (initialTab != null) {
+        if (initialTab != null && initialTab != selectedNavIndex) {
+            selectedNavIndex = initialTab
             val route = when (initialTab) {
                 0 -> Route.Home
                 1 -> Route.Collections
@@ -93,8 +108,6 @@ fun MainScreen(
             parentNavController.navigate(Route.CollectionDetail(navigateToCollectionId))
         }
     }
-    val currentBackStackEntry by bottomNavController.currentBackStackEntryAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // State for Collections screen FAB action
     var onCreateCollectionClick by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -114,12 +127,10 @@ fun MainScreen(
         if (sharedContent != null) {
             lastShareIntentHandledTime = System.currentTimeMillis()
             when {
-                // 0 URLs: Do nothing (already handled by showing no URLs message in MainActivity)
                 sharedContent.hasNoUrls -> {
                     Timber.d("No URLs in shared content")
                     onSharedContentHandled()
                 }
-                // 1 URL: Navigate directly to Add Link (current behavior)
                 sharedContent.hasSingleUrl -> {
                     Timber.d("Single URL detected: ${sharedContent.firstUrl}")
                     parentNavController.navigate(Route.AddEditLink(
@@ -128,7 +139,6 @@ fun MainScreen(
                     ))
                     onSharedContentHandled()
                 }
-                // 2+ URLs: Show bottom sheet with options
                 sharedContent.hasMultipleUrls -> {
                     Timber.d("Multiple URLs detected: ${sharedContent.urlCount} URLs")
                     showBatchImportBottomSheet = true
@@ -137,50 +147,75 @@ fun MainScreen(
         }
     }
 
-    // Get current route for bottom nav selection and FAB logic
-    // Match route by checking destination route string (contains route class name)
-    val currentRoute: Route? = when {
-        currentBackStackEntry == null -> null
-        else -> try {
-            // Match against known bottom nav routes by checking the destination route string
-            when {
-                currentBackStackEntry?.destination?.route?.contains("Home") == true -> Route.Home
-                currentBackStackEntry?.destination?.route?.contains("Collections") == true -> Route.Collections
-                currentBackStackEntry?.destination?.route?.contains("Search") == true -> Route.Search
-                currentBackStackEntry?.destination?.route?.contains("Settings") == true -> Route.Settings
-                else -> null
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
+    // State for selection mode (hides bottom nav)
+    var isSelectionMode by remember { mutableStateOf(false) }
 
-    // Map Route to NavItem for AnimatedBottomNav
-    val selectedNavItem = when (currentRoute) {
-        is Route.Collections -> NavItem.COLLECTIONS
-        is Route.Settings -> NavItem.SETTINGS
-        else -> NavItem.HOME
+    // Bottom bar visibility with animation
+    var isBottomBarVisible by remember { mutableStateOf(true) }
+    val bottomBarHeight = 120.dp
+    val bottomBarOffset by animateDpAsState(
+        targetValue = if (isBottomBarVisible && !isSelectionMode) 0.dp else bottomBarHeight,
+        animationSpec = tween(durationMillis = 300),
+        label = "bottomBarOffset"
+    )
+
+    // Get current route for FAB logic
+    val currentRoute: Route? = when (selectedNavIndex) {
+        0 -> Route.Home
+        1 -> Route.Collections
+        2 -> Route.Settings
+        else -> null
     }
 
     // Determine FAB icon and content description based on current route
     val fabIcon = when (currentRoute) {
         is Route.Collections -> Icons.Default.CreateNewFolder
-        else -> Icons.Default.Add // Home or null
+        else -> Icons.Default.Add
     }
     val fabContentDescription = when (currentRoute) {
         is Route.Collections -> "Create collection"
         else -> "Add link"
     }
 
-    // Main content with custom layout (no Scaffold TopAppBar)
+    // Main layout: Box with Scaffold inside, AnimatedBottomNav outside
     Box(modifier = Modifier.fillMaxSize()) {
-        // Content area
-        Column(modifier = Modifier.fillMaxSize()) {
-            // BottomNavHost contains the nested navigation for Home/Collections/Settings
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                // Only show FAB on Home and Collections screens
+                if (currentRoute != Route.Settings && !isSelectionMode) {
+                    FloatingActionButton(
+                        onClick = {
+                            when (currentRoute) {
+                                is Route.Home -> {
+                                    parentNavController.navigate(Route.AddEditLink())
+                                }
+                                is Route.Collections -> {
+                                    onCreateCollectionClick?.invoke()
+                                }
+                                else -> {
+                                    parentNavController.navigate(Route.AddEditLink())
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = fabIcon,
+                            contentDescription = fabContentDescription,
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            },
+            // Content bleeds behind the bottom bar for the cutout effect
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { paddingValues ->
+            // Only apply top padding - content goes behind bottom nav
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding())
             ) {
                 BottomNavHost(
                     navController = bottomNavController,
@@ -193,67 +228,36 @@ fun MainScreen(
                     onSearchClick = {
                         parentNavController.navigate(Route.Search)
                     },
+                    onSelectionModeChange = { isSelectionMode = it },
                     onExitRequest = { showExitDialog = true }
                 )
-
-                // Snackbar host
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
             }
+        }
 
-            // Animated Bottom Navigation Bar
-            AnimatedBottomNav(
-                selectedItem = selectedNavItem,
-                onItemSelected = { item ->
-                    val route = when (item) {
-                        NavItem.HOME -> Route.Home
-                        NavItem.COLLECTIONS -> Route.Collections
-                        NavItem.SETTINGS -> Route.Settings
-                    }
-                    bottomNavController.navigate(route) {
-                        // Pop up to start destination to avoid building up a large stack
-                        popUpTo(Route.Home) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+        // AnimatedBottomNav placed outside Scaffold at the bottom
+        AnimatedBottomNav(
+            selectedIndex = selectedNavIndex,
+            onItemClick = { index ->
+                selectedNavIndex = index
+                isBottomBarVisible = true // Show bottom bar when switching tabs
+                val route = when (index) {
+                    0 -> Route.Home
+                    1 -> Route.Collections
+                    2 -> Route.Settings
+                    else -> return@AnimatedBottomNav
                 }
-            )
-        }
-
-        // Floating Action Button - positioned above bottom nav
-        if (currentRoute != Route.Settings && currentRoute != Route.Search) {
-            FloatingActionButton(
-                onClick = {
-                    when (currentRoute) {
-                        is Route.Home -> {
-                            // Navigate to AddEditLink using parent controller
-                            parentNavController.navigate(Route.AddEditLink())
-                        }
-                        is Route.Collections -> {
-                            // Trigger create collection dialog in CollectionsScreen
-                            onCreateCollectionClick?.invoke()
-                        }
-                        else -> {
-                            // Default to Add Link (for null state on launch)
-                            parentNavController.navigate(Route.AddEditLink())
-                        }
+                bottomNavController.navigate(route) {
+                    popUpTo(Route.Home) {
+                        saveState = true
                     }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 88.dp)
-            ) {
-                Icon(
-                    imageVector = fabIcon,
-                    contentDescription = fabContentDescription,
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = bottomBarOffset)
+        )
     }
 
     // Exit Confirmation Bottom Sheet
@@ -292,7 +296,6 @@ fun MainScreen(
 
 /**
  * Exit Confirmation Bottom Sheet
- * Asks user to confirm before exiting the app
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -314,10 +317,9 @@ private fun ExitConfirmationBottomSheet(
                 .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Header with icon and title
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Icon(
@@ -333,19 +335,16 @@ private fun ExitConfirmationBottomSheet(
                 )
             }
 
-            // Message
             Text(
                 text = "Are you sure you want to exit the app?",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Cancel button
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
@@ -353,7 +352,6 @@ private fun ExitConfirmationBottomSheet(
                     Text("Cancel")
                 }
 
-                // Exit button
                 Button(
                     onClick = onConfirm,
                     modifier = Modifier.weight(1f)
@@ -367,7 +365,6 @@ private fun ExitConfirmationBottomSheet(
 
 /**
  * Batch Import Prompt Bottom Sheet
- * Shows options for handling shared text with multiple URLs
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -388,37 +385,33 @@ private fun BatchImportPromptBottomSheet(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Icon
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
                 modifier = Modifier
                     .size(48.dp)
-                    .align(androidx.compose.ui.Alignment.CenterHorizontally),
+                    .align(Alignment.CenterHorizontally),
                 tint = MaterialTheme.colorScheme.primary
             )
 
-            // Title
             Text(
                 text = "Multiple Links Detected",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
-            // Message
             Text(
                 text = "Found $urlCount links in the shared content. How would you like to proceed?",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Batch Import Button (Primary)
             Button(
                 onClick = onBatchImport,
                 modifier = Modifier.fillMaxWidth()
@@ -432,7 +425,6 @@ private fun BatchImportPromptBottomSheet(
                 Text("Batch Import ($urlCount links)")
             }
 
-            // Add First Link Only Button (Secondary)
             OutlinedButton(
                 onClick = onAddFirstLinkOnly,
                 modifier = Modifier.fillMaxWidth()
@@ -446,8 +438,7 @@ private fun BatchImportPromptBottomSheet(
                 Text("Add First Link Only")
             }
 
-            // Dismiss Text Button
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {

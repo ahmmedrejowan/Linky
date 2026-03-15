@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +43,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -71,7 +73,6 @@ import com.rejowan.linky.di.databaseModule
 import com.rejowan.linky.di.repositoryModule
 import com.rejowan.linky.di.useCaseModule
 import com.rejowan.linky.di.viewModelModule
-import com.rejowan.linky.presentation.components.CollapsingHomeHeader
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
@@ -83,13 +84,14 @@ import timber.log.Timber
 
 /**
  * Home Screen - Main entry point showing all saved links
- * Features: Collapsing header with search, filters, pull-to-refresh, link list
+ * Features: Header with search, filters, pull-to-refresh, link list
  *
  * @param onAddLinkClick Callback to navigate to add link screen (FAB in MainActivity), accepts optional URL
  * @param onLinkClick Callback when a link is clicked
  * @param onNavigateToCollections Callback to navigate to collections (not used, handled by bottom nav)
  * @param onNavigateToSettings Callback to navigate to settings (not used, handled by bottom nav)
  * @param onSearchClick Callback to navigate to search screen
+ * @param onSelectionModeChange Callback when selection mode changes (to hide/show bottom nav)
  * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param modifier Modifier for styling
  * @param viewModel HomeViewModel injected via Koin
@@ -104,6 +106,7 @@ fun HomeScreen(
     onNavigateToCollections: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onSearchClick: () -> Unit = {},
+    onSelectionModeChange: (Boolean) -> Unit = {},
     onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel()
@@ -247,15 +250,15 @@ fun HomeScreen(
         }
     }
 
-    // Scroll state for collapsing header
-    val scrollProgress = remember { mutableStateOf(0f) }
+    // Report selection mode changes to parent
+    LaunchedEffect(state.isSelectionMode) {
+        onSelectionModeChange(state.isSelectionMode)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Collapsing Header with Search
-        CollapsingHomeHeader(
-            scrollProgress = scrollProgress.value,
-            onSearchClick = onSearchClick,
-            onAccountClick = { /* TODO: Account screen */ }
+        // Header with Search Bar
+        HomeHeader(
+            onSearchClick = onSearchClick
         )
 
         // Content Area with Pull-to-Refresh
@@ -283,7 +286,6 @@ fun HomeScreen(
                 onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
                 onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
                 onAdvancedFilterClick = { viewModel.onEvent(HomeEvent.OnShowAdvancedFilterSheet) },
-                onScrollProgressChanged = { progress -> scrollProgress.value = progress },
                 // Bulk selection callbacks
                 onLongPress = { linkId ->
                     viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
@@ -427,7 +429,6 @@ private fun HomeContent(
     onFilterTypeChange: (FilterType) -> Unit,
     onSortTypeChange: (SortType) -> Unit,
     onAdvancedFilterClick: () -> Unit,
-    onScrollProgressChanged: (Float) -> Unit = {},
     // Bulk selection callbacks
     onLongPress: (String) -> Unit,
     onToggleSelection: (String) -> Unit,
@@ -442,18 +443,6 @@ private fun HomeContent(
     onBulkMove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Scroll state for tracking scroll progress
-    val listState = rememberLazyListState()
-
-    // Calculate scroll progress (0 = top, 1 = scrolled)
-    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
-        val progress = if (listState.firstVisibleItemIndex > 0) {
-            1f
-        } else {
-            (listState.firstVisibleItemScrollOffset / 200f).coerceIn(0f, 1f)
-        }
-        onScrollProgressChanged(progress)
-    }
     Column(modifier = modifier.fillMaxSize()) {
         // Bulk Actions Bar - shown when in selection mode
         if (state.isSelectionMode) {
@@ -508,7 +497,6 @@ private fun HomeContent(
             // Links list with count/sort header
             else -> {
                 LazyColumn(
-                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -904,5 +892,58 @@ private fun checkClipboardForUrl(context: Context, viewModel: HomeViewModel) {
         }
     } catch (e: Exception) {
         Timber.tag("HomeScreen").e(e, "Error checking clipboard")
+    }
+}
+
+/**
+ * Home Header with greeting and search bar
+ */
+@Composable
+private fun HomeHeader(
+    onSearchClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Greeting
+        Text(
+            text = "Linky",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Search Bar
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSearchClick),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(28.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Search links...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
     }
 }
