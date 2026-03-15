@@ -1,9 +1,11 @@
 package com.rejowan.linky.presentation.navigation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -11,23 +13,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,12 +34,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.rejowan.linky.presentation.components.BottomNavigationBar
+import com.rejowan.linky.presentation.components.AnimatedBottomNav
+import com.rejowan.linky.presentation.components.NavItem
 import timber.log.Timber
 
 /**
@@ -157,6 +155,13 @@ fun MainScreen(
         }
     }
 
+    // Map Route to NavItem for AnimatedBottomNav
+    val selectedNavItem = when (currentRoute) {
+        is Route.Collections -> NavItem.COLLECTIONS
+        is Route.Settings -> NavItem.SETTINGS
+        else -> NavItem.HOME
+    }
+
     // Determine FAB icon and content description based on current route
     val fabIcon = when (currentRoute) {
         is Route.Collections -> Icons.Default.CreateNewFolder
@@ -167,51 +172,47 @@ fun MainScreen(
         else -> "Add link"
     }
 
-    // Determine TopAppBar title based on current route
-    val topBarTitle = when (currentRoute) {
-        is Route.Home -> "Linky"
-        is Route.Collections -> "Collections"
-        is Route.Search -> "Search"
-        is Route.Settings -> "Settings"
-        null -> "Linky" // Default on app launch
-        else -> ""
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = topBarTitle,
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = 22.sp
-                        )
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Phase 2 - Account screen */ }) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Account",
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+    // Main content with custom layout (no Scaffold TopAppBar)
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Content area
+        Column(modifier = Modifier.fillMaxSize()) {
+            // BottomNavHost contains the nested navigation for Home/Collections/Settings
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                BottomNavHost(
+                    navController = bottomNavController,
+                    parentNavController = parentNavController,
+                    snackbarHostState = snackbarHostState,
+                    lastShareIntentHandledTime = lastShareIntentHandledTime,
+                    onCreateCollectionClick = { callback ->
+                        onCreateCollectionClick = callback
+                    },
+                    onSearchClick = {
+                        parentNavController.navigate(Route.Search)
+                    },
+                    onExitRequest = { showExitDialog = true }
                 )
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(snackbarHostState)
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                items = BottomNavItem.entries,
-                currentRoute = currentRoute,
-                onItemClick = { item ->
-                    bottomNavController.navigate(item.route) {
+
+                // Snackbar host
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+
+            // Animated Bottom Navigation Bar
+            AnimatedBottomNav(
+                selectedItem = selectedNavItem,
+                onItemSelected = { item ->
+                    val route = when (item) {
+                        NavItem.HOME -> Route.Home
+                        NavItem.COLLECTIONS -> Route.Collections
+                        NavItem.SETTINGS -> Route.Settings
+                    }
+                    bottomNavController.navigate(route) {
                         // Pop up to start destination to avoid building up a large stack
                         popUpTo(Route.Home) {
                             saveState = true
@@ -221,49 +222,38 @@ fun MainScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            // Only show FAB on Home and Collections screens, not on Settings or Search
-            if (currentRoute != Route.Settings && currentRoute != Route.Search) {
-                FloatingActionButton(
-                    onClick = {
-                        when (currentRoute) {
-                            is Route.Home -> {
-                                // Navigate to AddEditLink using parent controller
-                                parentNavController.navigate(Route.AddEditLink())
-                            }
-                            is Route.Collections -> {
-                                // Trigger create collection dialog in CollectionsScreen
-                                onCreateCollectionClick?.invoke()
-                            }
-                            else -> {
-                                // Default to Add Link (for null state on launch)
-                                parentNavController.navigate(Route.AddEditLink())
-                            }
+        }
+
+        // Floating Action Button - positioned above bottom nav
+        if (currentRoute != Route.Settings && currentRoute != Route.Search) {
+            FloatingActionButton(
+                onClick = {
+                    when (currentRoute) {
+                        is Route.Home -> {
+                            // Navigate to AddEditLink using parent controller
+                            parentNavController.navigate(Route.AddEditLink())
+                        }
+                        is Route.Collections -> {
+                            // Trigger create collection dialog in CollectionsScreen
+                            onCreateCollectionClick?.invoke()
+                        }
+                        else -> {
+                            // Default to Add Link (for null state on launch)
+                            parentNavController.navigate(Route.AddEditLink())
                         }
                     }
-                ) {
-                    Icon(
-                        imageVector = fabIcon,
-                        contentDescription = fabContentDescription,
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 88.dp)
+            ) {
+                Icon(
+                    imageVector = fabIcon,
+                    contentDescription = fabContentDescription,
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
             }
         }
-    ) { paddingValues ->
-        // BottomNavHost contains the nested navigation for Home/Collections/Settings
-        BottomNavHost(
-            navController = bottomNavController,
-            parentNavController = parentNavController,
-            snackbarHostState = snackbarHostState,
-            lastShareIntentHandledTime = lastShareIntentHandledTime,
-            onCreateCollectionClick = { callback ->
-                onCreateCollectionClick = callback
-            },
-            onExitRequest = { showExitDialog = true },
-            modifier = Modifier.padding(paddingValues)
-        )
     }
 
     // Exit Confirmation Bottom Sheet

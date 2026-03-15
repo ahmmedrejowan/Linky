@@ -20,6 +20,7 @@ import com.rejowan.linky.presentation.feature.settings.SettingsScreen
  * @param snackbarHostState Shared SnackbarHostState
  * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param onCreateCollectionClick Callback to set the create collection action for FAB
+ * @param onSearchClick Callback to navigate to search screen
  */
 @Composable
 fun BottomNavHost(
@@ -28,6 +29,7 @@ fun BottomNavHost(
     snackbarHostState: SnackbarHostState,
     lastShareIntentHandledTime: Long = 0L,
     onCreateCollectionClick: (() -> Unit) -> Unit,
+    onSearchClick: () -> Unit = {},
     onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -57,6 +59,7 @@ fun BottomNavHost(
                     // Navigate within bottom nav using local controller
                     navController.navigate(Route.Settings)
                 },
+                onSearchClick = onSearchClick,
                 onExitRequest = onExitRequest
             )
         }

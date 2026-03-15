@@ -3,17 +3,16 @@ package com.rejowan.linky.presentation.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Bottom navigation items with Material Icons
  * Each item has a route, selected/unselected icons, and label
+ * Search is now in the top bar, not bottom nav
  */
 enum class BottomNavItem(
     val route: Route,
@@ -39,16 +38,6 @@ enum class BottomNavItem(
         selectedIcon = Icons.Filled.Folder,
         unselectedIcon = Icons.Outlined.Folder,
         label = "Collections"
-    ),
-
-    /**
-     * Search tab - Dedicated search across all links
-     */
-    SEARCH(
-        route = Route.Search,
-        selectedIcon = Icons.Filled.Search,
-        unselectedIcon = Icons.Outlined.Search,
-        label = "Search"
     ),
 
     /**

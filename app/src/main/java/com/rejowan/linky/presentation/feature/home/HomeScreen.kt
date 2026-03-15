@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -70,6 +71,7 @@ import com.rejowan.linky.di.databaseModule
 import com.rejowan.linky.di.repositoryModule
 import com.rejowan.linky.di.useCaseModule
 import com.rejowan.linky.di.viewModelModule
+import com.rejowan.linky.presentation.components.CollapsingHomeHeader
 import com.rejowan.linky.presentation.components.EmptyStates
 import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
@@ -81,12 +83,13 @@ import timber.log.Timber
 
 /**
  * Home Screen - Main entry point showing all saved links
- * Features: Search, filters, pull-to-refresh, link list
+ * Features: Collapsing header with search, filters, pull-to-refresh, link list
  *
  * @param onAddLinkClick Callback to navigate to add link screen (FAB in MainActivity), accepts optional URL
  * @param onLinkClick Callback when a link is clicked
  * @param onNavigateToCollections Callback to navigate to collections (not used, handled by bottom nav)
  * @param onNavigateToSettings Callback to navigate to settings (not used, handled by bottom nav)
+ * @param onSearchClick Callback to navigate to search screen
  * @param lastShareIntentHandledTime Timestamp of when share intent was last handled (0 = never)
  * @param modifier Modifier for styling
  * @param viewModel HomeViewModel injected via Koin
@@ -100,6 +103,7 @@ fun HomeScreen(
     onLinkClick: (String) -> Unit,
     onNavigateToCollections: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onSearchClick: () -> Unit = {},
     onExitRequest: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel()
@@ -243,47 +247,62 @@ fun HomeScreen(
         }
     }
 
-    // Content Area with Pull-to-Refresh
-    PullToRefreshBox(
-        isRefreshing = state.isLoading && state.links.isNotEmpty(),
-        onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
-        modifier = Modifier.fillMaxSize()
-    ) {
-        HomeContent(
-            state = state,
-            onLinkClick = onLinkClick,
-            onFavoriteClick = { linkId, isFavorite ->
-                viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
-            },
-            onArchiveClick = { linkId, isArchiving ->
-                viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
-            },
-            onTrashClick = { linkId ->
-                viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
-            },
-            onAddLinkClick = { onAddLinkClick(null) },
-            onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
-            onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
-            onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
-            onAdvancedFilterClick = { viewModel.onEvent(HomeEvent.OnShowAdvancedFilterSheet) },
-            // Bulk selection callbacks
-            onLongPress = { linkId ->
-                viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
-                viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
-            },
-            onToggleSelection = { linkId ->
-                viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
-            },
-            onExitSelectionMode = { viewModel.onEvent(HomeEvent.OnExitSelectionMode) },
-            onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
-            onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
-            onBulkDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
-            onBulkArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
-            onBulkUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
-            onBulkFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
-            onBulkUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
-            onBulkMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) }
+    // Scroll state for collapsing header
+    val scrollProgress = remember { mutableStateOf(0f) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Collapsing Header with Search
+        CollapsingHomeHeader(
+            scrollProgress = scrollProgress.value,
+            onSearchClick = onSearchClick,
+            onAccountClick = { /* TODO: Account screen */ }
         )
+
+        // Content Area with Pull-to-Refresh
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.links.isNotEmpty(),
+            onRefresh = { viewModel.onEvent(HomeEvent.OnRefresh) },
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            HomeContent(
+                state = state,
+                onLinkClick = onLinkClick,
+                onFavoriteClick = { linkId, isFavorite ->
+                    viewModel.onEvent(HomeEvent.OnToggleFavorite(linkId, isFavorite))
+                },
+                onArchiveClick = { linkId, isArchiving ->
+                    viewModel.onEvent(HomeEvent.OnArchiveLink(linkId, isArchiving))
+                },
+                onTrashClick = { linkId ->
+                    viewModel.onEvent(HomeEvent.OnDeleteLink(linkId))
+                },
+                onAddLinkClick = { onAddLinkClick(null) },
+                onRetry = { viewModel.onEvent(HomeEvent.OnRefresh) },
+                onFilterTypeChange = { viewModel.onEvent(HomeEvent.OnFilterTypeChange(it)) },
+                onSortTypeChange = { viewModel.onEvent(HomeEvent.OnSortTypeChange(it)) },
+                onAdvancedFilterClick = { viewModel.onEvent(HomeEvent.OnShowAdvancedFilterSheet) },
+                onScrollProgressChanged = { progress -> scrollProgress.value = progress },
+                // Bulk selection callbacks
+                onLongPress = { linkId ->
+                    viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
+                    viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+                },
+                onToggleSelection = { linkId ->
+                    viewModel.onEvent(HomeEvent.OnToggleLinkSelection(linkId))
+                },
+                onExitSelectionMode = { viewModel.onEvent(HomeEvent.OnExitSelectionMode) },
+                onSelectAll = { viewModel.onEvent(HomeEvent.OnSelectAll) },
+                onDeselectAll = { viewModel.onEvent(HomeEvent.OnDeselectAll) },
+                onBulkDelete = { viewModel.onEvent(HomeEvent.OnBulkDelete) },
+                onBulkArchive = { viewModel.onEvent(HomeEvent.OnBulkArchive) },
+                onBulkUnarchive = { viewModel.onEvent(HomeEvent.OnBulkUnarchive) },
+                onBulkFavorite = { viewModel.onEvent(HomeEvent.OnBulkFavorite) },
+                onBulkUnfavorite = { viewModel.onEvent(HomeEvent.OnBulkUnfavorite) },
+                onBulkMove = { viewModel.onEvent(HomeEvent.OnShowBulkMoveSheet) }
+            )
+        }
     }
 
     // Clipboard URL Bottom Sheet
@@ -408,6 +427,7 @@ private fun HomeContent(
     onFilterTypeChange: (FilterType) -> Unit,
     onSortTypeChange: (SortType) -> Unit,
     onAdvancedFilterClick: () -> Unit,
+    onScrollProgressChanged: (Float) -> Unit = {},
     // Bulk selection callbacks
     onLongPress: (String) -> Unit,
     onToggleSelection: (String) -> Unit,
@@ -422,6 +442,18 @@ private fun HomeContent(
     onBulkMove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Scroll state for tracking scroll progress
+    val listState = rememberLazyListState()
+
+    // Calculate scroll progress (0 = top, 1 = scrolled)
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+        val progress = if (listState.firstVisibleItemIndex > 0) {
+            1f
+        } else {
+            (listState.firstVisibleItemScrollOffset / 200f).coerceIn(0f, 1f)
+        }
+        onScrollProgressChanged(progress)
+    }
     Column(modifier = modifier.fillMaxSize()) {
         // Bulk Actions Bar - shown when in selection mode
         if (state.isSelectionMode) {
@@ -476,6 +508,7 @@ private fun HomeContent(
             // Links list with count/sort header
             else -> {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
