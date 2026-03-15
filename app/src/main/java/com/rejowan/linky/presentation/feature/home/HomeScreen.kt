@@ -115,6 +115,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.material3.HorizontalDivider
+import com.rejowan.linky.ui.theme.SoftAccents
 
 /**
  * Home Screen - Main entry point showing all saved links
@@ -472,9 +473,6 @@ private fun HomeScreenPreview() {
 /**
  * Sort Options Bottom Sheet
  */
-// Accent colors for sort categories
-private val SortAccentPurple = Color(0xFF9575CD)
-private val SortAccentBlue = Color(0xFF64B5F6)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -508,7 +506,7 @@ private fun SortOptionsSheet(
                 title = "Alphabetical",
                 description = "Sort by link title",
                 icon = Icons.Outlined.SortByAlpha,
-                accentColor = SortAccentPurple,
+                accentColor = SoftAccents.Purple,
                 options = listOf(SortType.NAME_ASC, SortType.NAME_DESC),
                 currentSort = currentSort,
                 onSortSelected = {
@@ -524,7 +522,7 @@ private fun SortOptionsSheet(
                 title = "Date Added",
                 description = "Sort by creation time",
                 icon = Icons.Outlined.AccessTime,
-                accentColor = SortAccentBlue,
+                accentColor = SoftAccents.Blue,
                 options = listOf(SortType.DATE_DESC, SortType.DATE_ASC),
                 currentSort = currentSort,
                 onSortSelected = {
@@ -1611,7 +1609,7 @@ private fun LinkInfoBottomSheet(
                 LinkInfoActionButton(
                     icon = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     label = if (link.isFavorite) "Unfavorite" else "Favorite",
-                    tint = if (link.isFavorite) Color(0xFFE91E63) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = {
                         onFavoriteClick()
                     }

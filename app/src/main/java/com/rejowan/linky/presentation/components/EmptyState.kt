@@ -37,13 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-
-// Soft accent colors for different states
-private val SoftBlue = Color(0xFF64B5F6)
-private val SoftPurple = Color(0xFF9575CD)
-private val SoftPink = Color(0xFFF06292)
-private val SoftTeal = Color(0xFF4DB6AC)
-private val SoftAmber = Color(0xFFFFB74D)
+import com.rejowan.linky.ui.theme.SoftAccents
 
 /**
  * EmptyState component - Displays when there's no data to show
@@ -62,11 +56,14 @@ fun EmptyState(
     icon: ImageVector,
     title: String,
     message: String,
-    accentColor: Color = SoftPurple,
+    accentColor: Color? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    // Use theme-aware accent color, default to purple
+    val resolvedAccentColor = accentColor ?: SoftAccents.Purple
+
     // Subtle floating animation for the icon
     val infiniteTransition = rememberInfiniteTransition(label = "empty state float")
     val floatOffset by infiniteTransition.animateFloat(
@@ -94,7 +91,7 @@ fun EmptyState(
                 .offset(y = (-floatOffset).dp)
                 .size(100.dp)
                 .background(
-                    color = accentColor.copy(alpha = 0.12f),
+                    color = resolvedAccentColor.copy(alpha = 0.12f),
                     shape = RoundedCornerShape(28.dp)
                 )
         ) {
@@ -102,7 +99,7 @@ fun EmptyState(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
-                tint = accentColor
+                tint = resolvedAccentColor
             )
         }
 
@@ -133,7 +130,7 @@ fun EmptyState(
                 onClick = onAction,
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor
+                    containerColor = resolvedAccentColor
                 ),
                 contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp)
             ) {
@@ -159,7 +156,7 @@ object EmptyStates {
             icon = Icons.Outlined.BookmarkBorder,
             title = "No Links Yet",
             message = "Start building your link collection by saving your first link",
-            accentColor = SoftBlue,
+            accentColor = SoftAccents.Blue,
             actionLabel = "Add Link",
             onAction = onAddLinkClick,
             modifier = modifier
@@ -174,7 +171,7 @@ object EmptyStates {
             icon = Icons.Outlined.FavoriteBorder,
             title = "No Favorites",
             message = "Tap the heart icon on any link to add it to your favorites",
-            accentColor = SoftPink,
+            accentColor = SoftAccents.Pink,
             modifier = modifier
         )
     }
@@ -188,7 +185,7 @@ object EmptyStates {
             icon = Icons.Outlined.FolderOff,
             title = "No Collections Yet",
             message = "Create collections to organize your links",
-            accentColor = SoftPurple,
+            accentColor = SoftAccents.Purple,
             actionLabel = "Create Collection",
             onAction = onCreateCollectionClick,
             modifier = modifier
@@ -204,7 +201,7 @@ object EmptyStates {
             icon = Icons.Outlined.FolderOpen,
             title = "Collection is Empty",
             message = "Add links to this collection to keep them organized",
-            accentColor = SoftTeal,
+            accentColor = SoftAccents.Teal,
             actionLabel = "Add Link",
             onAction = onAddLinkClick,
             modifier = modifier
@@ -220,7 +217,7 @@ object EmptyStates {
             icon = Icons.Outlined.SearchOff,
             title = "No Results",
             message = "No links found matching \"$searchQuery\"",
-            accentColor = SoftAmber,
+            accentColor = SoftAccents.Amber,
             modifier = modifier
         )
     }
@@ -233,7 +230,7 @@ object EmptyStates {
             icon = Icons.Outlined.BookmarkBorder,
             title = "Trash is Empty",
             message = "Deleted links will appear here for 30 days before permanent deletion",
-            accentColor = SoftPurple,
+            accentColor = SoftAccents.Purple,
             modifier = modifier
         )
     }

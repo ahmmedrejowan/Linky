@@ -35,12 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-// Accent colors for action buttons
-private val SelectionBlue = Color(0xFF2196F3)
-private val AccentRed = Color(0xFFEF5350)
-private val AccentPurple = Color(0xFF9575CD)
-private val AccentOrange = Color(0xFFFF9800)
+import com.rejowan.linky.ui.theme.SoftAccents
 
 /**
  * Bulk actions bar shown when in selection mode
@@ -92,12 +87,13 @@ fun BulkActionsBar(
                 }
 
                 // Selection count
+                val selectionColor = MaterialTheme.colorScheme.primary
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "$selectedCount selected",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = SelectionBlue
+                        color = selectionColor
                     )
                     if (totalCount > 0) {
                         Text(
@@ -115,7 +111,7 @@ fun BulkActionsBar(
                         .clip(RoundedCornerShape(6.dp))
                         .clickable(onClick = if (allSelected) onDeselectAll else onSelectAll),
                     color = if (allSelected) {
-                        SelectionBlue.copy(alpha = 0.15f)
+                        selectionColor.copy(alpha = 0.15f)
                     } else {
                         MaterialTheme.colorScheme.surfaceContainerHigh
                     },
@@ -129,7 +125,7 @@ fun BulkActionsBar(
                             Icons.Default.SelectAll,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = if (allSelected) SelectionBlue
+                            tint = if (allSelected) selectionColor
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -137,7 +133,7 @@ fun BulkActionsBar(
                             text = if (allSelected) "Deselect" else "All",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
-                            color = if (allSelected) SelectionBlue
+                            color = if (allSelected) selectionColor
                             else MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -155,7 +151,7 @@ fun BulkActionsBar(
                 ActionButton(
                     icon = Icons.Default.Delete,
                     label = "Delete",
-                    color = AccentRed,
+                    color = MaterialTheme.colorScheme.error,
                     enabled = selectedCount > 0,
                     onClick = onDelete,
                     modifier = Modifier.weight(1f)
@@ -166,7 +162,7 @@ fun BulkActionsBar(
                     ActionButton(
                         icon = Icons.Default.FavoriteBorder,
                         label = "Unfavorite",
-                        color = AccentPurple,
+                        color = SoftAccents.Pink,
                         enabled = selectedCount > 0,
                         onClick = onUnfavorite,
                         modifier = Modifier.weight(1f)
@@ -175,7 +171,7 @@ fun BulkActionsBar(
                     ActionButton(
                         icon = Icons.Default.Favorite,
                         label = "Favorite",
-                        color = AccentPurple,
+                        color = SoftAccents.Pink,
                         enabled = selectedCount > 0,
                         onClick = onFavorite,
                         modifier = Modifier.weight(1f)
@@ -186,7 +182,7 @@ fun BulkActionsBar(
                 ActionButton(
                     icon = Icons.AutoMirrored.Filled.DriveFileMove,
                     label = "Move",
-                    color = AccentOrange,
+                    color = SoftAccents.Amber,
                     enabled = selectedCount > 0,
                     onClick = onMove,
                     modifier = Modifier.weight(1f)

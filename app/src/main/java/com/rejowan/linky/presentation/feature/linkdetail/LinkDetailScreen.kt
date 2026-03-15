@@ -100,12 +100,7 @@ import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Soft accent colors
-private val SoftBlue = Color(0xFF64B5F6)
-private val SoftPink = Color(0xFFF06292)
-private val SoftTeal = Color(0xFF4DB6AC)
-private val SoftPurple = Color(0xFF9575CD)
+import com.rejowan.linky.ui.theme.SoftAccents
 
 /**
  * Link Detail Screen - Modern redesigned version
@@ -256,11 +251,11 @@ fun LinkDetailScreen(
     if (showRestoreDialog) {
         ConfirmationBottomSheet(
             icon = Icons.Filled.RestoreFromTrash,
-            iconColor = SoftTeal,
+            iconColor = SoftAccents.Teal,
             title = "Restore Link?",
             message = "This link will be restored from trash and moved back to your links.",
             confirmText = "Restore",
-            confirmColor = SoftTeal,
+            confirmColor = SoftAccents.Teal,
             onConfirm = {
                 viewModel.onEvent(LinkDetailEvent.OnRestoreLink())
                 showRestoreDialog = false
@@ -400,7 +395,7 @@ private fun LinkDetailContent(
                     icon = Icons.Outlined.Description,
                     title = "Description",
                     content = link.description,
-                    accentColor = SoftBlue
+                    accentColor = SoftAccents.Blue
                 )
             }
 
@@ -410,7 +405,7 @@ private fun LinkDetailContent(
                     icon = Icons.Outlined.Note,
                     title = "Note",
                     content = link.note,
-                    accentColor = SoftTeal
+                    accentColor = SoftAccents.Teal
                 )
             }
 
@@ -478,8 +473,8 @@ private fun HeroSection(
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                SoftPurple.copy(alpha = 0.3f),
-                                SoftBlue.copy(alpha = 0.3f)
+                                SoftAccents.Purple.copy(alpha = 0.3f),
+                                SoftAccents.Blue.copy(alpha = 0.3f)
                             )
                         )
                     ),
@@ -607,7 +602,7 @@ private fun FavoriteButton(
             .size(40.dp)
             .scale(scale)
             .background(
-                color = if (isFavorite) SoftPink.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.3f),
+                color = if (isFavorite) SoftAccents.Pink.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.3f),
                 shape = CircleShape
             )
     ) {
@@ -634,19 +629,19 @@ private fun QuickActionsRow(
         QuickActionButton(
             icon = Icons.Filled.OpenInBrowser,
             label = "Open",
-            color = SoftBlue,
+            color = SoftAccents.Blue,
             onClick = onOpenInBrowser
         )
         QuickActionButton(
             icon = Icons.Filled.Share,
             label = "Share",
-            color = SoftTeal,
+            color = SoftAccents.Teal,
             onClick = onShare
         )
         QuickActionButton(
             icon = Icons.Filled.ContentCopy,
             label = "Copy",
-            color = SoftPurple,
+            color = SoftAccents.Purple,
             onClick = onCopy
         )
         QuickActionButton(
@@ -1011,7 +1006,7 @@ private fun SnapshotsSection(
                 Surface(
                     onClick = onCreateSnapshot,
                     enabled = !isCapturing,
-                    color = SoftPurple,
+                    color = SoftAccents.Purple,
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Row(
@@ -1118,7 +1113,7 @@ private fun SnapshotCard(
                         Text(
                             text = "${snapshot.estimatedReadTime} min read",
                             style = MaterialTheme.typography.labelSmall,
-                            color = SoftPurple,
+                            color = SoftAccents.Purple,
                             fontWeight = FontWeight.Medium
                         )
                         Text(

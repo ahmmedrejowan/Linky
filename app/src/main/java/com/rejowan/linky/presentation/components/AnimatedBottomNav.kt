@@ -9,7 +9,6 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +61,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.rejowan.linky.ui.theme.LocalIsDarkTheme
 
 enum class NavItem(
     val label: String,
@@ -82,11 +82,12 @@ fun AnimatedBottomNav(
     val circleRadius = 20.dp
     val items = NavItem.entries
 
-    val isDarkMode = isSystemInDarkTheme()
+    // Use app theme, not system theme
+    val isDarkMode = LocalIsDarkTheme.current
 
     val selectedTextColor = if (isDarkMode) Color.White else Color.Black
     val selectedIconColor = Color.White
-    val unselectedColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF606060)
+    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     var currentSelected by rememberSaveable { mutableIntStateOf(selectedIndex) }
 

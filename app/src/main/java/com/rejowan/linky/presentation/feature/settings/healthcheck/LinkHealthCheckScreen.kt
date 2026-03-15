@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.rejowan.linky.ui.theme.SoftAccents
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -212,7 +213,7 @@ private fun HealthCheckHeader(
                     StatItem(
                         count = state.slowCount,
                         label = "Slow",
-                        color = Color(0xFFFFA000)
+                        color = SoftAccents.Amber
                     )
                     StatItem(
                         count = state.brokenCount,
@@ -554,10 +555,10 @@ private fun getStatusIcon(status: LinkHealthStatus): ImageVector {
 private fun getStatusColor(status: LinkHealthStatus): Color {
     return when (status) {
         LinkHealthStatus.HEALTHY -> MaterialTheme.colorScheme.primary
-        LinkHealthStatus.SLOW -> Color(0xFFFFA000)
+        LinkHealthStatus.SLOW -> SoftAccents.Amber
         LinkHealthStatus.BROKEN -> MaterialTheme.colorScheme.error
         LinkHealthStatus.UNREACHABLE -> MaterialTheme.colorScheme.error
-        LinkHealthStatus.SSL_ERROR -> Color(0xFFFF5722)
+        LinkHealthStatus.SSL_ERROR -> MaterialTheme.colorScheme.error
         LinkHealthStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }

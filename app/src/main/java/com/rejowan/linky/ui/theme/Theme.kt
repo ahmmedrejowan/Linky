@@ -20,10 +20,33 @@ import androidx.core.view.WindowCompat
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import org.koin.compose.koinInject
 
+import androidx.compose.ui.graphics.Color
+
 /**
  * CompositionLocal to access the current dark mode state throughout the app.
  */
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
+
+/**
+ * Theme-aware soft accent colors.
+ * Use these instead of hardcoded colors for proper light/dark mode support.
+ */
+object SoftAccents {
+    val Blue: Color
+        @Composable get() = if (LocalIsDarkTheme.current) SoftAccentsDark.Blue else SoftAccentsLight.Blue
+
+    val Purple: Color
+        @Composable get() = if (LocalIsDarkTheme.current) SoftAccentsDark.Purple else SoftAccentsLight.Purple
+
+    val Pink: Color
+        @Composable get() = if (LocalIsDarkTheme.current) SoftAccentsDark.Pink else SoftAccentsLight.Pink
+
+    val Teal: Color
+        @Composable get() = if (LocalIsDarkTheme.current) SoftAccentsDark.Teal else SoftAccentsLight.Teal
+
+    val Amber: Color
+        @Composable get() = if (LocalIsDarkTheme.current) SoftAccentsDark.Amber else SoftAccentsLight.Amber
+}
 
 /**
  * Available theme modes for the app.

@@ -128,3 +128,23 @@ object OnboardingColors {
     val Page2 = Color(0xFF9575CD)  // Purple
     val Page3 = Color(0xFFEC407A)  // Pink
 }
+
+// ============================================================================
+// SOFT ACCENT COLORS - Theme Aware
+// ============================================================================
+
+object SoftAccentsDark {
+    val Blue = Color(0xFF64B5F6)
+    val Purple = Color(0xFF9575CD)
+    val Pink = Color(0xFFF06292)
+    val Teal = Color(0xFF4DB6AC)
+    val Amber = Color(0xFFFFB74D)
+}
+
+object SoftAccentsLight {
+    val Blue = Color(0xFF1976D2)
+    val Purple = Color(0xFF7E57C2)
+    val Pink = Color(0xFFD81B60)
+    val Teal = Color(0xFF00897B)
+    val Amber = Color(0xFFF57C00)
+}
