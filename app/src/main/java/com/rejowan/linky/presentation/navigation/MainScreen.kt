@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -208,14 +209,14 @@ fun MainScreen(
                     }
                 }
             },
-            // Content bleeds behind the bottom bar for the cutout effect
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+            // Keep status bar inset, but content bleeds behind bottom bar for cutout effect
+            contentWindowInsets = WindowInsets.statusBars
         ) { paddingValues ->
-            // Only apply top padding - content goes behind bottom nav
+            // Apply top padding for status bar - content goes behind bottom nav
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding())
+                    .padding(paddingValues)
             ) {
                 BottomNavHost(
                     navController = bottomNavController,
