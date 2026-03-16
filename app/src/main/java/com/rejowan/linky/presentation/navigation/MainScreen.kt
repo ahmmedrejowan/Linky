@@ -92,7 +92,8 @@ fun MainScreen(
             val route = when (initialTab) {
                 0 -> Route.Home
                 1 -> Route.Collections
-                2 -> Route.Settings
+                2 -> Route.Tools
+                3 -> Route.Settings
                 else -> null
             }
             if (route != null) {
@@ -184,7 +185,8 @@ fun MainScreen(
     val currentRoute: Route? = when (selectedNavIndex) {
         0 -> Route.Home
         1 -> Route.Collections
-        2 -> Route.Settings
+        2 -> Route.Tools
+        3 -> Route.Settings
         else -> null
     }
 
@@ -236,8 +238,8 @@ fun MainScreen(
             }
         }
 
-        // FAB placed outside Scaffold, above bottom nav
-        if (currentRoute != Route.Settings && !isSelectionMode) {
+        // FAB placed outside Scaffold, above bottom nav (hidden on Tools and Settings)
+        if (currentRoute != Route.Settings && currentRoute != Route.Tools && !isSelectionMode) {
             FloatingActionButton(
                 onClick = {
                     when (currentRoute) {
@@ -274,7 +276,8 @@ fun MainScreen(
                 val route = when (index) {
                     0 -> Route.Home
                     1 -> Route.Collections
-                    2 -> Route.Settings
+                    2 -> Route.Tools
+                    3 -> Route.Settings
                     else -> return@AnimatedBottomNav
                 }
                 bottomNavController.navigate(route) {

@@ -16,10 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -40,8 +37,8 @@ import androidx.compose.ui.unit.dp
  * Settings Screen - Main hub for all settings categories
  *
  * Features:
- * - Categorized settings navigation with 5 sections
- * - Tools, Preferences, Data, Security, and Information
+ * - Categorized settings navigation with 4 sections
+ * - Preferences, Data, Security, and Information
  * - Clean Material 3 design
  *
  * @param onNavigateToAppFeatures Navigate to App Features screen
@@ -49,9 +46,6 @@ import androidx.compose.ui.unit.dp
  * @param onNavigateToAppearance Navigate to Appearance screen
  * @param onNavigateToPrivacySecurity Navigate to Privacy & Security screen
  * @param onNavigateToAbout Navigate to About screen
- * @param onNavigateToBatchImport Navigate to Batch Import screen
- * @param onNavigateToTagManagement Navigate to Tag Management screen
- * @param onNavigateToVault Navigate to Vault screen
  * @param modifier Modifier for styling
  */
 @Composable
@@ -61,27 +55,9 @@ fun SettingsScreen(
     onNavigateToAppearance: () -> Unit,
     onNavigateToPrivacySecurity: () -> Unit,
     onNavigateToAbout: () -> Unit,
-    onNavigateToBatchImport: () -> Unit,
-    onNavigateToVault: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 1. Tools Section
-    val toolsSection = listOf(
-        SettingsCategory(
-            icon = Icons.Filled.FileUpload,
-            title = "Batch Import",
-            description = "Import multiple links at once from text",
-            onClick = onNavigateToBatchImport
-        ),
-        SettingsCategory(
-            icon = Icons.Filled.Folder,
-            title = "Link Vaults",
-            description = "Secure storage for private links",
-            onClick = onNavigateToVault
-        )
-    )
-
-    // 2. Preferences Section
+    // Preferences Section
     val preferencesSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Settings,
@@ -97,17 +73,17 @@ fun SettingsScreen(
         )
     )
 
-    // 3. Data Section
+    // Data Section
     val dataSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Storage,
             title = "Data & Storage",
-            description = "Storage usage, Trash, Export/Import",
+            description = "Storage usage, Export/Import",
             onClick = onNavigateToDataStorage
         )
     )
 
-    // 4. Security Section
+    // Security Section
     val securitySection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Lock,
@@ -117,7 +93,7 @@ fun SettingsScreen(
         )
     )
 
-    // 5. Information Section
+    // Information Section
     val informationSection = listOf(
         SettingsCategory(
             icon = Icons.Filled.Info,
@@ -135,18 +111,7 @@ fun SettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 1. Tools Section
-            item {
-                SectionHeader(title = "Tools")
-            }
-            items(toolsSection) { category ->
-                SettingsCategoryCard(category = category)
-            }
-
-            // Spacer
-            item { Spacer(modifier = Modifier.height(4.dp)) }
-
-            // 2. Preferences Section
+            // Preferences Section
             item {
                 SectionHeader(title = "Preferences")
             }
@@ -157,7 +122,7 @@ fun SettingsScreen(
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // 3. Data Section
+            // Data Section
             item {
                 SectionHeader(title = "Data")
             }
@@ -168,7 +133,7 @@ fun SettingsScreen(
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // 4. Security Section
+            // Security Section
             item {
                 SectionHeader(title = "Security")
             }
@@ -179,7 +144,7 @@ fun SettingsScreen(
             // Spacer
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // 5. Information Section
+            // Information Section
             item {
                 SectionHeader(title = "Information")
             }

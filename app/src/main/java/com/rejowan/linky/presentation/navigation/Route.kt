@@ -67,6 +67,12 @@ sealed class Route {
     data object Collections : Route()
 
     /**
+     * Tools screen - Batch import, vault, trash, data management
+     */
+    @Serializable
+    data object Tools : Route()
+
+    /**
      * Collection detail screen
      * Shows all links within a specific collection
      * @param collectionId The ID of the collection to display

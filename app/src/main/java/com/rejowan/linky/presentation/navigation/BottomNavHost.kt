@@ -10,6 +10,7 @@ import com.rejowan.linky.presentation.feature.collections.CollectionsScreen
 import com.rejowan.linky.presentation.feature.home.HomeScreen
 import com.rejowan.linky.presentation.feature.search.SearchScreen
 import com.rejowan.linky.presentation.feature.settings.SettingsScreen
+import com.rejowan.linky.presentation.feature.tools.ToolsScreen
 
 /**
  * Bottom navigation graph - Nested NavHost for Home/Collections/Settings only
@@ -87,6 +88,30 @@ fun BottomNavHost(
             )
         }
 
+        // ============ TOOLS SCREEN ============
+        composable<Route.Tools> {
+            ToolsScreen(
+                onNavigateToBatchImport = {
+                    parentNavController.navigate(Route.BatchImport())
+                },
+                onNavigateToVault = {
+                    parentNavController.navigate(Route.VaultUnlock)
+                },
+                onNavigateToTrash = {
+                    parentNavController.navigate(Route.Trash)
+                },
+                onNavigateToDataStorage = {
+                    parentNavController.navigate(Route.DataStorage)
+                },
+                onNavigateToDuplicateDetection = {
+                    parentNavController.navigate(Route.DuplicateDetection)
+                },
+                onNavigateToLinkHealthCheck = {
+                    parentNavController.navigate(Route.LinkHealthCheck)
+                }
+            )
+        }
+
         // ============ SEARCH SCREEN ============
         composable<Route.Search> {
             SearchScreen(
@@ -102,32 +127,19 @@ fun BottomNavHost(
         composable<Route.Settings> {
             SettingsScreen(
                 onNavigateToAppFeatures = {
-                    // Navigate using parent controller to AppFeatures
                     parentNavController.navigate(Route.AppFeatures)
                 },
                 onNavigateToDataStorage = {
-                    // Navigate using parent controller to DataStorage
                     parentNavController.navigate(Route.DataStorage)
                 },
                 onNavigateToAppearance = {
-                    // Navigate using parent controller to Appearance
                     parentNavController.navigate(Route.Appearance)
                 },
                 onNavigateToPrivacySecurity = {
-                    // Navigate using parent controller to PrivacySecurity
                     parentNavController.navigate(Route.PrivacySecurity)
                 },
                 onNavigateToAbout = {
-                    // Navigate using parent controller to About
                     parentNavController.navigate(Route.About)
-                },
-                onNavigateToBatchImport = {
-                    // Navigate using parent controller to BatchImport
-                    parentNavController.navigate(Route.BatchImport())
-                },
-                onNavigateToVault = {
-                    // Navigate to vault - VaultUnlock will check if setup is needed
-                    parentNavController.navigate(Route.VaultUnlock)
                 }
             )
         }

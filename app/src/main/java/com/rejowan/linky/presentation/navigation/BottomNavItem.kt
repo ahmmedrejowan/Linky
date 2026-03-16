@@ -1,9 +1,11 @@
 package com.rejowan.linky.presentation.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
@@ -38,6 +40,16 @@ enum class BottomNavItem(
         selectedIcon = Icons.Filled.Folder,
         unselectedIcon = Icons.Outlined.Folder,
         label = "Collections"
+    ),
+
+    /**
+     * Tools tab - Batch import, vault, trash, data management tools
+     */
+    TOOLS(
+        route = Route.Tools,
+        selectedIcon = Icons.Filled.Build,
+        unselectedIcon = Icons.Outlined.Build,
+        label = "Tools"
     ),
 
     /**
