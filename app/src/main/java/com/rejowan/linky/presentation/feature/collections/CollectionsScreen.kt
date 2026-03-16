@@ -173,40 +173,40 @@ fun CollectionsScreen(
                 )
             }
 
-            // Empty state
-            state.collections.isEmpty() -> {
-                EmptyStates.NoCollections(
-                    onCreateCollectionClick = { viewModel.onEvent(CollectionsEvent.OnCreateCollection) }
-                )
-            }
-
-            // Collections list
+            // Empty state or Collections list - both show header
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Header with title and sort button
+                    // Header with title and sort button (always shown)
                     CollectionsHeader(
                         onSortClick = { showSortSheet = true }
                     )
 
-                    // View mode toggle row with count
-                    ViewModeRow(
-                        count = state.collections.size,
-                        isGridView = state.viewMode == ViewMode.GRID,
-                        onViewModeToggle = {
-                            val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
-                            viewModel.onEvent(CollectionsEvent.OnViewModeChange(newMode))
-                        }
-                    )
+                    if (state.collections.isEmpty()) {
+                        // Empty state
+                        EmptyStates.NoCollections(
+                            onCreateCollectionClick = { viewModel.onEvent(CollectionsEvent.OnCreateCollection) }
+                        )
+                    } else {
+                        // View mode toggle row with count
+                        ViewModeRow(
+                            count = state.collections.size,
+                            isGridView = state.viewMode == ViewMode.GRID,
+                            onViewModeToggle = {
+                                val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
+                                viewModel.onEvent(CollectionsEvent.OnViewModeChange(newMode))
+                            }
+                        )
 
-                    // Collections List/Grid
-                    CollectionsContent(
-                        collections = state.collections,
-                        viewMode = state.viewMode,
-                        onCollectionClick = onCollectionClick,
-                        onFavoriteClick = { collectionId ->
-                            viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(collectionId))
-                        }
-                    )
+                        // Collections List/Grid
+                        CollectionsContent(
+                            collections = state.collections,
+                            viewMode = state.viewMode,
+                            onCollectionClick = onCollectionClick,
+                            onFavoriteClick = { collectionId ->
+                                viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(collectionId))
+                            }
+                        )
+                    }
                 }
             }
         }
