@@ -1268,10 +1268,19 @@ private fun HomeHeader(
                     )
                 }
 
-                IconButton(onClick = onSortClick) {
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onSortClick),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Sort,
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
                         contentDescription = "Sort",
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
