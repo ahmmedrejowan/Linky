@@ -86,6 +86,9 @@ fun LinkyNavHost(
                 onLinkClick = { linkId ->
                     navController.navigate(Route.LinkDetail(linkId))
                 },
+                onCollectionClick = { collectionId ->
+                    navController.navigate(Route.CollectionDetail(collectionId))
+                },
                 snackbarHostState = snackbarHostState,
                 onBackClick = { navController.popBackStack() }
             )

@@ -5,6 +5,7 @@ import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
 import com.rejowan.linky.domain.usecase.collection.GetCollectionByIdUseCase
 import com.rejowan.linky.domain.usecase.collection.GetCollectionsWithLinkCountUseCase
 import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
+import com.rejowan.linky.domain.usecase.collection.SearchCollectionsUseCase
 import com.rejowan.linky.domain.usecase.collection.UpdateCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.BatchSaveLinksUseCase
 import com.rejowan.linky.domain.usecase.link.CheckUrlExistsUseCase
@@ -55,6 +56,7 @@ val useCaseModule = module {
     factory { SaveCollectionUseCase(get()) }
     factory { UpdateCollectionUseCase(get()) }
     factory { DeleteCollectionUseCase(get()) }
+    factory { SearchCollectionsUseCase(get()) }
 
     // Snapshot use cases
     factory { GetSnapshotsForLinkUseCase(get()) }

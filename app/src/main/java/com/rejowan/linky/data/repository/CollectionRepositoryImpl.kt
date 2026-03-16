@@ -88,4 +88,16 @@ class CollectionRepositoryImpl(
     override suspend fun countCollections(): Int {
         return collectionDao.countCollections()
     }
+
+    override fun searchCollections(query: String): Flow<List<CollectionWithLinkCount>> {
+        return collectionDao.searchCollections(query).map { collectionWithCountList ->
+            collectionWithCountList.map { collectionWithCount ->
+                CollectionWithLinkCount(
+                    collection = collectionWithCount.collection.toDomain(),
+                    linkCount = collectionWithCount.linkCount,
+                    linkPreviews = emptyList() // Skip previews for search results
+                )
+            }
+        }
+    }
 }

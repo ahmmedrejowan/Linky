@@ -118,6 +118,7 @@ val viewModelModule = module {
     viewModel {
         SearchViewModel(
             searchLinksUseCase = get(),
+            searchCollectionsUseCase = get(),
             toggleFavoriteUseCase = get()
         )
     }

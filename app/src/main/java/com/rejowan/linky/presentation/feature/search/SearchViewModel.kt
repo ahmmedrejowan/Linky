@@ -2,6 +2,7 @@ package com.rejowan.linky.presentation.feature.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.domain.usecase.collection.SearchCollectionsUseCase
 import com.rejowan.linky.domain.usecase.link.SearchLinksUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.util.ErrorHandler
@@ -16,16 +17,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
  * ViewModel for Search screen
- * Handles search functionality across all links with auto-search and debounce
+ * Handles search functionality across links and collections with auto-search and debounce
  */
 class SearchViewModel(
     private val searchLinksUseCase: SearchLinksUseCase,
+    private val searchCollectionsUseCase: SearchCollectionsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase
 ) : ViewModel() {
 
@@ -56,7 +59,8 @@ class SearchViewModel(
                     // Clear results when query is empty
                     _state.update {
                         it.copy(
-                            searchResults = emptyList(),
+                            linkResults = emptyList(),
+                            collectionResults = emptyList(),
                             hasSearched = false,
                             error = null
                         )
@@ -76,7 +80,8 @@ class SearchViewModel(
                 _state.update {
                     it.copy(
                         searchQuery = "",
-                        searchResults = emptyList(),
+                        linkResults = emptyList(),
+                        collectionResults = emptyList(),
                         hasSearched = false,
                         error = null
                     )
@@ -96,7 +101,13 @@ class SearchViewModel(
         searchJob = viewModelScope.launch {
             _state.update { it.copy(isSearching = true, error = null, hasSearched = true) }
 
-            searchLinksUseCase(query)
+            // Combine link and collection search results
+            combine(
+                searchLinksUseCase(query),
+                searchCollectionsUseCase(query)
+            ) { links, collections ->
+                Pair(links, collections)
+            }
                 .catch { e ->
                     val errorMessage = ErrorHandler.getLinkErrorMessage(e, LinkOperation.SEARCH)
                     _state.update {
@@ -107,15 +118,16 @@ class SearchViewModel(
                     }
                     Timber.e(e, "Search failed for query: $query")
                 }
-                .collect { links ->
+                .collect { (links, collections) ->
                     _state.update {
                         it.copy(
-                            searchResults = links,
+                            linkResults = links,
+                            collectionResults = collections,
                             isSearching = false,
                             error = null
                         )
                     }
-                    Timber.d("Search completed: ${links.size} results for query '$query'")
+                    Timber.d("Search completed: ${links.size} links, ${collections.size} collections for query '$query'")
                 }
         }
     }

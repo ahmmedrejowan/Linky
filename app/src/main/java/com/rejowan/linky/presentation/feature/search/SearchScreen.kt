@@ -81,8 +81,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rejowan.linky.domain.model.CollectionWithLinkCount
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.presentation.components.LinkCard
+import androidx.compose.material.icons.outlined.Folder
+import androidx.core.graphics.toColorInt
 import com.rejowan.linky.presentation.components.LoadingIndicator
 import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
@@ -96,6 +99,7 @@ private const val COLLAPSED_RECENT_COUNT = 3
 @Composable
 fun SearchScreen(
     onLinkClick: (String) -> Unit,
+    onCollectionClick: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -145,8 +149,8 @@ fun SearchScreen(
     }
 
     // Save search to recent when query has results
-    LaunchedEffect(state.searchResults.size, state.searchQuery) {
-        if (state.searchQuery.isNotBlank() && state.searchResults.isNotEmpty()) {
+    LaunchedEffect(state.totalResults, state.searchQuery) {
+        if (state.searchQuery.isNotBlank() && state.totalResults > 0) {
             val prefs = context.getSharedPreferences(RECENT_SEARCHES_PREFS, Context.MODE_PRIVATE)
             val updated = (listOf(state.searchQuery) + recentSearches.filter { it != state.searchQuery })
                 .take(MAX_RECENT_SEARCHES)
@@ -205,14 +209,16 @@ fun SearchScreen(
                         }
                     )
                 }
-                state.searchResults.isEmpty() && state.hasSearched -> {
+                state.totalResults == 0 && state.hasSearched -> {
                     EmptySearchState(query = state.searchQuery)
                 }
                 else -> {
                     SearchResultsContent(
                         query = state.searchQuery,
-                        results = state.searchResults,
+                        linkResults = state.linkResults,
+                        collectionResults = state.collectionResults,
                         onLinkClick = onLinkClick,
+                        onCollectionClick = onCollectionClick,
                         onFavoriteClick = { linkId, isFavorite ->
                             viewModel.onEvent(SearchEvent.OnToggleFavorite(linkId, isFavorite))
                         }
@@ -275,7 +281,7 @@ private fun SearchHeader(
                     Box(modifier = Modifier.weight(1f)) {
                         if (query.isEmpty()) {
                             Text(
-                                text = "Search your links...",
+                                text = "Search links and collections...",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
@@ -522,25 +528,25 @@ private fun SearchTipsSection(modifier: Modifier = Modifier) {
 
         SearchTipCard(
             icon = Icons.Outlined.Link,
-            title = "Search by title or URL",
-            description = "Enter any part of the link title or URL",
+            title = "Search links",
+            description = "Find links by title, URL, or description",
             accentColor = SoftAccents.Blue
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         SearchTipCard(
-            icon = Icons.Outlined.Favorite,
-            title = "Find favorites",
-            description = "Search within your favorited links",
-            accentColor = SoftAccents.Pink
+            icon = Icons.Outlined.Folder,
+            title = "Search collections",
+            description = "Find collections by name",
+            accentColor = SoftAccents.Purple
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         SearchTipCard(
             icon = Icons.Outlined.Lightbulb,
-            title = "Partial matches",
+            title = "Instant results",
             description = "Results appear as you type",
             accentColor = SoftAccents.Teal
         )
@@ -627,7 +633,7 @@ private fun EmptySearchState(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "No links match \"$query\"",
+                text = "No links or collections match \"$query\"",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -639,8 +645,10 @@ private fun EmptySearchState(
 @Composable
 private fun SearchResultsContent(
     query: String,
-    results: List<Link>,
+    linkResults: List<Link>,
+    collectionResults: List<CollectionWithLinkCount>,
     onLinkClick: (String) -> Unit,
+    onCollectionClick: (String) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -657,24 +665,157 @@ private fun SearchResultsContent(
         item(key = "header", contentType = "header") {
             SearchResultsHeader(
                 query = query,
-                resultCount = results.size
+                linkCount = linkResults.size,
+                collectionCount = collectionResults.size
             )
         }
 
-        itemsIndexed(
-            items = results,
-            key = { _, link -> link.id },
-            contentType = { _, _ -> "link" }
-        ) { _, link ->
-            LinkCard(
-                link = link,
-                onClick = { onLinkClick(link.id) },
-                onFavoriteClick = { onFavoriteClick(link.id, !link.isFavorite) },
-                onMoreClick = { onLinkClick(link.id) },
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                    .animateItem()
+        // Collections section
+        if (collectionResults.isNotEmpty()) {
+            item(key = "collections_header", contentType = "section_header") {
+                SectionLabel(
+                    title = "Collections",
+                    count = collectionResults.size,
+                    accentColor = SoftAccents.Purple
+                )
+            }
+
+            itemsIndexed(
+                items = collectionResults,
+                key = { _, collection -> "collection_${collection.collection.id}" },
+                contentType = { _, _ -> "collection" }
+            ) { _, collectionWithCount ->
+                CollectionSearchItem(
+                    collection = collectionWithCount,
+                    onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .animateItem()
+                )
+            }
+        }
+
+        // Links section
+        if (linkResults.isNotEmpty()) {
+            item(key = "links_header", contentType = "section_header") {
+                SectionLabel(
+                    title = "Links",
+                    count = linkResults.size,
+                    accentColor = SoftAccents.Blue
+                )
+            }
+
+            itemsIndexed(
+                items = linkResults,
+                key = { _, link -> "link_${link.id}" },
+                contentType = { _, _ -> "link" }
+            ) { _, link ->
+                LinkCard(
+                    link = link,
+                    onClick = { onLinkClick(link.id) },
+                    onFavoriteClick = { onFavoriteClick(link.id, !link.isFavorite) },
+                    onMoreClick = { onLinkClick(link.id) },
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .animateItem()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(
+    title: String,
+    count: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = accentColor.copy(alpha = 0.12f)
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = accentColor,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun CollectionSearchItem(
+    collection: CollectionWithLinkCount,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val collectionColor = collection.collection.color?.let {
+        try { Color(it.toColorInt()) } catch (e: Exception) { null }
+    } ?: MaterialTheme.colorScheme.primary
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = collectionColor.copy(alpha = 0.15f)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .size(22.dp),
+                    tint = collectionColor
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = collection.collection.name,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (collection.linkCount == 1) "1 link" else "${collection.linkCount} links",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }
@@ -682,9 +823,12 @@ private fun SearchResultsContent(
 @Composable
 private fun SearchResultsHeader(
     query: String,
-    resultCount: Int,
+    linkCount: Int,
+    collectionCount: Int,
     modifier: Modifier = Modifier
 ) {
+    val totalCount = linkCount + collectionCount
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -692,7 +836,7 @@ private fun SearchResultsHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Results for \"$query\"",
                 style = MaterialTheme.typography.titleSmall.copy(
@@ -704,7 +848,15 @@ private fun SearchResultsHeader(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (resultCount == 1) "1 link found" else "$resultCount links found",
+                text = buildString {
+                    if (collectionCount > 0) {
+                        append(if (collectionCount == 1) "1 collection" else "$collectionCount collections")
+                    }
+                    if (collectionCount > 0 && linkCount > 0) append(", ")
+                    if (linkCount > 0) {
+                        append(if (linkCount == 1) "1 link" else "$linkCount links")
+                    }
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
@@ -715,7 +867,7 @@ private fun SearchResultsHeader(
             color = SoftAccents.Blue.copy(alpha = 0.12f)
         ) {
             Text(
-                text = resultCount.toString(),
+                text = totalCount.toString(),
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
