@@ -161,7 +161,7 @@ fun HomeScreen(
         Timber.tag("HomeScreen").d("Clipboard checking preference loaded/changed: $isClipboardCheckingEnabled")
     }
 
-    // Throttle clipboard checks - only check once per 5 seconds
+    // Throttle clipboard checks - only check once per 3 seconds
     var lastClipboardCheckTime by remember { mutableStateOf(0L) }
 
     // Collect and handle UI events
@@ -221,8 +221,8 @@ fun HomeScreen(
         }
     }
 
-    // Check clipboard when screen resumes (throttled to once per 5 seconds)
-    // Skip clipboard check for 5 seconds after share intent to avoid conflicts
+    // Check clipboard when screen resumes (throttled to once per 3 seconds)
+    // Skip clipboard check for 3 seconds after share intent to avoid conflicts
     // Also skip if user has disabled clipboard checking in settings or preference not loaded yet
     DisposableEffect(lifecycleOwner, lastShareIntentHandledTime, isClipboardCheckingEnabled) {
         Timber.tag("HomeScreen").d("DisposableEffect created with isClipboardCheckingEnabled=$isClipboardCheckingEnabled")
@@ -242,14 +242,14 @@ fun HomeScreen(
 
                 val currentTime = System.currentTimeMillis()
                 val timeSinceShareIntent = currentTime - lastShareIntentHandledTime
-                val shareIntentSuppressionMillis = 5000L // 5 seconds
+                val shareIntentSuppressionMillis = 3000L // 3 seconds
 
                 // Skip clipboard check if share intent was handled recently
                 if (lastShareIntentHandledTime > 0 && timeSinceShareIntent < shareIntentSuppressionMillis) {
                     Timber.tag("HomeScreen").d("Screen resumed, skipping clipboard check (share intent handled ${timeSinceShareIntent}ms ago)")
                 } else {
                     val timeSinceLastCheck = currentTime - lastClipboardCheckTime
-                    val throttleMillis = 5000L // 5 seconds
+                    val throttleMillis = 3000L // 3 seconds
 
                     if (timeSinceLastCheck >= throttleMillis) {
                         Timber.tag("HomeScreen").d("Screen resumed, checking clipboard (${timeSinceLastCheck}ms since last check)")
