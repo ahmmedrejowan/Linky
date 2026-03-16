@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Room
 
 /**
- * Singleton database instance provider for widget access
- * This provides direct database access without Koin DI for use in widgets/receivers
+ * Singleton database instance provider
+ * Used by both Koin DI module and widgets/receivers to ensure single instance
  */
 object LinkyDatabase {
     @Volatile
@@ -17,7 +17,10 @@ object LinkyDatabase {
                 context.applicationContext,
                 AppDatabase::class.java,
                 AppDatabase.DATABASE_NAME
-            ).build()
+            )
+                .addMigrations(*ALL_MIGRATIONS)
+                .fallbackToDestructiveMigration(true)
+                .build()
             INSTANCE = instance
             instance
         }
