@@ -76,6 +76,17 @@ interface CollectionDao {
     @Query("SELECT COUNT(*) FROM collections")
     suspend fun countCollections(): Int
 
+    // Search collections by name
+    @Query("""
+        SELECT collections.*, COUNT(links.id) as linkCount
+        FROM collections
+        LEFT JOIN links ON collections.id = links.collectionId AND links.deletedAt IS NULL AND links.isArchived = 0
+        WHERE collections.name LIKE '%' || :query || '%'
+        GROUP BY collections.id
+        ORDER BY collections.name ASC
+    """)
+    fun searchCollections(query: String): Flow<List<CollectionWithCount>>
+
     // Phase 2: Sync queries
     @Query("SELECT * FROM collections WHERE syncToRemote = 1")
     suspend fun getDirtyCollections(): List<CollectionEntity>

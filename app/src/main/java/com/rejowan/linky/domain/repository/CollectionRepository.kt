@@ -21,4 +21,7 @@ interface CollectionRepository {
 
     // Count operations
     suspend fun countCollections(): Int
+
+    // Search operations
+    fun searchCollections(query: String): Flow<List<CollectionWithLinkCount>>
 }
