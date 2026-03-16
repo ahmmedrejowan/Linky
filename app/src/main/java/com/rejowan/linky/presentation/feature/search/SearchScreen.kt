@@ -45,7 +45,9 @@ import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
@@ -154,62 +156,68 @@ fun SearchScreen(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { focusManager.clearFocus() })
-            }
-    ) {
-        // Search Header
-        SearchHeader(
-            query = state.searchQuery,
-            onQueryChange = { viewModel.onEvent(SearchEvent.OnSearchQueryChange(it)) },
-            onClear = { viewModel.onEvent(SearchEvent.OnClearSearch) },
-            onBack = onBackClick,
-            onSearch = {
-                viewModel.onEvent(SearchEvent.OnSearch)
-                focusManager.clearFocus()
-            },
-            focusRequester = focusRequester
-        )
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.surface)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }
+        ) {
+            // Search Header
+            SearchHeader(
+                query = state.searchQuery,
+                onQueryChange = { viewModel.onEvent(SearchEvent.OnSearchQueryChange(it)) },
+                onClear = { viewModel.onEvent(SearchEvent.OnClearSearch) },
+                onBack = onBackClick,
+                onSearch = {
+                    viewModel.onEvent(SearchEvent.OnSearch)
+                    focusManager.clearFocus()
+                },
+                focusRequester = focusRequester
+            )
 
-        // Content
-        when {
-            state.isSearching -> {
-                LoadingIndicator(message = "Searching...")
-            }
-            state.searchQuery.isBlank() -> {
-                SearchIdleContent(
-                    recentSearches = recentSearches,
-                    onRecentClick = { query ->
-                        viewModel.onEvent(SearchEvent.OnSearchQueryChange(query))
-                    },
-                    onClearRecent = { query ->
-                        recentSearches.remove(query)
-                        val prefs = context.getSharedPreferences(RECENT_SEARCHES_PREFS, Context.MODE_PRIVATE)
-                        prefs.edit().putStringSet(RECENT_SEARCHES_KEY, recentSearches.toSet()).apply()
-                    },
-                    onClearAllRecent = {
-                        recentSearches.clear()
-                        val prefs = context.getSharedPreferences(RECENT_SEARCHES_PREFS, Context.MODE_PRIVATE)
-                        prefs.edit().remove(RECENT_SEARCHES_KEY).apply()
-                    }
-                )
-            }
-            state.searchResults.isEmpty() && state.hasSearched -> {
-                EmptySearchState(query = state.searchQuery)
-            }
-            else -> {
-                SearchResultsContent(
-                    query = state.searchQuery,
-                    results = state.searchResults,
-                    onLinkClick = onLinkClick,
-                    onFavoriteClick = { linkId, isFavorite ->
-                        viewModel.onEvent(SearchEvent.OnToggleFavorite(linkId, isFavorite))
-                    }
-                )
+            // Content
+            when {
+                state.isSearching -> {
+                    LoadingIndicator(message = "Searching...")
+                }
+                state.searchQuery.isBlank() -> {
+                    SearchIdleContent(
+                        recentSearches = recentSearches,
+                        onRecentClick = { query ->
+                            viewModel.onEvent(SearchEvent.OnSearchQueryChange(query))
+                        },
+                        onClearRecent = { query ->
+                            recentSearches.remove(query)
+                            val prefs = context.getSharedPreferences(RECENT_SEARCHES_PREFS, Context.MODE_PRIVATE)
+                            prefs.edit().putStringSet(RECENT_SEARCHES_KEY, recentSearches.toSet()).apply()
+                        },
+                        onClearAllRecent = {
+                            recentSearches.clear()
+                            val prefs = context.getSharedPreferences(RECENT_SEARCHES_PREFS, Context.MODE_PRIVATE)
+                            prefs.edit().remove(RECENT_SEARCHES_KEY).apply()
+                        }
+                    )
+                }
+                state.searchResults.isEmpty() && state.hasSearched -> {
+                    EmptySearchState(query = state.searchQuery)
+                }
+                else -> {
+                    SearchResultsContent(
+                        query = state.searchQuery,
+                        results = state.searchResults,
+                        onLinkClick = onLinkClick,
+                        onFavoriteClick = { linkId, isFavorite ->
+                            viewModel.onEvent(SearchEvent.OnToggleFavorite(linkId, isFavorite))
+                        }
+                    )
+                }
             }
         }
     }
