@@ -13,9 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -71,73 +69,56 @@ fun ToolsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Quick Tools Section
             item {
-                SectionHeader(
-                    title = "Quick Tools",
-                    subtitle = "Frequently used utilities"
+                ToolCard(
+                    icon = Icons.Default.FileUpload,
+                    title = "Batch Import",
+                    description = "Import multiple links at once from text",
+                    accentColor = SoftAccents.Blue,
+                    onClick = onNavigateToBatchImport
                 )
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickToolCard(
-                        icon = Icons.Default.FileUpload,
-                        title = "Batch Import",
-                        accentColor = SoftAccents.Blue,
-                        onClick = onNavigateToBatchImport,
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickToolCard(
-                        icon = Icons.Default.Security,
-                        title = "Vault",
-                        accentColor = SoftAccents.Purple,
-                        onClick = onNavigateToVault,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ToolCard(
+                    icon = Icons.Default.Security,
+                    title = "Vault",
+                    description = "Secure storage for private links",
+                    accentColor = SoftAccents.Purple,
+                    onClick = onNavigateToVault
+                )
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickToolCard(
-                        icon = Icons.Default.Delete,
-                        title = "Recycle Bin",
-                        accentColor = SoftAccents.Pink,
-                        onClick = onNavigateToTrash,
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickToolCard(
-                        icon = Icons.Default.ImportExport,
-                        title = "Import/Export",
-                        accentColor = SoftAccents.Teal,
-                        onClick = onNavigateToDataStorage,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ToolCard(
+                    icon = Icons.Default.Delete,
+                    title = "Recycle Bin",
+                    description = "View and restore deleted links",
+                    accentColor = SoftAccents.Pink,
+                    onClick = onNavigateToTrash
+                )
             }
 
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item {
+                ToolCard(
+                    icon = Icons.Default.ImportExport,
+                    title = "Import/Export",
+                    description = "Backup and restore your data",
+                    accentColor = SoftAccents.Teal,
+                    onClick = onNavigateToDataStorage
+                )
+            }
 
             // Data Management Section
             item {
-                SectionHeader(
-                    title = "Data Management",
-                    subtitle = "Keep your links organized and healthy"
-                )
+                SectionHeader(title = "Data Management")
             }
 
             item {
                 ToolCard(
                     icon = Icons.Default.FindReplace,
                     title = "Duplicate Detection",
-                    description = "Find and remove duplicate links to keep your collection clean",
+                    description = "Find and remove duplicate links",
                     accentColor = SoftAccents.Amber,
                     onClick = onNavigateToDuplicateDetection
                 )
@@ -147,13 +128,13 @@ fun ToolsScreen(
                 ToolCard(
                     icon = Icons.Default.HealthAndSafety,
                     title = "Link Health Check",
-                    description = "Verify all your saved links are still accessible and working",
+                    description = "Verify links are still accessible",
                     accentColor = SoftAccents.Teal,
                     onClick = onNavigateToLinkHealthCheck
                 )
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
@@ -162,101 +143,33 @@ fun ToolsScreen(
 private fun ToolsHeader(
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Text(
+        text = "Tools",
+        style = MaterialTheme.typography.headlineMedium.copy(
+            fontWeight = FontWeight.Bold
+        ),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 16.dp)
-    ) {
-        Text(
-            text = "Tools",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Utilities to manage your links",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    )
 }
 
 @Composable
 private fun SectionHeader(
     title: String,
-    subtitle: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.SemiBold
+        ),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun QuickToolCard(
-    icon: ImageVector,
-    title: String,
-    accentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .height(100.dp)
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(accentColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = accentColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
+    )
 }
 
 @Composable
