@@ -8,7 +8,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.rejowan.linky.presentation.feature.collections.CollectionsScreen
 import com.rejowan.linky.presentation.feature.home.HomeScreen
-import com.rejowan.linky.presentation.feature.search.SearchScreen
 import com.rejowan.linky.presentation.feature.settings.SettingsScreen
 import com.rejowan.linky.presentation.feature.tools.ToolsScreen
 
@@ -109,17 +108,6 @@ fun BottomNavHost(
                 onNavigateToLinkHealthCheck = {
                     parentNavController.navigate(Route.LinkHealthCheck)
                 }
-            )
-        }
-
-        // ============ SEARCH SCREEN ============
-        composable<Route.Search> {
-            SearchScreen(
-                onLinkClick = { linkId ->
-                    // Navigate using parent controller to LinkDetail
-                    parentNavController.navigate(Route.LinkDetail(linkId))
-                },
-                snackbarHostState = snackbarHostState
             )
         }
 

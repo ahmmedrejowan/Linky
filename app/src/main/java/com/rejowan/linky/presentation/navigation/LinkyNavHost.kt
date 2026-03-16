@@ -2,7 +2,7 @@ package com.rejowan.linky.presentation.navigation
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,11 +11,12 @@ import com.rejowan.linky.presentation.feature.addlink.AddEditLinkScreen
 import com.rejowan.linky.presentation.feature.batchimport.BatchImportScreen
 import com.rejowan.linky.presentation.feature.collectiondetail.CollectionDetailScreen
 import com.rejowan.linky.presentation.feature.linkdetail.LinkDetailScreen
+import com.rejowan.linky.presentation.feature.onboarding.OnboardingScreen
+import com.rejowan.linky.presentation.feature.search.SearchScreen
 import com.rejowan.linky.presentation.feature.settings.AppFeaturesScreen
 import com.rejowan.linky.presentation.feature.settings.about.AboutScreen
 import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScreen
 import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
-import com.rejowan.linky.presentation.feature.onboarding.OnboardingScreen
 import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionScreen
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
@@ -75,6 +76,18 @@ fun LinkyNavHost(
                 navigateToCollectionId = mainRoute.navigateToCollectionId,
                 sharedContent = sharedContent,
                 onSharedContentHandled = onSharedContentHandled
+            )
+        }
+
+        // ============ SEARCH SCREEN ============
+        composable<Route.Search> {
+            val snackbarHostState = remember { SnackbarHostState() }
+            SearchScreen(
+                onLinkClick = { linkId ->
+                    navController.navigate(Route.LinkDetail(linkId))
+                },
+                snackbarHostState = snackbarHostState,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
