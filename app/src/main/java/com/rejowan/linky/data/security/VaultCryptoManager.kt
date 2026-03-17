@@ -2,9 +2,12 @@ package com.rejowan.linky.data.security
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import timber.log.Timber
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -15,7 +18,6 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
-import androidx.core.content.edit
 
 /**
  * Manages encryption/decryption for the Vault feature.
@@ -24,19 +26,19 @@ import androidx.core.content.edit
  * Storage strategy:
  * - PIN hash and salts are stored in regular SharedPreferences (hash is secure, salts are random)
  * - Vault link data is encrypted with PIN-derived keys using AES-GCM
- * - AndroidKeyStore is used for additional encryption of sensitive metadata if needed
+ * - Reinstall detection uses app's first install time from PackageManager
  */
 class VaultCryptoManager(private val context: Context) {
 
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        private const val VAULT_KEY_ALIAS = "linky_vault_key"
-        private const val PREFS_NAME = "linky_vault_prefs"
+        private const val VAULT_KEY_ALIAS = "linky_vault_secure_key"
+        private const val PREFS_NAME = "linky_vault_secure_prefs"
 
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_SALT = "pin_salt"
         private const val KEY_ENCRYPTION_SALT = "encryption_salt"
-        private const val KEY_VERIFICATION_TOKEN = "verification_token"
+        private const val KEY_INSTALL_TIME = "install_time"
 
         private const val AES_KEY_SIZE = 256
         private const val GCM_IV_LENGTH = 12
@@ -56,8 +58,58 @@ class VaultCryptoManager(private val context: Context) {
     }
 
     init {
-        // Verify keystore integrity on init - if key was regenerated (reinstall), clear vault data
-        verifyKeystoreIntegrity()
+        // Detect reinstall by checking first install time
+        detectReinstall()
+    }
+
+    /**
+     * Detect reinstall by comparing stored install time with actual first install time.
+     * This is more reliable than keystore-based detection since PackageManager data
+     * is always reset on uninstall.
+     */
+    private fun detectReinstall() {
+        val actualInstallTime = getFirstInstallTime()
+        val storedInstallTime = prefs.getLong(KEY_INSTALL_TIME, 0L)
+
+        when {
+            storedInstallTime == 0L -> {
+                // First run - store the install time
+                Timber.d("First app run, storing install time: $actualInstallTime")
+                prefs.edit { putLong(KEY_INSTALL_TIME, actualInstallTime) }
+            }
+            storedInstallTime != actualInstallTime -> {
+                // Install time mismatch - this is a reinstall with restored prefs
+                Timber.w("Reinstall detected (stored=$storedInstallTime, actual=$actualInstallTime), clearing vault")
+                clearVault()
+                // Store new install time
+                prefs.edit { putLong(KEY_INSTALL_TIME, actualInstallTime) }
+            }
+            else -> {
+                // Install time matches - normal launch
+                Timber.d("Normal launch, install time matches")
+            }
+        }
+    }
+
+    /**
+     * Get the first install time of the app from PackageManager.
+     * This is reset when the app is uninstalled.
+     */
+    private fun getFirstInstallTime(): Long {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0)
+                ).firstInstallTime
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to get first install time")
+            0L
+        }
     }
 
     /**
@@ -97,56 +149,6 @@ class VaultCryptoManager(private val context: Context) {
     }
 
     /**
-     * Verify keystore integrity - detect if key was regenerated after reinstall
-     */
-    private fun verifyKeystoreIntegrity() {
-        val storedToken = prefs.getString(KEY_VERIFICATION_TOKEN, null)
-
-        if (storedToken != null && keystoreKey != null) {
-            // Try to decrypt the verification token
-            try {
-                val parts = storedToken.split(":")
-                if (parts.size == 2) {
-                    val iv = Base64.decode(parts[0], Base64.NO_WRAP)
-                    val ciphertext = Base64.decode(parts[1], Base64.NO_WRAP)
-
-                    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-                    cipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
-                    cipher.doFinal(ciphertext)
-                    // Token decrypted successfully - keystore is intact
-                    return
-                }
-            } catch (_: Exception) {
-                // Decryption failed - key was regenerated
-                Timber.w("Keystore key regenerated (reinstall detected), clearing vault data")
-                clearVault()
-            }
-        } else if (storedToken == null && keystoreKey != null) {
-            // First time setup or after clear - create verification token
-            createVerificationToken()
-        }
-    }
-
-    /**
-     * Create a verification token encrypted with keystore key
-     */
-    private fun createVerificationToken() {
-        try {
-            val key = keystoreKey ?: return
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.ENCRYPT_MODE, key)
-
-            val iv = cipher.iv
-            val ciphertext = cipher.doFinal("linky_vault_verify".toByteArray())
-
-            val token = "${Base64.encodeToString(iv, Base64.NO_WRAP)}:${Base64.encodeToString(ciphertext, Base64.NO_WRAP)}"
-            prefs.edit { putString(KEY_VERIFICATION_TOKEN, token) }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to create verification token")
-        }
-    }
-
-    /**
      * Check if PIN is already set up
      */
     fun isPinSetup(): Boolean {
@@ -175,9 +177,6 @@ class VaultCryptoManager(private val context: Context) {
                     Base64.encodeToString(encryptionSalt, Base64.NO_WRAP)
                 )
         }
-
-        // Create verification token for reinstall detection
-        createVerificationToken()
 
         return true
     }
@@ -290,7 +289,12 @@ class VaultCryptoManager(private val context: Context) {
      * WARNING: This will make all encrypted vault links unrecoverable
      */
     fun clearVault() {
+        val installTime = prefs.getLong(KEY_INSTALL_TIME, 0L)
         prefs.edit { clear() }
+        // Restore install time after clear so we don't trigger reinstall detection again
+        if (installTime != 0L) {
+            prefs.edit { putLong(KEY_INSTALL_TIME, installTime) }
+        }
     }
 
     /**

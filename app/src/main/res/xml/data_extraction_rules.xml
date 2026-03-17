@@ -4,13 +4,13 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude vault encrypted preferences - must be re-created on new device/reinstall -->
+        <!-- Exclude vault preferences - must be re-created on new device/reinstall -->
+        <exclude domain="sharedpref" path="linky_vault_prefs_v2.xml"/>
         <exclude domain="sharedpref" path="linky_vault_prefs.xml"/>
-        <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__"/>
     </cloud-backup>
     <device-transfer>
         <!-- Also exclude from device-to-device transfer -->
+        <exclude domain="sharedpref" path="linky_vault_prefs_v2.xml"/>
         <exclude domain="sharedpref" path="linky_vault_prefs.xml"/>
-        <exclude domain="sharedpref" path="__androidx_security_crypto_encrypted_prefs__"/>
     </device-transfer>
 </data-extraction-rules>
