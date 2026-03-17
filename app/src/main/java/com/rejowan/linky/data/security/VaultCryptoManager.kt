@@ -1,11 +1,11 @@
 package com.rejowan.linky.data.security
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import timber.log.Timber
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -15,21 +15,28 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
+import androidx.core.content.edit
 
 /**
  * Manages encryption/decryption for the Vault feature.
  * Uses AES-256-GCM for data encryption and PBKDF2 for PIN-based key derivation.
+ *
+ * Storage strategy:
+ * - PIN hash and salts are stored in regular SharedPreferences (hash is secure, salts are random)
+ * - Vault link data is encrypted with PIN-derived keys using AES-GCM
+ * - AndroidKeyStore is used for additional encryption of sensitive metadata if needed
  */
 class VaultCryptoManager(private val context: Context) {
 
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        private const val VAULT_KEY_ALIAS = "linky_vault_master_key"
-        private const val ENCRYPTED_PREFS_NAME = "linky_vault_prefs"
+        private const val VAULT_KEY_ALIAS = "linky_vault_key"
+        private const val PREFS_NAME = "linky_vault_prefs"
 
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_SALT = "pin_salt"
         private const val KEY_ENCRYPTION_SALT = "encryption_salt"
+        private const val KEY_VERIFICATION_TOKEN = "verification_token"
 
         private const val AES_KEY_SIZE = 256
         private const val GCM_IV_LENGTH = 12
@@ -40,25 +47,110 @@ class VaultCryptoManager(private val context: Context) {
 
     private val secureRandom = SecureRandom()
 
-    private val encryptedPrefs by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    private val prefs: SharedPreferences by lazy {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
-        EncryptedSharedPreferences.create(
-            context,
-            ENCRYPTED_PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+    private val keystoreKey: SecretKey? by lazy {
+        getOrCreateKeystoreKey()
+    }
+
+    init {
+        // Verify keystore integrity on init - if key was regenerated (reinstall), clear vault data
+        verifyKeystoreIntegrity()
+    }
+
+    /**
+     * Get or create a key in AndroidKeyStore for additional encryption
+     */
+    private fun getOrCreateKeystoreKey(): SecretKey? {
+        return try {
+            val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+            keyStore.load(null)
+
+            // Return existing key if available
+            keyStore.getKey(VAULT_KEY_ALIAS, null)?.let {
+                return it as SecretKey
+            }
+
+            // Create new key
+            val keyGenerator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
+                ANDROID_KEYSTORE
+            )
+
+            val keySpec = KeyGenParameterSpec.Builder(
+                VAULT_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(AES_KEY_SIZE)
+                .build()
+
+            keyGenerator.init(keySpec)
+            keyGenerator.generateKey()
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to get/create keystore key")
+            null
+        }
+    }
+
+    /**
+     * Verify keystore integrity - detect if key was regenerated after reinstall
+     */
+    private fun verifyKeystoreIntegrity() {
+        val storedToken = prefs.getString(KEY_VERIFICATION_TOKEN, null)
+
+        if (storedToken != null && keystoreKey != null) {
+            // Try to decrypt the verification token
+            try {
+                val parts = storedToken.split(":")
+                if (parts.size == 2) {
+                    val iv = Base64.decode(parts[0], Base64.NO_WRAP)
+                    val ciphertext = Base64.decode(parts[1], Base64.NO_WRAP)
+
+                    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                    cipher.init(Cipher.DECRYPT_MODE, keystoreKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+                    cipher.doFinal(ciphertext)
+                    // Token decrypted successfully - keystore is intact
+                    return
+                }
+            } catch (_: Exception) {
+                // Decryption failed - key was regenerated
+                Timber.w("Keystore key regenerated (reinstall detected), clearing vault data")
+                clearVault()
+            }
+        } else if (storedToken == null && keystoreKey != null) {
+            // First time setup or after clear - create verification token
+            createVerificationToken()
+        }
+    }
+
+    /**
+     * Create a verification token encrypted with keystore key
+     */
+    private fun createVerificationToken() {
+        try {
+            val key = keystoreKey ?: return
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key)
+
+            val iv = cipher.iv
+            val ciphertext = cipher.doFinal("linky_vault_verify".toByteArray())
+
+            val token = "${Base64.encodeToString(iv, Base64.NO_WRAP)}:${Base64.encodeToString(ciphertext, Base64.NO_WRAP)}"
+            prefs.edit { putString(KEY_VERIFICATION_TOKEN, token) }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to create verification token")
+        }
     }
 
     /**
      * Check if PIN is already set up
      */
     fun isPinSetup(): Boolean {
-        return encryptedPrefs.contains(KEY_PIN_HASH)
+        return prefs.contains(KEY_PIN_HASH)
     }
 
     /**
@@ -75,11 +167,17 @@ class VaultCryptoManager(private val context: Context) {
         // Also generate and store encryption salt
         val encryptionSalt = generateSalt()
 
-        encryptedPrefs.edit()
-            .putString(KEY_PIN_HASH, hash)
-            .putString(KEY_PIN_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
-            .putString(KEY_ENCRYPTION_SALT, Base64.encodeToString(encryptionSalt, Base64.NO_WRAP))
-            .apply()
+        prefs.edit {
+            putString(KEY_PIN_HASH, hash)
+                .putString(KEY_PIN_SALT, Base64.encodeToString(salt, Base64.NO_WRAP))
+                .putString(
+                    KEY_ENCRYPTION_SALT,
+                    Base64.encodeToString(encryptionSalt, Base64.NO_WRAP)
+                )
+        }
+
+        // Create verification token for reinstall detection
+        createVerificationToken()
 
         return true
     }
@@ -90,8 +188,8 @@ class VaultCryptoManager(private val context: Context) {
      * @return true if PIN matches
      */
     fun verifyPin(pin: String): Boolean {
-        val storedHash = encryptedPrefs.getString(KEY_PIN_HASH, null) ?: return false
-        val saltString = encryptedPrefs.getString(KEY_PIN_SALT, null) ?: return false
+        val storedHash = prefs.getString(KEY_PIN_HASH, null) ?: return false
+        val saltString = prefs.getString(KEY_PIN_SALT, null) ?: return false
         val salt = Base64.decode(saltString, Base64.NO_WRAP)
 
         val hash = hashPin(pin, salt)
@@ -111,10 +209,10 @@ class VaultCryptoManager(private val context: Context) {
         val newSalt = generateSalt()
         val newHash = hashPin(newPin, newSalt)
 
-        encryptedPrefs.edit()
-            .putString(KEY_PIN_HASH, newHash)
-            .putString(KEY_PIN_SALT, Base64.encodeToString(newSalt, Base64.NO_WRAP))
-            .apply()
+        prefs.edit {
+            putString(KEY_PIN_HASH, newHash)
+                .putString(KEY_PIN_SALT, Base64.encodeToString(newSalt, Base64.NO_WRAP))
+        }
 
         return true
     }
@@ -126,7 +224,7 @@ class VaultCryptoManager(private val context: Context) {
      * @return The derived SecretKey or null if derivation fails
      */
     fun deriveKeyFromPin(pin: String): SecretKey? {
-        val saltString = encryptedPrefs.getString(KEY_ENCRYPTION_SALT, null) ?: return null
+        val saltString = prefs.getString(KEY_ENCRYPTION_SALT, null) ?: return null
         val salt = Base64.decode(saltString, Base64.NO_WRAP)
 
         return try {
@@ -134,7 +232,7 @@ class VaultCryptoManager(private val context: Context) {
             val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
             val keyBytes = factory.generateSecret(spec).encoded
             SecretKeySpec(keyBytes, "AES")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -160,7 +258,7 @@ class VaultCryptoManager(private val context: Context) {
                 ciphertext = Base64.encodeToString(ciphertext, Base64.NO_WRAP),
                 iv = Base64.encodeToString(iv, Base64.NO_WRAP)
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -182,7 +280,7 @@ class VaultCryptoManager(private val context: Context) {
 
             val plaintext = cipher.doFinal(ciphertext)
             String(plaintext, Charsets.UTF_8)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -192,7 +290,7 @@ class VaultCryptoManager(private val context: Context) {
      * WARNING: This will make all encrypted vault links unrecoverable
      */
     fun clearVault() {
-        encryptedPrefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 
     /**

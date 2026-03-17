@@ -56,4 +56,10 @@ interface VaultLinkDao {
      */
     @Query("SELECT COUNT(*) FROM vault_links")
     fun getVaultLinkCount(): Flow<Int>
+
+    /**
+     * Get the count of vault links synchronously (for cleanup checks)
+     */
+    @Query("SELECT COUNT(*) FROM vault_links")
+    suspend fun getVaultLinkCountSync(): Int
 }

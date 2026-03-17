@@ -9,9 +9,13 @@ import com.rejowan.linky.data.security.VaultSessionManager
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.VaultLink
 import com.rejowan.linky.domain.repository.VaultRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /**
  * Implementation of VaultRepository.
@@ -31,6 +35,24 @@ class VaultRepositoryImpl(
 
     private val prefs by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    init {
+        // Clean up orphaned vault links if PIN was reset (e.g., after reinstall)
+        // These links can't be decrypted without the original PIN
+        GlobalScope.launch(Dispatchers.IO) {
+            cleanupOrphanedVaultLinks()
+        }
+    }
+
+    private suspend fun cleanupOrphanedVaultLinks() {
+        if (!cryptoManager.isPinSetup()) {
+            val count = vaultLinkDao.getVaultLinkCountSync()
+            if (count > 0) {
+                Timber.w("Clearing $count orphaned vault links after key reset")
+                vaultLinkDao.deleteAllVaultLinks()
+            }
+        }
     }
 
     // ============ PIN Management ============
