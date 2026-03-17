@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
+import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.Result
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -27,7 +29,8 @@ import java.net.URL
  */
 class LinkHealthCheckViewModel(
     private val linkRepository: LinkRepository,
-    private val deleteLinkUseCase: DeleteLinkUseCase
+    private val deleteLinkUseCase: DeleteLinkUseCase,
+    private val linkPreviewFetcher: LinkPreviewFetcher
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LinkHealthCheckState())
@@ -36,6 +39,8 @@ class LinkHealthCheckViewModel(
     private val _uiEvents = MutableSharedFlow<HealthCheckUiEvent>()
     val uiEvents: SharedFlow<HealthCheckUiEvent> = _uiEvents.asSharedFlow()
 
+    private var healthCheckJob: Job? = null
+
     fun onEvent(event: HealthCheckEvent) {
         when (event) {
             HealthCheckEvent.OnStartHealthCheck -> startHealthCheck()
@@ -43,19 +48,37 @@ class LinkHealthCheckViewModel(
             is HealthCheckEvent.OnDeleteLink -> deleteLink(event.linkId)
             HealthCheckEvent.OnDeleteAllBroken -> deleteAllBroken()
             is HealthCheckEvent.OnFilterByStatus -> filterByStatus(event.status)
+            is HealthCheckEvent.OnRefetchMetadata -> refetchMetadata(event.linkId)
+            is HealthCheckEvent.OnToggleRefetchThumbnails -> toggleRefetchThumbnails(event.enabled)
+            is HealthCheckEvent.OnToggleRefetchTitles -> toggleRefetchTitles(event.enabled)
         }
     }
 
+    private fun toggleRefetchThumbnails(enabled: Boolean) {
+        _state.update { it.copy(refetchThumbnailsEnabled = enabled) }
+    }
+
+    private fun toggleRefetchTitles(enabled: Boolean) {
+        _state.update { it.copy(refetchTitlesEnabled = enabled) }
+    }
+
     private fun startHealthCheck() {
-        viewModelScope.launch {
+        healthCheckJob?.cancel()
+        healthCheckJob = viewModelScope.launch {
+            val refetchThumbnails = _state.value.refetchThumbnailsEnabled
+            val refetchTitles = _state.value.refetchTitlesEnabled
+
             _state.update {
                 it.copy(
                     isChecking = true,
                     isCancelled = false,
                     progress = 0f,
                     checkedCount = 0,
+                    currentCheckingLink = null,
                     healthResults = emptyList(),
-                    error = null
+                    error = null,
+                    thumbnailsUpdated = 0,
+                    titlesUpdated = 0
                 )
             }
 
@@ -73,46 +96,99 @@ class LinkHealthCheckViewModel(
                 }
 
                 val results = mutableListOf<LinkHealthResult>()
+                var thumbnailsUpdated = 0
+                var titlesUpdated = 0
 
                 allLinks.forEachIndexed { index, link ->
                     // Check if cancelled
                     if (_state.value.isCancelled) {
-                        _state.update { it.copy(isChecking = false) }
+                        _state.update { it.copy(isChecking = false, currentCheckingLink = null) }
                         _uiEvents.emit(HealthCheckUiEvent.ShowMessage("Health check cancelled"))
                         return@launch
                     }
 
+                    // Update current checking link for real-time display
+                    _state.update { it.copy(currentCheckingLink = link) }
+
                     val status = checkLinkHealth(link.url)
-                    results.add(LinkHealthResult(link = link, status = status))
+                    var updatedLink = link
+
+                    // Refetch metadata if enabled and link is healthy
+                    if (status == LinkHealthStatus.HEALTHY || status == LinkHealthStatus.SLOW) {
+                        if (refetchThumbnails || refetchTitles) {
+                            try {
+                                val preview = linkPreviewFetcher.fetchPreview(link.url)
+                                if (preview != null) {
+                                    var hasUpdate = false
+
+                                    val newTitle = if (refetchTitles && preview.title.isNotBlank() && preview.title != link.title) {
+                                        titlesUpdated++
+                                        hasUpdate = true
+                                        preview.title
+                                    } else link.title
+
+                                    val newDescription = if (refetchTitles && !preview.description.isNullOrBlank()) {
+                                        preview.description
+                                    } else link.description
+
+                                    val newThumbnail = if (refetchThumbnails && !preview.imageUrl.isNullOrBlank() && preview.imageUrl != link.previewImagePath) {
+                                        thumbnailsUpdated++
+                                        hasUpdate = true
+                                        preview.imageUrl
+                                    } else link.previewImagePath
+
+                                    if (hasUpdate) {
+                                        updatedLink = link.copy(
+                                            title = newTitle,
+                                            description = newDescription,
+                                            previewImagePath = newThumbnail,
+                                            updatedAt = System.currentTimeMillis()
+                                        )
+                                        linkRepository.updateLink(updatedLink)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Timber.w(e, "Failed to refetch metadata for ${link.url}")
+                            }
+                        }
+                    }
+
+                    results.add(LinkHealthResult(link = updatedLink, status = status))
 
                     _state.update {
                         it.copy(
                             progress = (index + 1).toFloat() / allLinks.size,
                             checkedCount = index + 1,
-                            healthResults = results.toList()
+                            healthResults = results.toList(),
+                            brokenCount = results.count { r -> r.status == LinkHealthStatus.BROKEN || r.status == LinkHealthStatus.UNREACHABLE },
+                            slowCount = results.count { r -> r.status == LinkHealthStatus.SLOW },
+                            healthyCount = results.count { r -> r.status == LinkHealthStatus.HEALTHY },
+                            thumbnailsUpdated = thumbnailsUpdated,
+                            titlesUpdated = titlesUpdated
                         )
                     }
                 }
 
-                // Count results
-                val brokenCount = results.count { it.status == LinkHealthStatus.BROKEN }
-                val slowCount = results.count { it.status == LinkHealthStatus.SLOW }
-                val healthyCount = results.count { it.status == LinkHealthStatus.HEALTHY }
-
                 _state.update {
                     it.copy(
                         isChecking = false,
-                        brokenCount = brokenCount,
-                        slowCount = slowCount,
-                        healthyCount = healthyCount
+                        currentCheckingLink = null
                     )
                 }
 
+                val brokenCount = results.count { it.status == LinkHealthStatus.BROKEN || it.status == LinkHealthStatus.UNREACHABLE }
                 val message = buildString {
-                    append("Health check complete: ")
-                    append("$healthyCount healthy")
-                    if (slowCount > 0) append(", $slowCount slow")
-                    if (brokenCount > 0) append(", $brokenCount broken")
+                    if (brokenCount > 0) {
+                        append("Found $brokenCount broken links")
+                    } else {
+                        append("All links healthy!")
+                    }
+                    if (thumbnailsUpdated > 0 || titlesUpdated > 0) {
+                        append(" • Updated: ")
+                        if (thumbnailsUpdated > 0) append("$thumbnailsUpdated thumbnails")
+                        if (thumbnailsUpdated > 0 && titlesUpdated > 0) append(", ")
+                        if (titlesUpdated > 0) append("$titlesUpdated titles")
+                    }
                 }
                 _uiEvents.emit(HealthCheckUiEvent.ShowMessage(message))
 
@@ -121,6 +197,7 @@ class LinkHealthCheckViewModel(
                 _state.update {
                     it.copy(
                         isChecking = false,
+                        currentCheckingLink = null,
                         error = "Failed to perform health check: ${e.message}"
                     )
                 }
@@ -130,6 +207,7 @@ class LinkHealthCheckViewModel(
 
     private fun cancelHealthCheck() {
         _state.update { it.copy(isCancelled = true) }
+        healthCheckJob?.cancel()
     }
 
     private suspend fun checkLinkHealth(url: String): LinkHealthStatus {
@@ -137,8 +215,8 @@ class LinkHealthCheckViewModel(
             try {
                 val startTime = System.currentTimeMillis()
                 val connection = URL(url).openConnection() as HttpURLConnection
-                connection.requestMethod = "HEAD" // Use HEAD for faster check
-                connection.connectTimeout = 10000 // 10 seconds
+                connection.requestMethod = "HEAD"
+                connection.connectTimeout = 10000
                 connection.readTimeout = 10000
                 connection.instanceFollowRedirects = true
 
@@ -163,17 +241,69 @@ class LinkHealthCheckViewModel(
                     connection.disconnect()
                 }
             } catch (e: java.net.UnknownHostException) {
-                Timber.w("Unknown host for URL: $url")
                 LinkHealthStatus.BROKEN
             } catch (e: java.net.SocketTimeoutException) {
-                Timber.w("Timeout checking URL: $url")
                 LinkHealthStatus.SLOW
             } catch (e: javax.net.ssl.SSLException) {
-                Timber.w("SSL error for URL: $url")
                 LinkHealthStatus.SSL_ERROR
             } catch (e: Exception) {
-                Timber.w(e, "Error checking URL: $url")
                 LinkHealthStatus.UNKNOWN
+            }
+        }
+    }
+
+    private fun refetchMetadata(linkId: String) {
+        viewModelScope.launch {
+            val link = _state.value.healthResults.find { it.link.id == linkId }?.link ?: return@launch
+
+            _state.update { state ->
+                state.copy(
+                    healthResults = state.healthResults.map {
+                        if (it.link.id == linkId) it.copy(isRefetching = true) else it
+                    }
+                )
+            }
+
+            try {
+                val preview = linkPreviewFetcher.fetchPreview(link.url)
+                if (preview == null) {
+                    _state.update { state ->
+                        state.copy(
+                            healthResults = state.healthResults.map {
+                                if (it.link.id == linkId) it.copy(isRefetching = false) else it
+                            }
+                        )
+                    }
+                    _uiEvents.emit(HealthCheckUiEvent.ShowMessage("Could not fetch metadata"))
+                    return@launch
+                }
+                val updatedLink = link.copy(
+                    title = preview.title.ifBlank { link.title },
+                    description = preview.description ?: link.description,
+                    previewImagePath = preview.imageUrl ?: link.previewImagePath,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                linkRepository.updateLink(updatedLink)
+
+                _state.update { state ->
+                    state.copy(
+                        healthResults = state.healthResults.map {
+                            if (it.link.id == linkId) it.copy(link = updatedLink, isRefetching = false) else it
+                        }
+                    )
+                }
+                _uiEvents.emit(HealthCheckUiEvent.ShowMessage("Metadata updated"))
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to refetch metadata")
+                _state.update { state ->
+                    state.copy(
+                        healthResults = state.healthResults.map {
+                            if (it.link.id == linkId) it.copy(isRefetching = false) else it
+                        }
+                    )
+                }
+                _uiEvents.emit(HealthCheckUiEvent.ShowMessage("Failed to update metadata"))
             }
         }
     }
@@ -183,12 +313,11 @@ class LinkHealthCheckViewModel(
             when (val result = deleteLinkUseCase(linkId, softDelete = true)) {
                 is Result.Success -> {
                     _uiEvents.emit(HealthCheckUiEvent.ShowMessage("Link moved to trash"))
-                    // Remove from results list
                     _state.update { state ->
                         val updatedResults = state.healthResults.filter { it.link.id != linkId }
                         state.copy(
                             healthResults = updatedResults,
-                            brokenCount = updatedResults.count { it.status == LinkHealthStatus.BROKEN },
+                            brokenCount = updatedResults.count { it.status == LinkHealthStatus.BROKEN || it.status == LinkHealthStatus.UNREACHABLE },
                             slowCount = updatedResults.count { it.status == LinkHealthStatus.SLOW },
                             healthyCount = updatedResults.count { it.status == LinkHealthStatus.HEALTHY }
                         )
@@ -203,7 +332,9 @@ class LinkHealthCheckViewModel(
     }
 
     private fun deleteAllBroken() {
-        val brokenLinks = _state.value.healthResults.filter { it.status == LinkHealthStatus.BROKEN }
+        val brokenLinks = _state.value.healthResults.filter {
+            it.status == LinkHealthStatus.BROKEN || it.status == LinkHealthStatus.UNREACHABLE
+        }
         if (brokenLinks.isEmpty()) return
 
         viewModelScope.launch {
@@ -214,7 +345,6 @@ class LinkHealthCheckViewModel(
                 when (deleteLinkUseCase(result.link.id, softDelete = true)) {
                     is Result.Success -> {
                         deletedCount++
-                        // Update UI progressively
                         _state.update { state ->
                             val updatedResults = state.healthResults.filter { it.link.id != result.link.id }
                             state.copy(healthResults = updatedResults)
@@ -227,7 +357,7 @@ class LinkHealthCheckViewModel(
             _state.update { state ->
                 state.copy(
                     isDeleting = false,
-                    brokenCount = state.healthResults.count { it.status == LinkHealthStatus.BROKEN },
+                    brokenCount = state.healthResults.count { it.status == LinkHealthStatus.BROKEN || it.status == LinkHealthStatus.UNREACHABLE },
                     slowCount = state.healthResults.count { it.status == LinkHealthStatus.SLOW },
                     healthyCount = state.healthResults.count { it.status == LinkHealthStatus.HEALTHY }
                 )
@@ -248,13 +378,18 @@ data class LinkHealthCheckState(
     val isChecking: Boolean = false,
     val isCancelled: Boolean = false,
     val isDeleting: Boolean = false,
+    val refetchThumbnailsEnabled: Boolean = false,
+    val refetchTitlesEnabled: Boolean = false,
     val progress: Float = 0f,
     val totalLinks: Int = 0,
     val checkedCount: Int = 0,
+    val currentCheckingLink: Link? = null,
     val healthResults: List<LinkHealthResult> = emptyList(),
     val brokenCount: Int = 0,
     val slowCount: Int = 0,
     val healthyCount: Int = 0,
+    val thumbnailsUpdated: Int = 0,
+    val titlesUpdated: Int = 0,
     val filterStatus: LinkHealthStatus? = null,
     val error: String? = null
 ) {
@@ -271,19 +406,20 @@ data class LinkHealthCheckState(
  */
 data class LinkHealthResult(
     val link: Link,
-    val status: LinkHealthStatus
+    val status: LinkHealthStatus,
+    val isRefetching: Boolean = false
 )
 
 /**
  * Possible health statuses for a link
  */
-enum class LinkHealthStatus(val displayName: String, val description: String) {
-    HEALTHY("Healthy", "Link is working correctly"),
-    SLOW("Slow", "Link takes too long to respond (>5s)"),
-    BROKEN("Broken", "Link returns 404 or similar error"),
-    UNREACHABLE("Unreachable", "Server is not responding"),
-    SSL_ERROR("SSL Error", "Security certificate issue"),
-    UNKNOWN("Unknown", "Could not determine status")
+enum class LinkHealthStatus(val displayName: String) {
+    HEALTHY("Healthy"),
+    SLOW("Slow"),
+    BROKEN("Broken"),
+    UNREACHABLE("Unreachable"),
+    SSL_ERROR("SSL Error"),
+    UNKNOWN("Unknown")
 }
 
 /**
@@ -295,6 +431,9 @@ sealed class HealthCheckEvent {
     data class OnDeleteLink(val linkId: String) : HealthCheckEvent()
     data object OnDeleteAllBroken : HealthCheckEvent()
     data class OnFilterByStatus(val status: LinkHealthStatus?) : HealthCheckEvent()
+    data class OnRefetchMetadata(val linkId: String) : HealthCheckEvent()
+    data class OnToggleRefetchThumbnails(val enabled: Boolean) : HealthCheckEvent()
+    data class OnToggleRefetchTitles(val enabled: Boolean) : HealthCheckEvent()
 }
 
 /**

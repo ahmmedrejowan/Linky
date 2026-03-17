@@ -176,7 +176,8 @@ val viewModelModule = module {
     viewModel {
         LinkHealthCheckViewModel(
             linkRepository = get(),
-            deleteLinkUseCase = get()
+            deleteLinkUseCase = get(),
+            linkPreviewFetcher = get()
         )
     }
 }
