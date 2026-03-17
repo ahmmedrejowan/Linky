@@ -29,6 +29,7 @@ import com.rejowan.linky.domain.usecase.snapshot.GetSnapshotsForLinkUseCase
 import com.rejowan.linky.domain.usecase.snapshot.SaveSnapshotUseCase
 import com.rejowan.linky.domain.usecase.backup.ExportDataUseCase
 import com.rejowan.linky.domain.usecase.backup.ImportDataUseCase
+import com.rejowan.linky.domain.usecase.SeedDataUseCase
 import org.koin.dsl.module
 
 val useCaseModule = module {
@@ -68,4 +69,7 @@ val useCaseModule = module {
     // Backup use cases
     factory { ExportDataUseCase(get()) }
     factory { ImportDataUseCase(get()) }
+
+    // Developer use cases
+    factory { SeedDataUseCase(get(), get()) }
 }
