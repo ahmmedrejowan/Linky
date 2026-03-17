@@ -15,6 +15,7 @@ object SeedData {
      */
     fun generateCollections(): List<Collection> {
         val now = System.currentTimeMillis()
+        val day = 86400000L // 1 day in milliseconds
         val colors = listOf(
             "#FF6B6B", "#E74C3C", "#4ECDC4", "#45B7D1", "#3498DB",
             "#FFA07A", "#E67E22", "#98D8C8", "#2ECC71", "#F7B731",
@@ -25,44 +26,44 @@ object SeedData {
 
         return listOf(
             // Development
-            Collection(id = "col_android", name = "Android Development", color = colors[0], sortOrder = 0, createdAt = now, updatedAt = now),
-            Collection(id = "col_kotlin", name = "Kotlin", color = colors[1], sortOrder = 1, createdAt = now, updatedAt = now),
-            Collection(id = "col_compose", name = "Jetpack Compose", color = colors[2], sortOrder = 2, createdAt = now, updatedAt = now),
-            Collection(id = "col_web", name = "Web Development", color = colors[3], sortOrder = 3, createdAt = now, updatedAt = now),
-            Collection(id = "col_backend", name = "Backend & APIs", color = colors[4], sortOrder = 4, createdAt = now, updatedAt = now),
+            Collection(id = "col_android", name = "Android Development", color = colors[0], sortOrder = 0, createdAt = now - day * 45, updatedAt = now - day * 2),
+            Collection(id = "col_kotlin", name = "Kotlin", color = colors[1], sortOrder = 1, createdAt = now - day * 40, updatedAt = now - day * 5),
+            Collection(id = "col_compose", name = "Jetpack Compose", color = colors[2], sortOrder = 2, createdAt = now - day * 35, updatedAt = now - day * 3),
+            Collection(id = "col_web", name = "Web Development", color = colors[3], sortOrder = 3, createdAt = now - day * 60, updatedAt = now - day * 10),
+            Collection(id = "col_backend", name = "Backend & APIs", color = colors[4], sortOrder = 4, createdAt = now - day * 55, updatedAt = now - day * 12),
 
             // Design
-            Collection(id = "col_design", name = "UI/UX Design", color = colors[5], sortOrder = 5, createdAt = now, updatedAt = now),
-            Collection(id = "col_icons", name = "Icons & Assets", color = colors[6], sortOrder = 6, createdAt = now, updatedAt = now),
-            Collection(id = "col_colors", name = "Color Palettes", color = colors[7], sortOrder = 7, createdAt = now, updatedAt = now),
+            Collection(id = "col_design", name = "UI/UX Design", color = colors[5], sortOrder = 5, createdAt = now - day * 50, updatedAt = now - day * 7),
+            Collection(id = "col_icons", name = "Icons & Assets", color = colors[6], sortOrder = 6, createdAt = now - day * 30, updatedAt = now - day * 15),
+            Collection(id = "col_colors", name = "Color Palettes", color = colors[7], sortOrder = 7, createdAt = now - day * 25, updatedAt = now - day * 20),
 
             // Learning
-            Collection(id = "col_tutorials", name = "Tutorials", color = colors[8], sortOrder = 8, createdAt = now, updatedAt = now),
-            Collection(id = "col_courses", name = "Online Courses", color = colors[9], sortOrder = 9, createdAt = now, updatedAt = now),
-            Collection(id = "col_docs", name = "Documentation", color = colors[10], sortOrder = 10, createdAt = now, updatedAt = now),
+            Collection(id = "col_tutorials", name = "Tutorials", color = colors[8], sortOrder = 8, createdAt = now - day * 90, updatedAt = now - day * 8),
+            Collection(id = "col_courses", name = "Online Courses", color = colors[9], sortOrder = 9, createdAt = now - day * 85, updatedAt = now - day * 22),
+            Collection(id = "col_docs", name = "Documentation", color = colors[10], sortOrder = 10, createdAt = now - day * 80, updatedAt = now - day * 4),
 
             // Tools
-            Collection(id = "col_tools", name = "Developer Tools", color = colors[11], sortOrder = 11, createdAt = now, updatedAt = now),
-            Collection(id = "col_ai", name = "AI & ML", color = colors[12], sortOrder = 12, createdAt = now, updatedAt = now),
-            Collection(id = "col_productivity", name = "Productivity", color = colors[13], sortOrder = 13, createdAt = now, updatedAt = now),
+            Collection(id = "col_tools", name = "Developer Tools", color = colors[11], sortOrder = 11, createdAt = now - day * 100, updatedAt = now - day * 1),
+            Collection(id = "col_ai", name = "AI & ML", color = colors[12], sortOrder = 12, createdAt = now - day * 20, updatedAt = now - day * 6),
+            Collection(id = "col_productivity", name = "Productivity", color = colors[13], sortOrder = 13, createdAt = now - day * 75, updatedAt = now - day * 9),
 
             // News & Blogs
-            Collection(id = "col_news", name = "Tech News", color = colors[14], sortOrder = 14, createdAt = now, updatedAt = now),
-            Collection(id = "col_blogs", name = "Dev Blogs", color = colors[15], sortOrder = 15, createdAt = now, updatedAt = now),
+            Collection(id = "col_news", name = "Tech News", color = colors[14], sortOrder = 14, createdAt = now - day * 70, updatedAt = now - day * 1),
+            Collection(id = "col_blogs", name = "Dev Blogs", color = colors[15], sortOrder = 15, createdAt = now - day * 65, updatedAt = now - day * 11),
 
             // Entertainment
-            Collection(id = "col_videos", name = "Videos & Podcasts", color = colors[16], sortOrder = 16, createdAt = now, updatedAt = now),
-            Collection(id = "col_music", name = "Music", color = colors[17], sortOrder = 17, createdAt = now, updatedAt = now),
+            Collection(id = "col_videos", name = "Videos & Podcasts", color = colors[16], sortOrder = 16, createdAt = now - day * 95, updatedAt = now - day * 14),
+            Collection(id = "col_music", name = "Music", color = colors[17], sortOrder = 17, createdAt = now - day * 120, updatedAt = now - day * 30),
 
             // Reference
-            Collection(id = "col_github", name = "GitHub Repos", color = colors[18], sortOrder = 18, createdAt = now, updatedAt = now),
-            Collection(id = "col_libraries", name = "Libraries", color = colors[19], sortOrder = 19, createdAt = now, updatedAt = now),
-            Collection(id = "col_apis", name = "Public APIs", color = colors[20], sortOrder = 20, createdAt = now, updatedAt = now),
+            Collection(id = "col_github", name = "GitHub Repos", color = colors[18], sortOrder = 18, createdAt = now - day * 110, updatedAt = now - day * 2),
+            Collection(id = "col_libraries", name = "Libraries", color = colors[19], sortOrder = 19, createdAt = now - day * 105, updatedAt = now - day * 18),
+            Collection(id = "col_apis", name = "Public APIs", color = colors[20], sortOrder = 20, createdAt = now - day * 88, updatedAt = now - day * 25),
 
             // Personal
-            Collection(id = "col_readlater", name = "Read Later", color = colors[21], sortOrder = 21, createdAt = now, updatedAt = now),
-            Collection(id = "col_inspiration", name = "Inspiration", color = colors[22], sortOrder = 22, createdAt = now, updatedAt = now),
-            Collection(id = "col_shopping", name = "Shopping", color = colors[23], sortOrder = 23, createdAt = now, updatedAt = now)
+            Collection(id = "col_readlater", name = "Read Later", color = colors[21], sortOrder = 21, createdAt = now - day * 15, updatedAt = now - day * 1),
+            Collection(id = "col_inspiration", name = "Inspiration", color = colors[22], sortOrder = 22, createdAt = now - day * 10, updatedAt = now - day * 3),
+            Collection(id = "col_shopping", name = "Shopping", color = colors[23], sortOrder = 23, createdAt = now - day * 5, updatedAt = now - day * 2)
         )
     }
 

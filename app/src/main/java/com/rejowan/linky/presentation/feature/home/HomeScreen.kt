@@ -110,6 +110,8 @@ import com.rejowan.linky.presentation.components.LoadingIndicator
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
+import com.rejowan.linky.domain.usecase.SeedDataUseCase
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -149,6 +151,12 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+//    // Seed data initialization - remove after testing
+//    val seedDataUseCase: SeedDataUseCase = koinInject()
+//    LaunchedEffect(Unit) {
+//        seedDataUseCase()
+//    }
 
     // Collect clipboard checking preference
     // Use null as initial to avoid checking before preference is loaded from DataStore

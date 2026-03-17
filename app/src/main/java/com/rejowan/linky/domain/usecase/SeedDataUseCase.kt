@@ -4,6 +4,7 @@ import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.util.Result
 import com.rejowan.linky.util.SeedData
+import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 /**
@@ -32,6 +33,13 @@ class SeedDataUseCase(
 ) {
     suspend operator fun invoke(): Result<SeedResult> {
         return try {
+            // Check if data already exists - skip if not empty
+            val existingCollections = collectionRepository.getAllCollections().first()
+            if (existingCollections.isNotEmpty()) {
+                Timber.d("Database already has data, skipping seed")
+                return Result.Success(SeedResult(0, 0, skipped = true))
+            }
+
             var collectionsAdded = 0
             var linksAdded = 0
 
@@ -67,5 +75,6 @@ class SeedDataUseCase(
 
 data class SeedResult(
     val collectionsAdded: Int,
-    val linksAdded: Int
+    val linksAdded: Int,
+    val skipped: Boolean = false
 )
