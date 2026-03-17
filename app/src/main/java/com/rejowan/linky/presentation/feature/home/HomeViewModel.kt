@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
@@ -333,6 +334,8 @@ class HomeViewModel(
                     .sortedByDescending { it.value }
                     .map { DomainInfo(it.key, it.value) }
                 _state.update { it.copy(availableDomains = domainCounts) }
+            } catch (e: CancellationException) {
+                throw e // Don't catch cancellation - it's normal coroutine behavior
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load domain options")
             }
@@ -340,21 +343,22 @@ class HomeViewModel(
 
         // Load available collections
         viewModelScope.launch {
-            try {
-                collectionRepository.getCollectionsWithLinkCount()
-                    .collect { collectionsWithCount ->
-                        val collectionOptions = collectionsWithCount.map { (collection, count) ->
-                            CollectionFilterInfo(
-                                id = collection.id,
-                                name = collection.name,
-                                count = count
-                            )
-                        }
-                        _state.update { it.copy(availableCollections = collectionOptions) }
+            collectionRepository.getCollectionsWithLinkCount()
+                .catch { e ->
+                    if (e !is CancellationException) {
+                        Timber.e(e, "Failed to load collection options")
                     }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load collection options")
-            }
+                }
+                .collect { collectionsWithCount ->
+                    val collectionOptions = collectionsWithCount.map { (collection, count) ->
+                        CollectionFilterInfo(
+                            id = collection.id,
+                            name = collection.name,
+                            count = count
+                        )
+                    }
+                    _state.update { it.copy(availableCollections = collectionOptions) }
+                }
         }
     }
 
