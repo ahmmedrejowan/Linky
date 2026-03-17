@@ -90,6 +90,7 @@ fun LinkHealthCheckScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteBrokenDialog by remember { mutableStateOf(false) }
+    var showRunAgainDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
@@ -145,7 +146,7 @@ fun LinkHealthCheckScreen(
                 ResultsScreen(
                     state = state,
                     onCancel = { viewModel.onEvent(HealthCheckEvent.OnCancelHealthCheck) },
-                    onRunAgain = { viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck) },
+                    onRunAgain = { showRunAgainDialog = true },
                     onDeleteBroken = { showDeleteBrokenDialog = true },
                     onFilterChange = { viewModel.onEvent(HealthCheckEvent.OnFilterByStatus(it)) },
                     onRefetch = { viewModel.onEvent(HealthCheckEvent.OnRefetchMetadata(it)) },
@@ -165,6 +166,17 @@ fun LinkHealthCheckScreen(
                 showDeleteBrokenDialog = false
             },
             onDismiss = { showDeleteBrokenDialog = false }
+        )
+    }
+
+    // Run again confirmation dialog
+    if (showRunAgainDialog) {
+        RunAgainDialog(
+            onConfirm = {
+                viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck)
+                showRunAgainDialog = false
+            },
+            onDismiss = { showRunAgainDialog = false }
         )
     }
 }
@@ -518,27 +530,32 @@ private fun ResultsScreen(
                             Text("Cancel")
                         }
                     } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Button(
-                                onClick = onRunAgain,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                        if (state.brokenCount > 0) {
+                            // Two buttons side by side when there are broken links
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Run Again")
-                            }
+                                Button(
+                                    onClick = onRunAgain,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Recheck",
+                                        maxLines = 1
+                                    )
+                                }
 
-                            AnimatedVisibility(visible = state.brokenCount > 0) {
                                 Button(
                                     onClick = onDeleteBroken,
+                                    modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.error
                                     ),
@@ -550,8 +567,26 @@ private fun ResultsScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Delete Broken")
+                                    Text(
+                                        text = "Delete",
+                                        maxLines = 1
+                                    )
                                 }
+                            }
+                        } else {
+                            // Full width button when no broken links
+                            Button(
+                                onClick = onRunAgain,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Run Again")
                             }
                         }
                     }
@@ -877,6 +912,38 @@ private fun DeleteBrokenDialog(
                 )
             ) {
                 Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun RunAgainDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Run Health Check Again?",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Text(
+                text = "This will clear the current results and start a new health check on all your links.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Run Again")
             }
         },
         dismissButton = {
