@@ -48,7 +48,7 @@ class VaultUnlockViewModel(
     private val _state = MutableStateFlow(VaultUnlockState())
     val state: StateFlow<VaultUnlockState> = _state.asStateFlow()
 
-    private val _uiEvents = MutableSharedFlow<VaultUnlockUiEvent>()
+    private val _uiEvents = MutableSharedFlow<VaultUnlockUiEvent>(replay = 1)
     val uiEvents = _uiEvents.asSharedFlow()
 
     init {
@@ -57,7 +57,10 @@ class VaultUnlockViewModel(
 
     private fun checkVaultSetup() {
         viewModelScope.launch {
-            if (!vaultRepository.isPinSetup()) {
+            val isPinSetup = vaultRepository.isPinSetup()
+            timber.log.Timber.d("VaultUnlockViewModel: isPinSetup=$isPinSetup")
+            if (!isPinSetup) {
+                timber.log.Timber.d("VaultUnlockViewModel: Emitting NavigateToSetup")
                 _uiEvents.emit(VaultUnlockUiEvent.NavigateToSetup)
             }
         }

@@ -22,7 +22,9 @@ import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthChe
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
+import com.rejowan.linky.presentation.feature.vault.VaultIntroScreen
 import com.rejowan.linky.presentation.feature.vault.VaultScreen
+import com.rejowan.linky.presentation.feature.vault.VaultSetupCompleteScreen
 import com.rejowan.linky.presentation.feature.vault.VaultSetupScreen
 import com.rejowan.linky.presentation.feature.vault.VaultSettingsScreen
 import com.rejowan.linky.presentation.feature.vault.VaultUnlockScreen
@@ -238,13 +240,36 @@ fun LinkyNavHost(
 
         // ============ VAULT SCREENS ============
 
+        composable<Route.VaultIntro> {
+            VaultIntroScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onGetStarted = {
+                    // Go to PIN setup
+                    navController.navigate(Route.VaultSetup) {
+                        popUpTo<Route.VaultIntro> { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable<Route.VaultSetup> {
             VaultSetupScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onSetupComplete = {
-                    // After setup, go to vault unlock then vault
-                    navController.navigate(Route.VaultUnlock) {
+                    // After setup, show completion screen
+                    navController.navigate(Route.VaultSetupComplete) {
                         popUpTo<Route.VaultSetup> { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable<Route.VaultSetupComplete> {
+            VaultSetupCompleteScreen(
+                onContinue = {
+                    // Go directly to vault (PIN was just set, so auto-unlock)
+                    navController.navigate(Route.Vault) {
+                        popUpTo<Route.VaultSetupComplete> { inclusive = true }
                     }
                 }
             )
@@ -260,8 +285,8 @@ fun LinkyNavHost(
                     }
                 },
                 onNavigateToSetup = {
-                    // Vault not setup yet, redirect to setup
-                    navController.navigate(Route.VaultSetup) {
+                    // Vault not setup yet, show intro first
+                    navController.navigate(Route.VaultIntro) {
                         popUpTo<Route.VaultUnlock> { inclusive = true }
                     }
                 }

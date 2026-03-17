@@ -70,8 +70,17 @@ class VaultCryptoManager(private val context: Context) {
     private fun detectReinstall() {
         val actualInstallTime = getFirstInstallTime()
         val storedInstallTime = prefs.getLong(KEY_INSTALL_TIME, 0L)
+        val hasPinData = prefs.contains(KEY_PIN_HASH)
+
+        Timber.d("detectReinstall: actualInstallTime=$actualInstallTime, storedInstallTime=$storedInstallTime, hasPinData=$hasPinData")
 
         when {
+            storedInstallTime == 0L && hasPinData -> {
+                // Edge case: PIN data exists but no install time (restored from backup or migration)
+                Timber.w("PIN data exists without install time - clearing vault (likely restored backup)")
+                prefs.edit { clear() }
+                prefs.edit { putLong(KEY_INSTALL_TIME, actualInstallTime) }
+            }
             storedInstallTime == 0L -> {
                 // First run - store the install time
                 Timber.d("First app run, storing install time: $actualInstallTime")
@@ -152,7 +161,9 @@ class VaultCryptoManager(private val context: Context) {
      * Check if PIN is already set up
      */
     fun isPinSetup(): Boolean {
-        return prefs.contains(KEY_PIN_HASH)
+        val result = prefs.contains(KEY_PIN_HASH)
+        Timber.d("isPinSetup() called, returning: $result")
+        return result
     }
 
     /**

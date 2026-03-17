@@ -194,6 +194,20 @@ sealed class Route {
     @Serializable
     data object VaultSettings : Route()
 
+    /**
+     * Vault Intro screen
+     * First-time introduction to vault features
+     */
+    @Serializable
+    data object VaultIntro : Route()
+
+    /**
+     * Vault Setup Complete screen
+     * Confirmation after PIN setup
+     */
+    @Serializable
+    data object VaultSetupComplete : Route()
+
     // ============ ONBOARDING ============
 
     /**

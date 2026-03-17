@@ -4,6 +4,7 @@
 -->
 <full-backup-content>
     <!-- Exclude vault preferences - must be re-created on new device/reinstall -->
+    <exclude domain="sharedpref" path="linky_vault_secure_prefs.xml"/>
     <exclude domain="sharedpref" path="linky_vault_prefs_v2.xml"/>
     <exclude domain="sharedpref" path="linky_vault_prefs.xml"/>
 </full-backup-content>
