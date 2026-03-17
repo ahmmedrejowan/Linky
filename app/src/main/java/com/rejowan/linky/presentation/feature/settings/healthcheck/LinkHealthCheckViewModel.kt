@@ -153,7 +153,8 @@ class LinkHealthCheckViewModel(
                         }
                     }
 
-                    results.add(LinkHealthResult(link = updatedLink, status = status))
+                    // Add at beginning for newest-first ordering
+                    results.add(0, LinkHealthResult(link = updatedLink, status = status))
 
                     _state.update {
                         it.copy(
