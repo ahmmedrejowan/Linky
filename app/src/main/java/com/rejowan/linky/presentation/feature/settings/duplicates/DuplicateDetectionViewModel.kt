@@ -32,9 +32,7 @@ class DuplicateDetectionViewModel(
     private val _uiEvents = MutableSharedFlow<DuplicateUiEvent>()
     val uiEvents: SharedFlow<DuplicateUiEvent> = _uiEvents.asSharedFlow()
 
-    init {
-        scanForDuplicates()
-    }
+    // Removed auto-scan on init - user must click "Start Scan" button
 
     fun onEvent(event: DuplicateEvent) {
         when (event) {
@@ -61,6 +59,7 @@ class DuplicateDetectionViewModel(
 
                 _state.update {
                     it.copy(
+                        hasScanned = true,
                         isScanning = false,
                         duplicateGroups = duplicateGroups,
                         totalDuplicatesFound = totalDuplicates,
@@ -229,6 +228,7 @@ class DuplicateDetectionViewModel(
  * State for duplicate detection screen
  */
 data class DuplicateDetectionState(
+    val hasScanned: Boolean = false,
     val isScanning: Boolean = false,
     val isDeleting: Boolean = false,
     val duplicateGroups: List<DuplicateGroup> = emptyList(),

@@ -1,13 +1,19 @@
 package com.rejowan.linky.presentation.feature.settings.duplicates
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,17 +24,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FindReplace
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,19 +45,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,7 +61,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,10 +73,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Duplicate Detection Screen
- * Finds and helps manage duplicate links in the database
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DuplicateDetectionScreen(
@@ -78,19 +81,8 @@ fun DuplicateDetectionScreen(
     viewModel: DuplicateDetectionViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
-
-    // Handle UI events
-    LaunchedEffect(Unit) {
-        viewModel.uiEvents.collect { event ->
-            when (event) {
-                is DuplicateUiEvent.ShowMessage -> {
-                    snackbarHostState.showSnackbar(event.message)
-                }
-            }
-        }
-    }
+    var showScanAgainDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -105,61 +97,40 @@ fun DuplicateDetectionScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.onEvent(DuplicateEvent.OnScan) },
-                        enabled = !state.isScanning
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Rescan"
+                            contentDescription = "Back"
                         )
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        modifier = modifier
     ) { paddingValues ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Summary header
-            SummaryHeader(
-                totalDuplicates = state.totalDuplicatesFound,
-                groupCount = state.duplicateGroups.size,
-                isScanning = state.isScanning,
-                isDeleting = state.isDeleting,
-                onDeleteAll = { showDeleteAllDialog = true },
-                onScan = { viewModel.onEvent(DuplicateEvent.OnScan) }
-            )
-
-            HorizontalDivider()
-
-            // Content
-            when {
-                state.isScanning -> {
-                    ScanningIndicator()
-                }
-                state.duplicateGroups.isEmpty() -> {
-                    NoDuplicatesContent()
-                }
-                else -> {
-                    DuplicatesList(
-                        groups = state.duplicateGroups,
-                        expandedGroups = state.expandedGroups,
-                        onExpandGroup = { viewModel.onEvent(DuplicateEvent.OnExpandGroup(it)) },
-                        onDeleteLink = { viewModel.onEvent(DuplicateEvent.OnDeleteLink(it)) },
-                        onDeleteAllInGroup = { index ->
-                            viewModel.onEvent(DuplicateEvent.OnDeleteAllInGroup(index, keepFirst = true))
-                        }
-                    )
-                }
+        AnimatedContent(
+            targetState = state.isScanning || state.hasScanned,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+            },
+            label = "screen_content"
+        ) { hasStarted ->
+            if (!hasStarted) {
+                // Initial full-screen state
+                InitialScreen(
+                    onStartScan = { viewModel.onEvent(DuplicateEvent.OnScan) },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                // Scanning or Results state
+                ResultsScreen(
+                    state = state,
+                    onScanAgain = { showScanAgainDialog = true },
+                    onDeleteAll = { showDeleteAllDialog = true },
+                    onExpandGroup = { viewModel.onEvent(DuplicateEvent.OnExpandGroup(it)) },
+                    onDeleteLink = { viewModel.onEvent(DuplicateEvent.OnDeleteLink(it)) },
+                    onDeleteAllInGroup = { index ->
+                        viewModel.onEvent(DuplicateEvent.OnDeleteAllInGroup(index, keepFirst = true))
+                    },
+                    modifier = Modifier.padding(paddingValues)
+                )
             }
         }
     }
@@ -175,147 +146,160 @@ fun DuplicateDetectionScreen(
             onDismiss = { showDeleteAllDialog = false }
         )
     }
+
+    // Scan Again Confirmation Dialog
+    if (showScanAgainDialog) {
+        ScanAgainDialog(
+            onConfirm = {
+                viewModel.onEvent(DuplicateEvent.OnScan)
+                showScanAgainDialog = false
+            },
+            onDismiss = { showScanAgainDialog = false }
+        )
+    }
 }
 
 @Composable
-private fun SummaryHeader(
-    totalDuplicates: Int,
-    groupCount: Int,
-    isScanning: Boolean,
-    isDeleting: Boolean,
-    onDeleteAll: () -> Unit,
-    onScan: () -> Unit,
+private fun InitialScreen(
+    onStartScan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-        )
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "$totalDuplicates Duplicates",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "in $groupCount groups",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                }
+        Spacer(modifier = Modifier.height(48.dp))
 
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
-                )
-            }
-
-            if (totalDuplicates > 0) {
-                Button(
-                    onClick = onDeleteAll,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isScanning && !isDeleting,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    if (isDeleting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onError,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Delete All Duplicates (Keep Originals)")
-                }
-
-                Text(
-                    text = "This will keep the oldest link in each group and delete the rest",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScanningIndicator(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = "Scanning for duplicates...",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-    }
-}
-
-@Composable
-private fun NoDuplicatesContent(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // Icon
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.CheckCircle,
+                imageVector = Icons.Outlined.FindReplace,
                 contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "No Duplicates Found",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "Your link collection is clean!",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Title
+        Text(
+            text = "Find Duplicate Links",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Description
+        Text(
+            text = "Scan your link collection to find and remove duplicate entries. The oldest link in each group will be kept as the original.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // Info Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "How it works",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                InfoItem(
+                    icon = Icons.Default.Link,
+                    text = "URLs are normalized to find matches"
+                )
+                InfoItem(
+                    icon = Icons.Default.ContentCopy,
+                    text = "Duplicates are grouped together"
+                )
+                InfoItem(
+                    icon = Icons.Default.CheckCircle,
+                    text = "Oldest link is marked as original"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Start Button
+        Button(
+            onClick = onStartScan,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Start Scan",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
 @Composable
-private fun DuplicatesList(
-    groups: List<DuplicateGroup>,
-    expandedGroups: Set<Int>,
+private fun InfoItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun ResultsScreen(
+    state: DuplicateDetectionState,
+    onScanAgain: () -> Unit,
+    onDeleteAll: () -> Unit,
     onExpandGroup: (Int) -> Unit,
     onDeleteLink: (String) -> Unit,
     onDeleteAllInGroup: (Int) -> Unit,
@@ -323,26 +307,266 @@ private fun DuplicatesList(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        itemsIndexed(groups) { index, group ->
-            DuplicateGroupCard(
-                group = group,
-                groupIndex = index,
-                isExpanded = expandedGroups.contains(index),
-                onExpand = { onExpandGroup(index) },
-                onDeleteLink = onDeleteLink,
-                onDeleteAllInGroup = { onDeleteAllInGroup(index) }
+        // Summary Card
+        item {
+            SummaryCard(
+                isScanning = state.isScanning,
+                isDeleting = state.isDeleting,
+                totalDuplicates = state.totalDuplicatesFound,
+                groupCount = state.duplicateGroups.size,
+                onScanAgain = onScanAgain,
+                onDeleteAll = onDeleteAll
             )
         }
+
+        // Scanning state
+        if (state.isScanning) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = "Scanning for duplicates...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // No duplicates found
+        if (!state.isScanning && state.duplicateGroups.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = Color(0xFF4CAF50)
+                            )
+                        }
+                        Text(
+                            text = "No Duplicates Found",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Your link collection is clean!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // Duplicate groups
+        if (!state.isScanning && state.duplicateGroups.isNotEmpty()) {
+            itemsIndexed(state.duplicateGroups) { index, group ->
+                DuplicateGroupCard(
+                    group = group,
+                    isExpanded = state.expandedGroups.contains(index),
+                    onExpand = { onExpandGroup(index) },
+                    onDeleteLink = onDeleteLink,
+                    onDeleteAllInGroup = { onDeleteAllInGroup(index) }
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+private fun SummaryCard(
+    isScanning: Boolean,
+    isDeleting: Boolean,
+    totalDuplicates: Int,
+    groupCount: Int,
+    onScanAgain: () -> Unit,
+    onDeleteAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isScanning) "Scanning..." else "Scan Results",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (!isScanning && totalDuplicates > 0) {
+                    Text(
+                        text = "$groupCount groups",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Stats
+            if (!isScanning) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatItem(
+                        count = totalDuplicates,
+                        label = "Duplicates",
+                        color = if (totalDuplicates > 0) Color(0xFFF44336) else Color(0xFF4CAF50)
+                    )
+                    StatItem(
+                        count = groupCount,
+                        label = "Groups",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Action buttons
+            if (!isScanning) {
+                if (totalDuplicates > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onScanAgain,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Rescan", maxLines = 1)
+                        }
+
+                        Button(
+                            onClick = onDeleteAll,
+                            modifier = Modifier.weight(1f),
+                            enabled = !isDeleting,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (isDeleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete All", maxLines = 1)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onScanAgain,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan Again")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    count: Int,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
 private fun DuplicateGroupCard(
     group: DuplicateGroup,
-    groupIndex: Int,
     isExpanded: Boolean,
     onExpand: () -> Unit,
     onDeleteLink: (String) -> Unit,
@@ -354,7 +578,7 @@ private fun DuplicateGroupCard(
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
-            // Header (always visible)
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -363,12 +587,20 @@ private fun DuplicateGroupCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Link,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Link,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -387,7 +619,8 @@ private fun DuplicateGroupCard(
 
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -400,14 +633,15 @@ private fun DuplicateGroupCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Quick action button
                     OutlinedButton(
                         onClick = onDeleteAllInGroup,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -418,7 +652,7 @@ private fun DuplicateGroupCard(
                         Text("Delete Duplicates (Keep Original)")
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     // Link list
                     group.links.forEachIndexed { index, link ->
@@ -445,11 +679,12 @@ private fun DuplicateLinkItem(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (isOriginal) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             } else {
                 MaterialTheme.colorScheme.surface
             }
-        )
+        ),
+        shape = RoundedCornerShape(10.dp)
     ) {
         Row(
             modifier = Modifier
@@ -464,7 +699,7 @@ private fun DuplicateLinkItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = link.title,
+                        text = link.title.ifBlank { "Untitled" },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -508,8 +743,7 @@ private fun DuplicateLinkItem(
 private fun DeleteAllDialog(
     duplicateCount: Int,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -521,9 +755,7 @@ private fun DeleteAllDialog(
         },
         text = {
             Text(
-                text = "This will move $duplicateCount duplicate links to trash. " +
-                        "The oldest link in each group (the original) will be kept. " +
-                        "You can restore them from trash if needed.",
+                text = "This will move $duplicateCount duplicate links to trash. The oldest link in each group (the original) will be kept. You can restore them from trash if needed.",
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -534,15 +766,46 @@ private fun DeleteAllDialog(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Delete Duplicates")
+                Text("Delete")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
+        }
+    )
+}
+
+@Composable
+private fun ScanAgainDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Scan Again?",
+                style = MaterialTheme.typography.headlineSmall
+            )
         },
-        modifier = modifier
+        text = {
+            Text(
+                text = "This will clear the current results and start a new scan for duplicate links.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Scan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
     )
 }
 
