@@ -9,6 +9,7 @@ import com.rejowan.linky.data.security.VaultSessionManager
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.VaultLink
 import com.rejowan.linky.domain.repository.VaultRepository
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +41,8 @@ class VaultRepositoryImpl(
     init {
         // Clean up orphaned vault links if PIN was reset (e.g., after reinstall)
         // These links can't be decrypted without the original PIN
+        // Using GlobalScope is appropriate here: one-time app startup cleanup
+        @OptIn(DelicateCoroutinesApi::class)
         GlobalScope.launch(Dispatchers.IO) {
             cleanupOrphanedVaultLinks()
         }
