@@ -72,6 +72,7 @@ object SeedData {
      */
     fun generateLinks(): List<Link> {
         val now = System.currentTimeMillis()
+        val day = 86400000L // 1 day in milliseconds (Long to avoid overflow)
 
         return listOf(
             // Android Development
@@ -81,7 +82,7 @@ object SeedData {
                 description = "Official Android developer documentation and guides",
                 url = "https://developer.android.com",
                 collectionId = "col_android",
-                createdAt = now - 86400000 * 1,
+                createdAt = now - day * 1,
                 updatedAt = now
             ),
             Link(
@@ -90,7 +91,7 @@ object SeedData {
                 description = "Free weekly Android development newsletter",
                 url = "https://androidweekly.net",
                 collectionId = "col_android",
-                createdAt = now - 86400000 * 2,
+                createdAt = now - day * 2,
                 updatedAt = now
             ),
             Link(
@@ -99,7 +100,7 @@ object SeedData {
                 description = "Professional Android Development publication on Medium",
                 url = "https://proandroiddev.com",
                 collectionId = "col_android",
-                createdAt = now - 86400000 * 3,
+                createdAt = now - day * 3,
                 updatedAt = now
             ),
 
@@ -110,7 +111,7 @@ object SeedData {
                 description = "Official Kotlin programming language website",
                 url = "https://kotlinlang.org",
                 collectionId = "col_kotlin",
-                createdAt = now - 86400000 * 4,
+                createdAt = now - day * 4,
                 updatedAt = now
             ),
             Link(
@@ -119,7 +120,7 @@ object SeedData {
                 description = "Online Kotlin code editor and runner",
                 url = "https://play.kotlinlang.org",
                 collectionId = "col_kotlin",
-                createdAt = now - 86400000 * 5,
+                createdAt = now - day * 5,
                 updatedAt = now
             ),
 
@@ -130,7 +131,7 @@ object SeedData {
                 description = "Official Jetpack Compose documentation",
                 url = "https://developer.android.com/jetpack/compose",
                 collectionId = "col_compose",
-                createdAt = now - 86400000 * 6,
+                createdAt = now - day * 6,
                 updatedAt = now
             ),
             Link(
@@ -139,7 +140,7 @@ object SeedData {
                 description = "Jetpack Compose UI components and examples",
                 url = "https://www.composables.com",
                 collectionId = "col_compose",
-                createdAt = now - 86400000 * 7,
+                createdAt = now - day * 7,
                 updatedAt = now
             ),
 
@@ -150,7 +151,7 @@ object SeedData {
                 description = "Resources for developers, by developers",
                 url = "https://developer.mozilla.org",
                 collectionId = "col_web",
-                createdAt = now - 86400000 * 8,
+                createdAt = now - day * 8,
                 updatedAt = now
             ),
             Link(
@@ -159,7 +160,7 @@ object SeedData {
                 description = "Tips, tricks, and techniques on using CSS",
                 url = "https://css-tricks.com",
                 collectionId = "col_web",
-                createdAt = now - 86400000 * 9,
+                createdAt = now - day * 9,
                 updatedAt = now
             ),
             Link(
@@ -168,7 +169,7 @@ object SeedData {
                 description = "For web designers and developers",
                 url = "https://www.smashingmagazine.com",
                 collectionId = "col_web",
-                createdAt = now - 86400000 * 10,
+                createdAt = now - day * 10,
                 updatedAt = now
             ),
 
@@ -179,7 +180,7 @@ object SeedData {
                 description = "API platform for building and using APIs",
                 url = "https://www.postman.com",
                 collectionId = "col_backend",
-                createdAt = now - 86400000 * 11,
+                createdAt = now - day * 11,
                 updatedAt = now
             ),
             Link(
@@ -188,7 +189,7 @@ object SeedData {
                 description = "Free fake API for testing and prototyping",
                 url = "https://jsonplaceholder.typicode.com",
                 collectionId = "col_backend",
-                createdAt = now - 86400000 * 12,
+                createdAt = now - day * 12,
                 updatedAt = now
             ),
 
@@ -199,7 +200,7 @@ object SeedData {
                 description = "Discover the world's top designers & creatives",
                 url = "https://dribbble.com",
                 collectionId = "col_design",
-                createdAt = now - 86400000 * 13,
+                createdAt = now - day * 13,
                 updatedAt = now
             ),
             Link(
@@ -208,7 +209,7 @@ object SeedData {
                 description = "Showcase and discover creative work",
                 url = "https://www.behance.net",
                 collectionId = "col_design",
-                createdAt = now - 86400000 * 14,
+                createdAt = now - day * 14,
                 updatedAt = now
             ),
             Link(
@@ -217,7 +218,7 @@ object SeedData {
                 description = "Collaborative interface design tool",
                 url = "https://www.figma.com",
                 collectionId = "col_design",
-                createdAt = now - 86400000 * 15,
+                createdAt = now - day * 15,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -229,7 +230,7 @@ object SeedData {
                 description = "Google Material Design icons",
                 url = "https://fonts.google.com/icons",
                 collectionId = "col_icons",
-                createdAt = now - 86400000 * 16,
+                createdAt = now - day * 16,
                 updatedAt = now
             ),
             Link(
@@ -238,7 +239,7 @@ object SeedData {
                 description = "Beautiful hand-crafted SVG icons",
                 url = "https://heroicons.com",
                 collectionId = "col_icons",
-                createdAt = now - 86400000 * 17,
+                createdAt = now - day * 17,
                 updatedAt = now
             ),
             Link(
@@ -247,7 +248,7 @@ object SeedData {
                 description = "Beautiful free images & pictures",
                 url = "https://unsplash.com",
                 collectionId = "col_icons",
-                createdAt = now - 86400000 * 18,
+                createdAt = now - day * 18,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -259,7 +260,7 @@ object SeedData {
                 description = "The super fast color palettes generator",
                 url = "https://coolors.co",
                 collectionId = "col_colors",
-                createdAt = now - 86400000 * 19,
+                createdAt = now - day * 19,
                 updatedAt = now
             ),
             Link(
@@ -268,7 +269,7 @@ object SeedData {
                 description = "Curated collection of beautiful color palettes",
                 url = "https://colorhunt.co",
                 collectionId = "col_colors",
-                createdAt = now - 86400000 * 20,
+                createdAt = now - day * 20,
                 updatedAt = now
             ),
 
@@ -279,7 +280,7 @@ object SeedData {
                 description = "High quality programming tutorials",
                 url = "https://www.kodeco.com",
                 collectionId = "col_tutorials",
-                createdAt = now - 86400000 * 21,
+                createdAt = now - day * 21,
                 updatedAt = now
             ),
             Link(
@@ -288,7 +289,7 @@ object SeedData {
                 description = "Learn to code for free",
                 url = "https://www.freecodecamp.org",
                 collectionId = "col_tutorials",
-                createdAt = now - 86400000 * 22,
+                createdAt = now - day * 22,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -300,7 +301,7 @@ object SeedData {
                 description = "Online learning and teaching marketplace",
                 url = "https://www.udemy.com",
                 collectionId = "col_courses",
-                createdAt = now - 86400000 * 23,
+                createdAt = now - day * 23,
                 updatedAt = now
             ),
             Link(
@@ -309,7 +310,7 @@ object SeedData {
                 description = "Build skills with courses from top universities",
                 url = "https://www.coursera.org",
                 collectionId = "col_courses",
-                createdAt = now - 86400000 * 24,
+                createdAt = now - day * 24,
                 updatedAt = now
             ),
 
@@ -320,7 +321,7 @@ object SeedData {
                 description = "API documentation browser",
                 url = "https://devdocs.io",
                 collectionId = "col_docs",
-                createdAt = now - 86400000 * 25,
+                createdAt = now - day * 25,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -332,7 +333,7 @@ object SeedData {
                 description = "Where the world builds software",
                 url = "https://github.com",
                 collectionId = "col_tools",
-                createdAt = now - 86400000 * 26,
+                createdAt = now - day * 26,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -342,7 +343,7 @@ object SeedData {
                 description = "Where developers learn, share, & build careers",
                 url = "https://stackoverflow.com",
                 collectionId = "col_tools",
-                createdAt = now - 86400000 * 27,
+                createdAt = now - day * 27,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -352,7 +353,7 @@ object SeedData {
                 description = "Online regex tester and debugger",
                 url = "https://regex101.com",
                 collectionId = "col_tools",
-                createdAt = now - 86400000 * 28,
+                createdAt = now - day * 28,
                 updatedAt = now
             ),
 
@@ -363,7 +364,7 @@ object SeedData {
                 description = "AI research and deployment company",
                 url = "https://openai.com",
                 collectionId = "col_ai",
-                createdAt = now - 86400000 * 29,
+                createdAt = now - day * 29,
                 updatedAt = now
             ),
             Link(
@@ -372,7 +373,7 @@ object SeedData {
                 description = "The AI community building the future",
                 url = "https://huggingface.co",
                 collectionId = "col_ai",
-                createdAt = now - 86400000 * 30,
+                createdAt = now - day * 30,
                 updatedAt = now
             ),
             Link(
@@ -381,7 +382,7 @@ object SeedData {
                 description = "Machine learning papers with code",
                 url = "https://paperswithcode.com",
                 collectionId = "col_ai",
-                createdAt = now - 86400000 * 31,
+                createdAt = now - day * 31,
                 updatedAt = now
             ),
 
@@ -392,7 +393,7 @@ object SeedData {
                 description = "All-in-one workspace for notes, tasks, wikis",
                 url = "https://www.notion.so",
                 collectionId = "col_productivity",
-                createdAt = now - 86400000 * 32,
+                createdAt = now - day * 32,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -402,7 +403,7 @@ object SeedData {
                 description = "Modern issue tracking and project management",
                 url = "https://linear.app",
                 collectionId = "col_productivity",
-                createdAt = now - 86400000 * 33,
+                createdAt = now - day * 33,
                 updatedAt = now
             ),
 
@@ -413,7 +414,7 @@ object SeedData {
                 description = "Social news website focusing on computer science",
                 url = "https://news.ycombinator.com",
                 collectionId = "col_news",
-                createdAt = now - 86400000 * 34,
+                createdAt = now - day * 34,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -423,7 +424,7 @@ object SeedData {
                 description = "Startup and technology news",
                 url = "https://techcrunch.com",
                 collectionId = "col_news",
-                createdAt = now - 86400000 * 35,
+                createdAt = now - day * 35,
                 updatedAt = now
             ),
             Link(
@@ -432,7 +433,7 @@ object SeedData {
                 description = "Technology, science, art, and culture",
                 url = "https://www.theverge.com",
                 collectionId = "col_news",
-                createdAt = now - 86400000 * 36,
+                createdAt = now - day * 36,
                 updatedAt = now
             ),
 
@@ -443,7 +444,7 @@ object SeedData {
                 description = "Community of software developers",
                 url = "https://dev.to",
                 collectionId = "col_blogs",
-                createdAt = now - 86400000 * 37,
+                createdAt = now - day * 37,
                 updatedAt = now
             ),
             Link(
@@ -452,7 +453,7 @@ object SeedData {
                 description = "Where good ideas find you",
                 url = "https://medium.com",
                 collectionId = "col_blogs",
-                createdAt = now - 86400000 * 38,
+                createdAt = now - day * 38,
                 updatedAt = now
             ),
             Link(
@@ -461,7 +462,7 @@ object SeedData {
                 description = "Blogging platform for developers",
                 url = "https://hashnode.com",
                 collectionId = "col_blogs",
-                createdAt = now - 86400000 * 39,
+                createdAt = now - day * 39,
                 updatedAt = now
             ),
 
@@ -472,7 +473,7 @@ object SeedData {
                 description = "Share your videos with friends, family, and the world",
                 url = "https://www.youtube.com",
                 collectionId = "col_videos",
-                createdAt = now - 86400000 * 40,
+                createdAt = now - day * 40,
                 updatedAt = now
             ),
             Link(
@@ -481,7 +482,7 @@ object SeedData {
                 description = "A Tasty Treats Podcast for Web Developers",
                 url = "https://syntax.fm",
                 collectionId = "col_videos",
-                createdAt = now - 86400000 * 41,
+                createdAt = now - day * 41,
                 updatedAt = now
             ),
 
@@ -492,7 +493,7 @@ object SeedData {
                 description = "Music for everyone",
                 url = "https://www.spotify.com",
                 collectionId = "col_music",
-                createdAt = now - 86400000 * 42,
+                createdAt = now - day * 42,
                 updatedAt = now
             ),
             Link(
@@ -501,7 +502,7 @@ object SeedData {
                 description = "Listen to free music and podcasts",
                 url = "https://soundcloud.com",
                 collectionId = "col_music",
-                createdAt = now - 86400000 * 43,
+                createdAt = now - day * 43,
                 updatedAt = now
             ),
 
@@ -512,7 +513,7 @@ object SeedData {
                 description = "Curated list of awesome Android resources",
                 url = "https://github.com/JStumpp/awesome-android",
                 collectionId = "col_github",
-                createdAt = now - 86400000 * 44,
+                createdAt = now - day * 44,
                 updatedAt = now
             ),
             Link(
@@ -521,7 +522,7 @@ object SeedData {
                 description = "A curated list of awesome Kotlin resources",
                 url = "https://github.com/KotlinBy/awesome-kotlin",
                 collectionId = "col_github",
-                createdAt = now - 86400000 * 45,
+                createdAt = now - day * 45,
                 updatedAt = now
             ),
 
@@ -532,7 +533,7 @@ object SeedData {
                 description = "Search Maven packages",
                 url = "https://search.maven.org",
                 collectionId = "col_libraries",
-                createdAt = now - 86400000 * 46,
+                createdAt = now - day * 46,
                 updatedAt = now
             ),
             Link(
@@ -541,7 +542,7 @@ object SeedData {
                 description = "Build amazing things with JavaScript",
                 url = "https://www.npmjs.com",
                 collectionId = "col_libraries",
-                createdAt = now - 86400000 * 47,
+                createdAt = now - day * 47,
                 updatedAt = now
             ),
 
@@ -552,7 +553,7 @@ object SeedData {
                 description = "A collective list of free APIs",
                 url = "https://github.com/public-apis/public-apis",
                 collectionId = "col_apis",
-                createdAt = now - 86400000 * 48,
+                createdAt = now - day * 48,
                 updatedAt = now
             ),
             Link(
@@ -561,7 +562,7 @@ object SeedData {
                 description = "Discover and connect to thousands of APIs",
                 url = "https://rapidapi.com",
                 collectionId = "col_apis",
-                createdAt = now - 86400000 * 49,
+                createdAt = now - day * 49,
                 updatedAt = now
             ),
 
@@ -572,7 +573,7 @@ object SeedData {
                 description = "The free encyclopedia",
                 url = "https://www.wikipedia.org",
                 collectionId = "col_readlater",
-                createdAt = now - 86400000 * 50,
+                createdAt = now - day * 50,
                 updatedAt = now
             ),
 
@@ -583,7 +584,7 @@ object SeedData {
                 description = "Website awards for design, creativity and innovation",
                 url = "https://www.awwwards.com",
                 collectionId = "col_inspiration",
-                createdAt = now - 86400000 * 51,
+                createdAt = now - day * 51,
                 updatedAt = now,
                 isFavorite = true
             ),
@@ -595,7 +596,7 @@ object SeedData {
                 description = "Online shopping from the earth's biggest selection",
                 url = "https://www.amazon.com",
                 collectionId = "col_shopping",
-                createdAt = now - 86400000 * 52,
+                createdAt = now - day * 52,
                 updatedAt = now
             )
         )
