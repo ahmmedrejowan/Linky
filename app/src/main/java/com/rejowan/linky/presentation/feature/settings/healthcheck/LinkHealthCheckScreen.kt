@@ -1,12 +1,12 @@
 package com.rejowan.linky.presentation.feature.settings.healthcheck
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
@@ -40,6 +39,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +73,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,79 +123,36 @@ fun LinkHealthCheckScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Options Card (before checking)
-            if (!state.isChecking && state.healthResults.isEmpty()) {
-                item {
-                    OptionsCard(
-                        refetchThumbnailsEnabled = state.refetchThumbnailsEnabled,
-                        refetchTitlesEnabled = state.refetchTitlesEnabled,
-                        onToggleThumbnails = { viewModel.onEvent(HealthCheckEvent.OnToggleRefetchThumbnails(it)) },
-                        onToggleTitles = { viewModel.onEvent(HealthCheckEvent.OnToggleRefetchTitles(it)) },
-                        onStartCheck = { viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck) }
-                    )
-                }
+        AnimatedContent(
+            targetState = state.isChecking || state.healthResults.isNotEmpty(),
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+            },
+            label = "screen_content"
+        ) { hasStarted ->
+            if (!hasStarted) {
+                // Initial full-screen state
+                InitialScreen(
+                    refetchThumbnailsEnabled = state.refetchThumbnailsEnabled,
+                    refetchTitlesEnabled = state.refetchTitlesEnabled,
+                    onToggleThumbnails = { viewModel.onEvent(HealthCheckEvent.OnToggleRefetchThumbnails(it)) },
+                    onToggleTitles = { viewModel.onEvent(HealthCheckEvent.OnToggleRefetchTitles(it)) },
+                    onStartCheck = { viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck) },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                // Progress or Results state - same UI with real-time updates
+                ResultsScreen(
+                    state = state,
+                    onCancel = { viewModel.onEvent(HealthCheckEvent.OnCancelHealthCheck) },
+                    onRunAgain = { viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck) },
+                    onDeleteBroken = { showDeleteBrokenDialog = true },
+                    onFilterChange = { viewModel.onEvent(HealthCheckEvent.OnFilterByStatus(it)) },
+                    onRefetch = { viewModel.onEvent(HealthCheckEvent.OnRefetchMetadata(it)) },
+                    onDelete = { viewModel.onEvent(HealthCheckEvent.OnDeleteLink(it)) },
+                    modifier = Modifier.padding(paddingValues)
+                )
             }
-
-            // Progress Card (while checking)
-            if (state.isChecking) {
-                item {
-                    ProgressCard(
-                        progress = state.progress,
-                        checkedCount = state.checkedCount,
-                        totalLinks = state.totalLinks,
-                        currentLink = state.currentCheckingLink,
-                        onCancel = { viewModel.onEvent(HealthCheckEvent.OnCancelHealthCheck) }
-                    )
-                }
-            }
-
-            // Results Summary (after checking)
-            if (!state.isChecking && state.healthResults.isNotEmpty()) {
-                item {
-                    ResultsSummaryCard(
-                        healthyCount = state.healthyCount,
-                        slowCount = state.slowCount,
-                        brokenCount = state.brokenCount,
-                        thumbnailsUpdated = state.thumbnailsUpdated,
-                        titlesUpdated = state.titlesUpdated,
-                        onRunAgain = { viewModel.onEvent(HealthCheckEvent.OnStartHealthCheck) },
-                        onDeleteBroken = { showDeleteBrokenDialog = true }
-                    )
-                }
-
-                // Filter chips
-                item {
-                    FilterRow(
-                        selectedFilter = state.filterStatus,
-                        healthyCount = state.healthyCount,
-                        slowCount = state.slowCount,
-                        brokenCount = state.brokenCount,
-                        onFilterChange = { viewModel.onEvent(HealthCheckEvent.OnFilterByStatus(it)) }
-                    )
-                }
-
-                // Results list
-                items(
-                    items = state.filteredResults,
-                    key = { it.link.id }
-                ) { result ->
-                    LinkResultCard(
-                        result = result,
-                        onRefetch = { viewModel.onEvent(HealthCheckEvent.OnRefetchMetadata(result.link.id)) },
-                        onDelete = { viewModel.onEvent(HealthCheckEvent.OnDeleteLink(result.link.id)) },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
@@ -212,7 +170,7 @@ fun LinkHealthCheckScreen(
 }
 
 @Composable
-private fun OptionsCard(
+private fun InitialScreen(
     refetchThumbnailsEnabled: Boolean,
     refetchTitlesEnabled: Boolean,
     onToggleThumbnails: (Boolean) -> Unit,
@@ -220,80 +178,120 @@ private fun OptionsCard(
     onStartCheck: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Icon
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
         ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Icon(
+                imageVector = Icons.Outlined.HealthAndSafety,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Title
+        Text(
+            text = "Verify Your Links",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Description
+        Text(
+            text = "Check if all your saved links are still accessible and working properly",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // Options Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Link,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                Text(
+                    text = "Additional Options",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Column {
-                    Text(
-                        text = "Verify Your Links",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Check if all saved links are still accessible",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
 
-            HorizontalDivider()
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Options
-            Text(
-                text = "Options",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            OptionToggle(
-                icon = Icons.Default.Image,
-                title = "Refetch Thumbnails",
-                description = "Update link preview images",
-                checked = refetchThumbnailsEnabled,
-                onCheckedChange = onToggleThumbnails
-            )
-
-            OptionToggle(
-                icon = Icons.Default.Title,
-                title = "Refetch Titles",
-                description = "Update link titles and descriptions",
-                checked = refetchTitlesEnabled,
-                onCheckedChange = onToggleTitles
-            )
-
-            // Start button
-            Button(
-                onClick = onStartCheck,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
+                OptionToggle(
+                    icon = Icons.Default.Image,
+                    title = "Refetch Thumbnails",
+                    description = "Update link preview images",
+                    checked = refetchThumbnailsEnabled,
+                    onCheckedChange = onToggleThumbnails
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Start Health Check")
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                OptionToggle(
+                    icon = Icons.Default.Title,
+                    title = "Refetch Titles",
+                    description = "Update link titles and descriptions",
+                    checked = refetchTitlesEnabled,
+                    onCheckedChange = onToggleTitles
+                )
             }
         }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Start Button
+        Button(
+            onClick = onStartCheck,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Start Health Check",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -309,18 +307,26 @@ private fun OptionToggle(
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             Text(
@@ -337,230 +343,251 @@ private fun OptionToggle(
 }
 
 @Composable
-private fun ProgressCard(
-    progress: Float,
-    checkedCount: Int,
-    totalLinks: Int,
-    currentLink: com.rejowan.linky.domain.model.Link?,
+private fun ResultsScreen(
+    state: LinkHealthCheckState,
     onCancel: () -> Unit,
+    onRunAgain: () -> Unit,
+    onDeleteBroken: () -> Unit,
+    onFilterChange: (LinkHealthStatus?) -> Unit,
+    onRefetch: (String) -> Unit,
+    onDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val animatedProgress by animateFloatAsState(
-        targetValue = progress,
+        targetValue = state.progress,
         animationSpec = tween(300),
         label = "progress"
     )
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-        )
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
+        // Stats Card with progress (real-time updates)
+        item {
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    text = "Checking links...",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "$checkedCount / $totalLinks",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            LinearProgressIndicator(
-                progress = { animatedProgress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                strokeCap = StrokeCap.Round
-            )
-
-            // Current link being checked
-            currentLink?.let { link ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                        .padding(10.dp)
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = link.title.ifBlank { link.url },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Button(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Stop,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Cancel")
-            }
-        }
-    }
-}
-
-@Composable
-private fun ResultsSummaryCard(
-    healthyCount: Int,
-    slowCount: Int,
-    brokenCount: Int,
-    thumbnailsUpdated: Int,
-    titlesUpdated: Int,
-    onRunAgain: () -> Unit,
-    onDeleteBroken: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Stats row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatItem(
-                    count = healthyCount,
-                    label = "Healthy",
-                    icon = Icons.Default.CheckCircle,
-                    color = Color(0xFF4CAF50)
-                )
-                StatItem(
-                    count = slowCount,
-                    label = "Slow",
-                    icon = Icons.Default.Speed,
-                    color = Color(0xFFFF9800)
-                )
-                StatItem(
-                    count = brokenCount,
-                    label = "Broken",
-                    icon = Icons.Default.Error,
-                    color = Color(0xFFF44336)
-                )
-            }
-
-            // Updates info
-            if (thumbnailsUpdated > 0 || titlesUpdated > 0) {
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Updated: ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (thumbnailsUpdated > 0) {
-                        Text(
-                            text = "$thumbnailsUpdated thumbnails",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (thumbnailsUpdated > 0 && titlesUpdated > 0) {
-                        Text(
-                            text = ", ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (titlesUpdated > 0) {
-                        Text(
-                            text = "$titlesUpdated titles",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            HorizontalDivider()
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onRunAgain,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Run Again")
-                }
-
-                AnimatedVisibility(visible = brokenCount > 0) {
-                    Button(
-                        onClick = onDeleteBroken,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
-                        shape = RoundedCornerShape(10.dp)
+                    // Header with status
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                        Text(
+                            text = if (state.isChecking) "Checking Links..." else "Health Check Complete",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Delete Broken")
+                        if (state.isChecking) {
+                            Text(
+                                text = "${state.checkedCount}/${state.totalLinks}",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Progress bar (only when checking)
+                    if (state.isChecking) {
+                        LinearProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            strokeCap = StrokeCap.Round
+                        )
+                    }
+
+                    // Stats row - updates in real-time
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        StatItem(
+                            count = state.healthyCount,
+                            label = "Healthy",
+                            icon = Icons.Default.CheckCircle,
+                            color = Color(0xFF4CAF50)
+                        )
+                        StatItem(
+                            count = state.slowCount,
+                            label = "Slow",
+                            icon = Icons.Default.Speed,
+                            color = Color(0xFFFF9800)
+                        )
+                        StatItem(
+                            count = state.brokenCount,
+                            label = "Broken",
+                            icon = Icons.Default.Error,
+                            color = Color(0xFFF44336)
+                        )
+                    }
+
+                    // Current link being checked (only when checking)
+                    if (state.isChecking && state.currentCheckingLink != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .padding(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = state.currentCheckingLink.title.ifBlank { "Checking..." },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = state.currentCheckingLink.url.shortenUrl(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    // Updates info (only after completion with updates)
+                    if (!state.isChecking && (state.thumbnailsUpdated > 0 || state.titlesUpdated > 0)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = buildString {
+                                    append("Updated: ")
+                                    if (state.thumbnailsUpdated > 0) append("${state.thumbnailsUpdated} thumbnails")
+                                    if (state.thumbnailsUpdated > 0 && state.titlesUpdated > 0) append(", ")
+                                    if (state.titlesUpdated > 0) append("${state.titlesUpdated} titles")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Action button
+                    if (state.isChecking) {
+                        Button(
+                            onClick = onCancel,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Stop,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Cancel")
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = onRunAgain,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Run Again")
+                            }
+
+                            AnimatedVisibility(visible = state.brokenCount > 0) {
+                                Button(
+                                    onClick = onDeleteBroken,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DeleteSweep,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Delete Broken")
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+
+        // Filter chips (only when not checking and has results)
+        if (!state.isChecking && state.healthResults.isNotEmpty()) {
+            item {
+                FilterRow(
+                    selectedFilter = state.filterStatus,
+                    healthyCount = state.healthyCount,
+                    slowCount = state.slowCount,
+                    brokenCount = state.brokenCount,
+                    onFilterChange = onFilterChange
+                )
+            }
+        }
+
+        // Results list
+        if (state.healthResults.isNotEmpty()) {
+            items(
+                items = state.filteredResults,
+                key = { it.link.id }
+            ) { result ->
+                LinkResultCard(
+                    result = result,
+                    onRefetch = { onRefetch(result.link.id) },
+                    onDelete = { onDelete(result.link.id) },
+                    modifier = Modifier.animateItem()
+                )
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
 
@@ -576,16 +603,24 @@ private fun StatItem(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = color
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = color
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = count.toString(),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = color
         )
@@ -651,9 +686,9 @@ private fun FilterChip(
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -665,7 +700,7 @@ private fun FilterChip(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -715,8 +750,8 @@ private fun LinkResultCard(
             // Thumbnail or icon
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(statusColor.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -726,7 +761,7 @@ private fun LinkResultCard(
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(RoundedCornerShape(10.dp)),
                         contentScale = ContentScale.Crop
                     )
                     // Status indicator
@@ -734,7 +769,7 @@ private fun LinkResultCard(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(2.dp)
-                            .size(14.dp)
+                            .size(16.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center
@@ -742,7 +777,7 @@ private fun LinkResultCard(
                         Icon(
                             imageVector = statusIcon,
                             contentDescription = null,
-                            modifier = Modifier.size(10.dp),
+                            modifier = Modifier.size(12.dp),
                             tint = statusColor
                         )
                     }
@@ -750,7 +785,7 @@ private fun LinkResultCard(
                     Icon(
                         imageVector = statusIcon,
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(26.dp),
                         tint = statusColor
                     )
                 }
@@ -781,7 +816,7 @@ private fun LinkResultCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
                         .background(statusColor.copy(alpha = 0.1f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
 
