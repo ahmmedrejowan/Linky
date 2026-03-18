@@ -114,20 +114,8 @@ fun BottomNavHost(
         // ============ SETTINGS SCREEN ============
         composable<Route.Settings> {
             SettingsScreen(
-                onNavigateToAppFeatures = {
-                    parentNavController.navigate(Route.AppFeatures)
-                },
-                onNavigateToDataStorage = {
-                    parentNavController.navigate(Route.DataStorage)
-                },
-                onNavigateToAppearance = {
-                    parentNavController.navigate(Route.Appearance)
-                },
-                onNavigateToPrivacySecurity = {
-                    parentNavController.navigate(Route.PrivacySecurity)
-                },
-                onNavigateToAbout = {
-                    parentNavController.navigate(Route.About)
+                onNavigateToDangerZone = {
+                    parentNavController.navigate(Route.DangerZone)
                 }
             )
         }

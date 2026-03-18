@@ -164,6 +164,13 @@ sealed class Route {
     data object ImportExport : Route()
 
     /**
+     * Danger Zone screen
+     * Delete data, clear cache, and other destructive operations
+     */
+    @Serializable
+    data object DangerZone : Route()
+
+    /**
      * Batch Import screen
      * Import multiple links at once from pasted text
      * @param prefillText Optional text to pre-fill in the paste field (from share intent)

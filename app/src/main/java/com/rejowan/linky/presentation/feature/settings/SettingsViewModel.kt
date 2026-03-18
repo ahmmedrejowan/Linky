@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.rejowan.linky.BuildConfig
 import com.rejowan.linky.data.export.ImportConflictStrategy
 import com.rejowan.linky.data.local.preferences.ThemePreferences
+import com.rejowan.linky.data.update.UpdateCheckInterval
+import com.rejowan.linky.data.update.UpdateRepository
+import com.rejowan.linky.data.update.UpdateState
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
@@ -32,16 +35,66 @@ class SettingsViewModel(
     private val themePreferences: ThemePreferences,
     private val fileStorageManager: FileStorageManager,
     private val exportDataUseCase: ExportDataUseCase,
-    private val importDataUseCase: ImportDataUseCase
+    private val importDataUseCase: ImportDataUseCase,
+    private val updateRepository: UpdateRepository? = null
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
 
+    private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
     init {
         loadSettings()
         observeTheme()
         observeTrashedLinksCount()
+    }
+
+    /**
+     * Check for app updates via GitHub releases
+     */
+    fun checkForUpdates() {
+        if (updateRepository == null) {
+            _updateState.value = UpdateState.Error("Update checking not available")
+            return
+        }
+
+        viewModelScope.launch {
+            _updateState.value = UpdateState.Checking
+
+            val result = updateRepository.checkForUpdates(BuildConfig.VERSION_NAME)
+            result.fold(
+                onSuccess = { release ->
+                    if (release != null) {
+                        _updateState.value = UpdateState.Available(
+                            release = release,
+                            currentVersion = BuildConfig.VERSION_NAME
+                        )
+                    } else {
+                        _updateState.value = UpdateState.UpToDate
+                    }
+                },
+                onFailure = { e ->
+                    _updateState.value = UpdateState.Error(e.message ?: "Check failed")
+                }
+            )
+        }
+    }
+
+    /**
+     * Dismiss the update dialog
+     */
+    fun dismissUpdateDialog() {
+        _updateState.value = UpdateState.Idle
+    }
+
+    /**
+     * Set update check interval
+     */
+    fun setUpdateCheckInterval(interval: UpdateCheckInterval) {
+        _state.update { it.copy(updateCheckInterval = interval) }
+        // TODO: Persist to preferences
     }
 
     fun onEvent(event: SettingsEvent) {

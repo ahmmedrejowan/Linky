@@ -3,6 +3,7 @@ package com.rejowan.linky.presentation.feature.settings
 import com.rejowan.linky.data.export.ExportSummary
 import com.rejowan.linky.data.export.ImportPreview
 import com.rejowan.linky.data.export.ImportSummary
+import com.rejowan.linky.data.update.UpdateCheckInterval
 
 data class SettingsState(
     val totalLinks: Int = 0,
@@ -16,7 +17,10 @@ data class SettingsState(
 
     // Export/Import states
     val exportState: ExportUiState = ExportUiState.Idle,
-    val importState: ImportUiState = ImportUiState.Idle
+    val importState: ImportUiState = ImportUiState.Idle,
+
+    // Update check
+    val updateCheckInterval: UpdateCheckInterval = UpdateCheckInterval.WEEKLY
 )
 
 sealed class ExportUiState {

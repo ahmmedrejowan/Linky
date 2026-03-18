@@ -95,7 +95,8 @@ val viewModelModule = module {
             themePreferences = get(),
             fileStorageManager = get(),
             exportDataUseCase = get(),
-            importDataUseCase = get()
+            importDataUseCase = get(),
+            updateRepository = get()
         )
     }
 
