@@ -42,11 +42,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
-import com.rejowan.linky.ui.theme.SoftAccents
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// Soft rose color for favorites - warm and gentle
+private val FavoritePink = Color(0xFFE57373)
 
 /**
  * LinkCard component - Modern vibrant design with preview image, title, URL, and actions
@@ -65,7 +67,7 @@ fun LinkCard(
     onToggleSelection: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val accentColor = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.primary
+    val accentColor = if (link.isFavorite) FavoritePink else MaterialTheme.colorScheme.primary
     val domain = link.url.extractDomain()
 
     Card(
@@ -103,10 +105,6 @@ fun LinkCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    if (link.isFavorite) accentColor.copy(alpha = 0.04f)
-                    else Color.Transparent
-                )
                 .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -272,7 +270,7 @@ fun LinkCard(
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(
-                                if (link.isFavorite) SoftAccents.Pink.copy(alpha = 0.12f)
+                                if (link.isFavorite) FavoritePink.copy(alpha = 0.12f)
                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             )
                             .clickable { onFavoriteClick() },
@@ -281,7 +279,7 @@ fun LinkCard(
                         Icon(
                             imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
-                            tint = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (link.isFavorite) FavoritePink else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -325,7 +323,7 @@ fun LinkGridCard(
     onToggleSelection: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val accentColor = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.primary
+    val accentColor = if (link.isFavorite) FavoritePink else MaterialTheme.colorScheme.primary
     val domain = link.url.extractDomain()
 
     Card(
@@ -452,7 +450,7 @@ fun LinkGridCard(
                             .size(32.dp)
                             .clip(CircleShape)
                             .background(
-                                if (link.isFavorite) SoftAccents.Pink.copy(alpha = 0.9f)
+                                if (link.isFavorite) FavoritePink.copy(alpha = 0.9f)
                                 else Color.Black.copy(alpha = 0.4f)
                             )
                             .clickable { onFavoriteClick() },
@@ -543,10 +541,6 @@ fun LinkGridCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        if (link.isFavorite) accentColor.copy(alpha = 0.04f)
-                        else Color.Transparent
-                    )
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
