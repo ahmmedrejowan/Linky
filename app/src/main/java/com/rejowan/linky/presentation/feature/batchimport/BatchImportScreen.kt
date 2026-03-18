@@ -69,6 +69,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rejowan.linky.data.local.preferences.ThemePreferences
+import com.rejowan.linky.presentation.components.EmptyState
+import com.rejowan.linky.ui.theme.SoftAccents
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import kotlin.random.Random
@@ -338,14 +340,15 @@ fun BatchImportScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Character count
@@ -354,12 +357,12 @@ fun BatchImportScreen(
                     ) {
                         Text(
                             text = "$characterCount",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "characters",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -370,12 +373,12 @@ fun BatchImportScreen(
                     ) {
                         Text(
                             text = "$lineCount",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "lines",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -391,8 +394,10 @@ fun BatchImportScreen(
             ) {
                 OutlinedButton(
                     onClick = handleBackPress,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Cancel")
                 }
@@ -402,9 +407,11 @@ fun BatchImportScreen(
                         viewModel.onEvent(BatchImportEvent.OnTextChanged(pastedText))
                         viewModel.onEvent(BatchImportEvent.OnStartScan)
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
                     enabled = pastedText.isNotEmpty() && !state.isScanning,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     if (state.isScanning) {
                         CircularProgressIndicator(
@@ -535,6 +542,7 @@ fun BatchImportScreen(
 
 /**
  * Test Data Card - Load sample data for testing
+ * Styled to match the app's modern design
  */
 @Composable
 private fun TestDataCard(
@@ -545,21 +553,32 @@ private fun TestDataCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = SoftAccents.Purple.copy(alpha = 0.12f)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Testing Tools",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = null,
+                    tint = SoftAccents.Purple,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Test Data",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -570,7 +589,7 @@ private fun TestDataCard(
                     onClick = onLoadNormalText,
                     modifier = Modifier
                         .weight(1f)
-                        .height(70.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
@@ -579,14 +598,12 @@ private fun TestDataCard(
                     ) {
                         Text(
                             text = "Normal",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            style = MaterialTheme.typography.titleSmall
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "5-10 links",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            text = "5-15 links",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -596,7 +613,7 @@ private fun TestDataCard(
                     onClick = onLoadLargeText,
                     modifier = Modifier
                         .weight(1f)
-                        .height(70.dp),
+                        .height(56.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
@@ -605,14 +622,12 @@ private fun TestDataCard(
                     ) {
                         Text(
                             text = "Large",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            style = MaterialTheme.typography.titleSmall
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "150+ links",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -623,37 +638,53 @@ private fun TestDataCard(
 
 /**
  * How It Works Card - Dismissable with close button
+ * Modern design matching the app's visual style
  */
 @Composable
 private fun HowItWorksCard(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val accentColor = SoftAccents.Blue
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = accentColor.copy(alpha = 0.12f)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .padding(end = 24.dp), // Extra padding for close button
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(end = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "How it works",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                // Icon
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(24.dp)
                 )
-                Text(
-                    text = "Paste text containing multiple URLs in any format. We'll automatically extract and import them for you.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "How it works",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Paste text containing multiple URLs in any format. We'll automatically extract and import them for you.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Close button
@@ -661,13 +692,13 @@ private fun HowItWorksCard(
                 onClick = onDismiss,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(40.dp)
+                    .size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -684,10 +715,21 @@ private fun HowItWorksDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = "How it works",
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = SoftAccents.Blue,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "How it works",
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
         },
         text = {
             Column(
@@ -695,13 +737,14 @@ private fun HowItWorksDialog(
             ) {
                 Text(
                     text = "Paste text containing multiple URLs in any format. We'll automatically extract and import them for you.",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Text(
                     text = "Examples:",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Text(
@@ -715,11 +758,14 @@ private fun HowItWorksDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Got it")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
@@ -746,23 +792,30 @@ private fun ConfirmationDialog(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Start
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    confirmText,
-                    color = MaterialTheme.colorScheme.error
-                )
+            Button(
+                onClick = onConfirm,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(confirmText)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
@@ -788,19 +841,21 @@ private fun ScanningDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
+                    color = SoftAccents.Blue
                 )
                 if (progress.isNotEmpty()) {
                     Text(
                         text = progress,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 }
             }
         },
         confirmButton = { /* No button while scanning */ },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
@@ -817,10 +872,21 @@ private fun ScanResultDialog(
     AlertDialog(
         onDismissRequest = onBackToEdit,
         title = {
-            Text(
-                text = "URLs Found",
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = SoftAccents.Teal,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "URLs Found",
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
         },
         text = {
             Column(
@@ -828,21 +894,22 @@ private fun ScanResultDialog(
             ) {
                 Text(
                     text = "Found $totalUrls unique URL${if (totalUrls != 1) "s" else ""} ready to import",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (duplicateCount > 0) {
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                            containerColor = SoftAccents.Amber.copy(alpha = 0.12f)
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = "$duplicateCount URL${if (duplicateCount != 1) "s" else ""} already saved (marked as duplicate)",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(12.dp),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -850,14 +917,14 @@ private fun ScanResultDialog(
                 Text(
                     text = "New links: ${totalUrls - duplicateCount}",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = SoftAccents.Teal
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = onProceed,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Review Links")
             }
@@ -865,344 +932,13 @@ private fun ScanResultDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onBackToEdit,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Back to Edit")
             }
         },
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
-}
-
-/**
- * FOR TESTING ONLY: Get random normal test data (5-10 links)
- */
-private fun getRandomNormalTestData(): String {
-    val testDataList = listOf(
-        // Test 1: Simple list of URLs
-        """
-        https://github.com/JetBrains/kotlin
-        https://developer.android.com/jetpack/compose
-        https://kotlinlang.org/docs/home.html
-        https://medium.com/androiddevelopers/effective-state-management-for-jetpack-compose-d7e1bd9c1c5a
-        https://stackoverflow.com/questions/tagged/android
-        """.trimIndent(),
-
-        // Test 2: Mixed text with URLs
-        """
-        Check out these amazing resources:
-        - Kotlin documentation: https://kotlinlang.org/
-        - Android guide at developer.android.com/guide
-        - Great blog post: https://proandroiddev.com/jetpack-compose-best-practices
-        Also visit https://github.com/android for official samples
-        Don't forget reddit.com/r/androiddev for community discussions
-        """.trimIndent(),
-
-        // Test 3: URLs in sentences
-        """
-        I found this great article on https://medium.com/@dev/android-tips yesterday.
-        You should also read https://blog.jetbrains.com/kotlin/ for the latest updates.
-        The official guide is at developer.android.com/guide/components but there's
-        also a good tutorial at https://www.raywenderlich.com/android-tutorials.
-        For design inspiration, check out material.io/design.
-        """.trimIndent(),
-
-        // Test 4: Multiple URLs per line
-        """
-        Resources: https://github.com/topics/android, https://stackoverflow.com, developer.android.com
-        Blogs: medium.com/tag/android, dev.to/t/android, https://androidweekly.net
-        Libraries: github.com/square/retrofit, github.com/coil-kt/coil
-        """.trimIndent(),
-
-        // Test 5: URLs with different formats
-        """
-        https://www.youtube.com/watch?v=abc123
-        github.com/user/repo/issues/42
-        http://old-site.com/page.html
-        www.example.com/path/to/resource
-        subdomain.example.com/api/v1/endpoint
-        https://docs.google.com/document/d/abc123/edit
-        """.trimIndent(),
-
-        // Test 6: News articles and blogs
-        """
-        Breaking: New Android version announced! https://android-developers.googleblog.com/2024/01/android-15-preview
-
-        Tech news from https://techcrunch.com/android and https://theverge.com/tech
-
-        Tutorial I'm following: https://www.udacity.com/course/android-basics
-
-        Community: reddit.com/r/android, xda-developers.com
-        """.trimIndent(),
-
-        // Test 7: Development resources
-        """
-        Official docs: developer.android.com/docs
-
-        Libraries to check:
-        • Networking: github.com/square/retrofit
-        • Images: github.com/coil-kt/coil
-        • DI: insert-koin.io
-        • Database: developer.android.com/training/data-storage/room
-
-        Tutorials: https://www.vogella.com/tutorials/android.html
-        """.trimIndent(),
-
-        // Test 8: Mixed content with duplicates (for testing)
-        """
-        Important links for the project:
-
-        Backend API: https://api.example.com/v2/docs
-        Frontend repo: github.com/company/frontend
-        Design system: https://www.figma.com/file/abc123
-
-        Also see:
-        https://api.example.com/v2/docs (same as above)
-        Backup link: github.com/company/frontend
-
-        Slack: company.slack.com/archives/C123
-        """.trimIndent(),
-
-        // Test 9: Social media and video links
-        """
-        Follow these channels:
-        YouTube tutorial: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-        Twitter updates: twitter.com/androiddev
-        LinkedIn post: https://www.linkedin.com/posts/user_android-mobile-dev
-
-        Conference talk: https://www.youtube.com/watch?v=example
-        Slides: speakerdeck.com/user/presentation
-        """.trimIndent(),
-
-        // Test 10: E-commerce and mixed domains
-        """
-        Shopping list:
-        Phone case: https://www.amazon.com/dp/B08XYZ123
-        Screen protector: amazon.com/gp/product/B09ABC456
-
-        Reviews:
-        https://www.cnet.com/reviews/android-phones/
-        gsmarena.com/samsung_galaxy_s24-review-123.php
-
-        Price comparison: camelcamelcamel.com
-        Deals: slickdeals.net/android
-        """.trimIndent()
-    )
-
-    return testDataList[Random.nextInt(testDataList.size)]
-}
-
-/**
- * FOR TESTING ONLY: Large test data with 50+ links for load testing
- */
-private fun getLargeTestData(): String {
-    return """
-    📚 COMPREHENSIVE WEB DEVELOPMENT RESOURCES COLLECTION
-
-    This is a curated list of essential web development resources gathered from various sources.
-    Perfect for testing link import functionality with a large dataset.
-
-    === OFFICIAL DOCUMENTATION ===
-
-    Frontend Frameworks:
-    React official docs: https://react.dev/learn
-    Vue.js guide: https://vuejs.org/guide/introduction.html
-    Angular documentation: https://angular.io/docs
-    Svelte tutorial: https://svelte.dev/tutorial
-    Next.js docs: https://nextjs.org/docs
-    Nuxt.js guide: https://nuxt.com/docs
-    Remix docs: https://remix.run/docs
-    Astro documentation: https://docs.astro.build
-
-    Backend & APIs:
-    Node.js documentation: https://nodejs.org/docs/latest/api/
-    Express.js guide: https://expressjs.com/en/guide/routing.html
-    Django documentation: https://docs.djangoproject.com/
-    Flask quickstart: https://flask.palletsprojects.com/quickstart/
-    FastAPI docs: https://fastapi.tiangolo.com/
-    Ruby on Rails guides: https://guides.rubyonrails.org/
-    Laravel documentation: https://laravel.com/docs
-    Spring Boot reference: https://docs.spring.io/spring-boot/docs/current/reference/html/
-
-    === LEARNING PLATFORMS ===
-
-    Interactive Tutorials:
-    https://www.freecodecamp.org/learn
-    https://www.codecademy.com/catalog
-    https://www.udemy.com/courses/development/
-    https://www.coursera.org/browse/computer-science
-    https://www.edx.org/learn/computer-programming
-    https://www.pluralsight.com/browse/software-development
-    https://egghead.io/
-    https://frontendmasters.com/
-    https://www.udacity.com/courses/programming
-    https://www.khanacademy.org/computing/computer-programming
-
-    === DEVELOPER COMMUNITIES ===
-
-    Forums & Discussion:
-    Stack Overflow: https://stackoverflow.com/
-    Reddit webdev: https://www.reddit.com/r/webdev/
-    Dev.to community: https://dev.to/
-    Hashnode blogs: https://hashnode.com/
-    HackerNews: https://news.ycombinator.com/
-    Lobsters: https://lobste.rs/
-
-    === CODE REPOSITORIES & EXAMPLES ===
-
-    GitHub Collections:
-    https://github.com/topics/web-development
-    https://github.com/topics/javascript
-    https://github.com/topics/typescript
-    https://github.com/topics/python
-    https://github.com/trending
-    https://github.com/collections/web-accessibility
-    https://github.com/topics/progressive-web-apps
-    https://github.com/topics/serverless
-
-    === CSS & DESIGN ===
-
-    CSS Resources:
-    https://css-tricks.com/
-    https://www.smashingmagazine.com/category/css/
-    https://developer.mozilla.org/en-US/docs/Web/CSS
-    https://web.dev/learn/css/
-    https://cssreference.io/
-    https://tailwindcss.com/docs
-    https://getbootstrap.com/docs/
-    https://bulma.io/documentation/
-
-    Design Systems:
-    Material Design: https://material.io/design
-    Apple HIG: https://developer.apple.com/design/human-interface-guidelines/
-    Ant Design: https://ant.design/
-    Chakra UI: https://chakra-ui.com/
-    Radix UI: https://www.radix-ui.com/
-
-    === JAVASCRIPT ECOSYSTEM ===
-
-    Libraries & Tools:
-    Lodash utilities: https://lodash.com/docs/
-    Axios HTTP client: https://axios-http.com/docs/intro
-    Moment.js dates: https://momentjs.com/docs/
-    Day.js alternative: https://day.js.org/
-    Chart.js graphs: https://www.chartjs.org/docs/
-    D3.js visualization: https://d3js.org/
-    Three.js 3D: https://threejs.org/docs/
-    Gsap animation: https://greensock.com/docs/
-
-    === TESTING & QUALITY ===
-
-    Testing Frameworks:
-    Jest testing: https://jestjs.io/docs/getting-started
-    Vitest modern: https://vitest.dev/guide/
-    Cypress e2e: https://docs.cypress.io/
-    Playwright testing: https://playwright.dev/docs/intro
-    Testing Library: https://testing-library.com/docs/
-    Mocha framework: https://mochajs.org/
-
-    === DEPLOYMENT & HOSTING ===
-
-    Cloud Platforms:
-    Vercel hosting: https://vercel.com/docs
-    Netlify deploy: https://docs.netlify.com/
-    AWS documentation: https://docs.aws.amazon.com/
-    Google Cloud: https://cloud.google.com/docs
-    Azure docs: https://docs.microsoft.com/azure/
-    Heroku platform: https://devcenter.heroku.com/
-    DigitalOcean tutorials: https://www.digitalocean.com/community/tutorials
-    Railway hosting: https://docs.railway.app/
-    Render services: https://render.com/docs
-    Fly.io platform: https://fly.io/docs/
-
-    === DATABASE & BACKEND ===
-
-    Databases:
-    MongoDB docs: https://docs.mongodb.com/
-    PostgreSQL manual: https://www.postgresql.org/docs/
-    MySQL reference: https://dev.mysql.com/doc/
-    Redis documentation: https://redis.io/documentation
-    Firebase guides: https://firebase.google.com/docs
-    Supabase docs: https://supabase.com/docs
-    PlanetScale MySQL: https://planetscale.com/docs
-
-    === PERFORMANCE & OPTIMIZATION ===
-
-    Web Performance:
-    https://web.dev/learn-core-web-vitals/
-    https://developers.google.com/speed/docs/insights/
-    https://www.webpagetest.org/
-    https://gtmetrix.com/
-    https://tools.pingdom.com/
-
-    === SECURITY ===
-
-    Security Resources:
-    OWASP Top 10: https://owasp.org/www-project-top-ten/
-    Security headers: https://securityheaders.com/
-    Content Security Policy: https://content-security-policy.com/
-
-    === TOOLS & UTILITIES ===
-
-    Developer Tools:
-    Can I Use: https://caniuse.com/
-    Regexr patterns: https://regexr.com/
-    JSON formatter: https://jsonformatter.org/
-    Code beautifier: https://codebeautify.org/
-    Epoch converter: https://www.epochconverter.com/
-    Base64 encode: https://www.base64encode.org/
-    Color picker: https://htmlcolorcodes.com/color-picker/
-
-    === NEWS & BLOGS ===
-
-    Tech News:
-    https://www.theverge.com/tech
-    https://techcrunch.com/
-    https://www.wired.com/category/gear/
-    https://arstechnica.com/
-
-    Developer Blogs:
-    https://overreacted.io/
-    https://kentcdodds.com/blog
-    https://css-tricks.com/
-    https://www.joshwcomeau.com/
-    https://leerob.io/blog
-
-    === PODCASTS & VIDEOS ===
-
-    YouTube Channels:
-    Fireship: https://www.youtube.com/@Fireship
-    Traversy Media: https://www.youtube.com/@TraversyMedia
-    Web Dev Simplified: https://www.youtube.com/@WebDevSimplified
-    The Net Ninja: https://www.youtube.com/@NetNinja
-    Kevin Powell CSS: https://www.youtube.com/@KevinPowell
-
-    === API RESOURCES ===
-
-    Public APIs:
-    https://github.com/public-apis/public-apis
-    https://rapidapi.com/hub
-    https://any-api.com/
-    https://apilist.fun/
-
-    === MISCELLANEOUS ===
-
-    Code Challenges:
-    LeetCode: https://leetcode.com/
-    HackerRank: https://www.hackerrank.com/
-    Codewars: https://www.codewars.com/
-    Project Euler: https://projecteuler.net/
-    Advent of Code: https://adventofcode.com/
-
-    Icons & Assets:
-    Font Awesome: https://fontawesome.com/
-    Heroicons: https://heroicons.com/
-    Unsplash photos: https://unsplash.com/
-    Pexels videos: https://www.pexels.com/
-
-    This collection contains over 150+ unique URLs across various categories for comprehensive testing.
-    Use this to test batch import performance, duplicate detection, and URL extraction logic.
-    """.trimIndent()
 }
 
 /**
@@ -1241,18 +977,30 @@ private fun LinkSelectionScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+                containerColor = SoftAccents.Purple.copy(alpha = 0.12f)
+            ),
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "URL Statistics",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = SoftAccents.Purple,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "URL Statistics",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1382,37 +1130,19 @@ private fun LinkSelectionScreen(
                 .fillMaxWidth()
                 .weight(1f),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             if (state.urlStatuses.isEmpty()) {
                 // Empty state
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Text(
-                            text = "No URLs to review",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "All URLs have been removed",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
+                EmptyState(
+                    icon = Icons.Default.Info,
+                    title = "No URLs to review",
+                    message = "All URLs have been removed",
+                    accentColor = SoftAccents.Amber
+                )
             } else {
                 androidx.compose.foundation.lazy.LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -1460,8 +1190,10 @@ private fun LinkSelectionScreen(
             ) {
                 OutlinedButton(
                     onClick = { showBackConfirmationDialog = true },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Back")
                 }
@@ -1470,9 +1202,11 @@ private fun LinkSelectionScreen(
                     onClick = {
                         onEvent(BatchImportEvent.OnStartFetching)
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
                     enabled = state.selectedCount > 0,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Next")
                 }
@@ -1546,13 +1280,13 @@ private fun StatisticItem(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -1668,8 +1402,9 @@ private fun PreviewFetchingScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                    containerColor = SoftAccents.Teal.copy(alpha = 0.12f)
+                ),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -1681,19 +1416,19 @@ private fun PreviewFetchingScreen(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
+                        tint = SoftAccents.Teal,
+                        modifier = Modifier.size(28.dp)
                     )
                     Column {
                         Text(
                             text = "Previews Ready",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "${state.previewResults.size} links ready to import",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -1706,8 +1441,10 @@ private fun PreviewFetchingScreen(
                 .fillMaxWidth()
                 .weight(1f),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             if (state.previewResults.isEmpty()) {
                 Box(
@@ -1764,8 +1501,10 @@ private fun PreviewFetchingScreen(
             ) {
                 OutlinedButton(
                     onClick = onNavigateBack,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Back")
                 }
@@ -1774,9 +1513,11 @@ private fun PreviewFetchingScreen(
                     onClick = {
                         onEvent(BatchImportEvent.OnStartImport)
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
                     enabled = state.previewResults.isNotEmpty(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Import")
                 }
@@ -1793,8 +1534,9 @@ private fun FetchingProgressCard(progress: FetchProgress?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+            containerColor = SoftAccents.Blue.copy(alpha = 0.12f)
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -1805,16 +1547,26 @@ private fun FetchingProgressCard(progress: FetchProgress?) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Fetching Previews...",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = SoftAccents.Blue
+                    )
+                    Text(
+                        text = "Fetching Previews...",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 if (progress != null) {
                     Text(
                         text = "Chunk ${progress.currentChunk} of ${progress.totalChunks}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -1822,17 +1574,23 @@ private fun FetchingProgressCard(progress: FetchProgress?) {
             if (progress != null) {
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { progress.current.toFloat() / progress.total.toFloat() },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = SoftAccents.Blue
                 )
 
                 Text(
                     text = "${progress.current} of ${progress.total} links",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 androidx.compose.material3.LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = SoftAccents.Blue
                 )
             }
         }
@@ -1841,19 +1599,21 @@ private fun FetchingProgressCard(progress: FetchProgress?) {
 
 /**
  * Preview Card for individual link
+ * Styled to match LinkCard component
  */
 @Composable
 private fun PreviewCard(result: LinkPreviewResult) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             when (result) {
                 is LinkPreviewResult.Success -> {
@@ -1863,7 +1623,7 @@ private fun PreviewCard(result: LinkPreviewResult) {
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     // Description
@@ -1871,9 +1631,9 @@ private fun PreviewCard(result: LinkPreviewResult) {
                         Text(
                             text = result.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -1881,14 +1641,14 @@ private fun PreviewCard(result: LinkPreviewResult) {
                     Text(
                         text = result.domain,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
 
                 is LinkPreviewResult.Error -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
@@ -1896,7 +1656,9 @@ private fun PreviewCard(result: LinkPreviewResult) {
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
-                        Column {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             Text(
                                 text = result.domain,
                                 style = MaterialTheme.typography.titleSmall,
@@ -1904,8 +1666,8 @@ private fun PreviewCard(result: LinkPreviewResult) {
                             )
                             Text(
                                 text = "Preview failed - will use domain as title",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -1914,15 +1676,17 @@ private fun PreviewCard(result: LinkPreviewResult) {
                 is LinkPreviewResult.Timeout -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            tint = SoftAccents.Amber,
                             modifier = Modifier.size(20.dp)
                         )
-                        Column {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             Text(
                                 text = result.domain,
                                 style = MaterialTheme.typography.titleSmall,
@@ -1930,8 +1694,8 @@ private fun PreviewCard(result: LinkPreviewResult) {
                             )
                             Text(
                                 text = "Request timeout - will use domain as title",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -1951,7 +1715,10 @@ private fun ImportingDialog(
     AlertDialog(
         onDismissRequest = { /* Cannot dismiss */ },
         title = {
-            Text("Importing Links")
+            Text(
+                text = "Importing Links",
+                style = MaterialTheme.typography.titleLarge
+            )
         },
         text = {
             Column(
@@ -1960,26 +1727,29 @@ private fun ImportingDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
+                    color = SoftAccents.Purple
                 )
 
                 if (progress != null) {
                     Text(
                         text = "Saving ${progress.current} of ${progress.total} links...",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 } else {
                     Text(
                         text = "Preparing to save links...",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 }
             }
         },
         confirmButton = {},
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
@@ -2007,18 +1777,18 @@ private fun ImportResultScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Result Card
+        val resultAccentColor = when {
+            result.isCompleteSuccess -> SoftAccents.Teal
+            result.isCompleteFailure -> MaterialTheme.colorScheme.error
+            else -> SoftAccents.Amber
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = if (result.isCompleteSuccess) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else if (result.isCompleteFailure) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    MaterialTheme.colorScheme.tertiaryContainer
-                }
+                containerColor = resultAccentColor.copy(alpha = 0.12f)
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -2036,13 +1806,7 @@ private fun ImportResultScreen(
                     },
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = if (result.isCompleteSuccess) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else if (result.isCompleteFailure) {
-                        MaterialTheme.colorScheme.onErrorContainer
-                    } else {
-                        MaterialTheme.colorScheme.onTertiaryContainer
-                    }
+                    tint = resultAccentColor
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2055,13 +1819,7 @@ private fun ImportResultScreen(
                         else -> "Partial Success"
                     },
                     style = MaterialTheme.typography.headlineSmall,
-                    color = if (result.isCompleteSuccess) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else if (result.isCompleteFailure) {
-                        MaterialTheme.colorScheme.onErrorContainer
-                    } else {
-                        MaterialTheme.colorScheme.onTertiaryContainer
-                    }
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 // Summary
@@ -2069,13 +1827,13 @@ private fun ImportResultScreen(
                     Text(
                         text = "Successfully imported ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else if (result.isCompleteFailure) {
                     Text(
                         text = "Failed to import all ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Column(
@@ -2085,12 +1843,12 @@ private fun ImportResultScreen(
                         Text(
                             text = "Success: ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = "Failed: ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -2103,7 +1861,11 @@ private fun ImportResultScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -2167,8 +1929,10 @@ private fun ImportResultScreen(
                     onClick = {
                         onEvent(BatchImportEvent.OnRetryFailed)
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Retry Failed")
                 }
@@ -2180,8 +1944,10 @@ private fun ImportResultScreen(
                     onClick = {
                         onEvent(BatchImportEvent.OnRetryImport)
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Text("Retry All")
                 }
@@ -2192,8 +1958,10 @@ private fun ImportResultScreen(
                 onClick = {
                     onEvent(BatchImportEvent.OnDone)
                 },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp)
             ) {
                 Text("Done")
             }
@@ -2518,4 +2286,563 @@ private fun ColorBlock(
             )
         }
     }
+}
+
+// ============================================================================
+// TEST DATA FUNCTIONS
+// ============================================================================
+
+/**
+ * Get random normal test data (5-15 links)
+ * Returns one of several test cases for variety
+ */
+private fun getRandomNormalTestData(): String {
+    val testDataList = listOf(
+        // Test 1: Simple list of URLs
+        """
+        https://github.com/JetBrains/kotlin
+        https://developer.android.com/jetpack/compose
+        https://kotlinlang.org/docs/home.html
+        https://medium.com/androiddevelopers/effective-state-management-for-jetpack-compose-d7e1bd9c1c5a
+        https://stackoverflow.com/questions/tagged/android
+        """.trimIndent(),
+
+        // Test 2: Mixed text with URLs
+        """
+        Check out these amazing resources:
+        - Kotlin documentation: https://kotlinlang.org/
+        - Android guide at developer.android.com/guide
+        - Great blog post: https://proandroiddev.com/jetpack-compose-best-practices
+        Also visit https://github.com/android for official samples
+        Don't forget reddit.com/r/androiddev for community discussions
+        """.trimIndent(),
+
+        // Test 3: URLs in sentences
+        """
+        I found this great article on https://medium.com/@dev/android-tips yesterday.
+        You should also read https://blog.jetbrains.com/kotlin/ for the latest updates.
+        The official guide is at developer.android.com/guide/components but there's
+        also a good tutorial at https://www.raywenderlich.com/android-tutorials.
+        For design inspiration, check out material.io/design.
+        """.trimIndent(),
+
+        // Test 4: Multiple URLs per line
+        """
+        Resources: https://github.com/topics/android, https://stackoverflow.com, developer.android.com
+        Blogs: medium.com/tag/android, dev.to/t/android, https://androidweekly.net
+        Libraries: github.com/square/retrofit, github.com/coil-kt/coil
+        """.trimIndent(),
+
+        // Test 5: URLs with different formats
+        """
+        https://www.youtube.com/watch?v=abc123
+        github.com/user/repo/issues/42
+        http://old-site.com/page.html
+        www.example.com/path/to/resource
+        subdomain.example.com/api/v1/endpoint
+        https://docs.google.com/document/d/abc123/edit
+        """.trimIndent(),
+
+        // Test 6: News articles and blogs
+        """
+        Breaking: New Android version announced! https://android-developers.googleblog.com/2024/01/android-15-preview
+
+        Tech news from https://techcrunch.com/android and https://theverge.com/tech
+
+        Tutorial I'm following: https://www.udacity.com/course/android-basics
+
+        Community: reddit.com/r/android, xda-developers.com
+        """.trimIndent(),
+
+        // Test 7: Development resources
+        """
+        Official docs: developer.android.com/docs
+
+        Libraries to check:
+        • Networking: github.com/square/retrofit
+        • Images: github.com/coil-kt/coil
+        • DI: insert-koin.io
+        • Database: developer.android.com/training/data-storage/room
+
+        Tutorials: https://www.vogella.com/tutorials/android.html
+        """.trimIndent(),
+
+        // Test 8: Mixed content with duplicates (for testing duplicate detection)
+        """
+        Important links for the project:
+
+        Backend API: https://api.example.com/v2/docs
+        Frontend repo: github.com/company/frontend
+        Design system: https://www.figma.com/file/abc123
+
+        Also see:
+        https://api.example.com/v2/docs (same as above)
+        Backup link: github.com/company/frontend
+
+        Slack: company.slack.com/archives/C123
+        """.trimIndent(),
+
+        // Test 9: Social media and video links
+        """
+        Follow these channels:
+        YouTube tutorial: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        Twitter updates: twitter.com/androiddev
+        LinkedIn post: https://www.linkedin.com/posts/user_android-mobile-dev
+
+        Conference talk: https://www.youtube.com/watch?v=example
+        Slides: speakerdeck.com/user/presentation
+        """.trimIndent(),
+
+        // Test 10: E-commerce and mixed domains
+        """
+        Shopping list:
+        Phone case: https://www.amazon.com/dp/B08XYZ123
+        Screen protector: amazon.com/gp/product/B09ABC456
+
+        Reviews:
+        https://www.cnet.com/reviews/android-phones/
+        gsmarena.com/samsung_galaxy_s24-review-123.php
+
+        Price comparison: camelcamelcamel.com
+        Deals: slickdeals.net/android
+        """.trimIndent(),
+
+        // Test 11: Android development tools
+        """
+        My Android dev toolkit:
+
+        IDE: https://developer.android.com/studio
+        Emulator alternatives: https://www.genymotion.com/
+
+        Testing:
+        - https://firebase.google.com/products/test-lab
+        - https://appium.io/
+
+        CI/CD: https://bitrise.io/, https://circleci.com/
+        Analytics: https://firebase.google.com/products/analytics
+        """.trimIndent(),
+
+        // Test 12: Design resources
+        """
+        Design inspiration for the app:
+
+        Icons: https://fonts.google.com/icons
+        Colors: https://m3.material.io/styles/color/overview
+        Typography: https://fonts.google.com/
+
+        Figma plugins:
+        - figma.com/community/plugin/material-design
+        - figma.com/community/plugin/iconify
+
+        Dribbble: https://dribbble.com/tags/android
+        """.trimIndent(),
+
+        // Test 13: Documentation links
+        """
+        Project documentation:
+
+        API Reference: https://api.myproject.com/docs/v2
+        Wiki: https://github.com/myorg/myproject/wiki
+        Changelog: github.com/myorg/myproject/blob/main/CHANGELOG.md
+
+        External docs:
+        https://kotlinlang.org/api/latest/jvm/stdlib/
+        https://square.github.io/okhttp/
+        https://insert-koin.io/docs/quickstart/kotlin
+        """.trimIndent(),
+
+        // Test 14: Podcast and learning links
+        """
+        Podcasts I listen to:
+
+        Android Developers Backstage: https://adbackstage.libsyn.com/
+        Fragmented: https://fragmentedpodcast.com/
+        Talking Kotlin: https://talkingkotlin.com/
+
+        Courses:
+        https://www.udacity.com/course/developing-android-apps-with-kotlin
+        https://developer.android.com/courses
+        """.trimIndent(),
+
+        // Test 15: Open source projects
+        """
+        Interesting open source Android apps:
+
+        https://github.com/nickcedwards/android-architecture-samples
+        https://github.com/android/nowinandroid
+        https://github.com/android/sunflower
+        https://github.com/chrisbanes/tivi
+        https://github.com/skydoves/Pokedex
+
+        Libraries I use:
+        github.com/airbnb/lottie-android
+        github.com/bumptech/glide
+        """.trimIndent()
+    )
+
+    return testDataList[Random.nextInt(testDataList.size)]
+}
+
+/**
+ * Get large test data with 150+ links for load testing
+ * Contains URLs across various categories
+ */
+private fun getLargeTestData(): String {
+    return """
+    📚 COMPREHENSIVE WEB DEVELOPMENT & ANDROID RESOURCES COLLECTION
+
+    This is a curated list of essential resources gathered from various sources.
+    Perfect for testing link import functionality with a large dataset.
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    ANDROID DEVELOPMENT
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Official Documentation:
+    https://developer.android.com/
+    https://developer.android.com/jetpack/compose
+    https://developer.android.com/kotlin
+    https://developer.android.com/studio
+    https://developer.android.com/guide
+    https://developer.android.com/reference
+    https://developer.android.com/training
+    https://developer.android.com/courses
+    https://developer.android.com/games
+    https://developer.android.com/health-and-fitness
+
+    Jetpack Libraries:
+    https://developer.android.com/jetpack/androidx/releases/room
+    https://developer.android.com/jetpack/androidx/releases/navigation
+    https://developer.android.com/jetpack/androidx/releases/lifecycle
+    https://developer.android.com/jetpack/androidx/releases/work
+    https://developer.android.com/jetpack/androidx/releases/paging
+    https://developer.android.com/jetpack/androidx/releases/datastore
+    https://developer.android.com/jetpack/androidx/releases/hilt
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    KOTLIN
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Official Resources:
+    https://kotlinlang.org/
+    https://kotlinlang.org/docs/home.html
+    https://kotlinlang.org/docs/coroutines-overview.html
+    https://kotlinlang.org/docs/flow.html
+    https://kotlinlang.org/docs/multiplatform.html
+    https://play.kotlinlang.org/
+    https://kotlinlang.org/api/latest/jvm/stdlib/
+
+    JetBrains:
+    https://blog.jetbrains.com/kotlin/
+    https://www.jetbrains.com/kotlin/
+    https://www.jetbrains.com/idea/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    FRONTEND FRAMEWORKS
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    React:
+    https://react.dev/
+    https://react.dev/learn
+    https://react.dev/reference/react
+    https://nextjs.org/
+    https://nextjs.org/docs
+    https://remix.run/
+    https://remix.run/docs
+
+    Vue:
+    https://vuejs.org/
+    https://vuejs.org/guide/introduction.html
+    https://nuxt.com/
+    https://nuxt.com/docs
+
+    Angular:
+    https://angular.io/
+    https://angular.io/docs
+    https://angular.io/tutorial
+
+    Other:
+    https://svelte.dev/
+    https://svelte.dev/tutorial
+    https://kit.svelte.dev/
+    https://docs.astro.build/
+    https://solidjs.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    BACKEND & APIs
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Node.js:
+    https://nodejs.org/
+    https://nodejs.org/docs/latest/api/
+    https://expressjs.com/
+    https://expressjs.com/en/guide/routing.html
+    https://fastify.io/
+    https://nestjs.com/
+
+    Python:
+    https://docs.djangoproject.com/
+    https://flask.palletsprojects.com/
+    https://fastapi.tiangolo.com/
+    https://www.python.org/doc/
+
+    Other:
+    https://guides.rubyonrails.org/
+    https://laravel.com/docs
+    https://docs.spring.io/spring-boot/docs/current/reference/html/
+    https://go.dev/doc/
+    https://doc.rust-lang.org/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    LEARNING PLATFORMS
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Free Resources:
+    https://www.freecodecamp.org/
+    https://www.freecodecamp.org/learn
+    https://www.khanacademy.org/computing/computer-programming
+    https://www.theodinproject.com/
+    https://fullstackopen.com/en/
+
+    Paid Platforms:
+    https://www.udemy.com/
+    https://www.coursera.org/
+    https://www.edx.org/
+    https://www.pluralsight.com/
+    https://egghead.io/
+    https://frontendmasters.com/
+    https://www.udacity.com/
+    https://www.codecademy.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    DEVELOPER COMMUNITIES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Forums:
+    https://stackoverflow.com/
+    https://stackoverflow.com/questions/tagged/android
+    https://stackoverflow.com/questions/tagged/kotlin
+    https://www.reddit.com/r/androiddev/
+    https://www.reddit.com/r/Kotlin/
+    https://www.reddit.com/r/webdev/
+    https://www.reddit.com/r/programming/
+
+    Social:
+    https://dev.to/
+    https://hashnode.com/
+    https://news.ycombinator.com/
+    https://lobste.rs/
+    https://twitter.com/AndroidDev
+    https://twitter.com/kotlin
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    GITHUB REPOSITORIES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Android:
+    https://github.com/android
+    https://github.com/android/nowinandroid
+    https://github.com/android/sunflower
+    https://github.com/android/architecture-samples
+    https://github.com/android/compose-samples
+    https://github.com/android/camera-samples
+
+    Kotlin:
+    https://github.com/JetBrains/kotlin
+    https://github.com/Kotlin/kotlinx.coroutines
+    https://github.com/Kotlin/kotlinx.serialization
+
+    Popular Libraries:
+    https://github.com/square/retrofit
+    https://github.com/square/okhttp
+    https://github.com/coil-kt/coil
+    https://github.com/bumptech/glide
+    https://github.com/airbnb/lottie-android
+    https://github.com/InsertKoinIO/koin
+    https://github.com/google/dagger
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    CSS & DESIGN
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    CSS Resources:
+    https://css-tricks.com/
+    https://www.smashingmagazine.com/category/css/
+    https://developer.mozilla.org/en-US/docs/Web/CSS
+    https://web.dev/learn/css/
+    https://cssreference.io/
+
+    CSS Frameworks:
+    https://tailwindcss.com/
+    https://tailwindcss.com/docs
+    https://getbootstrap.com/
+    https://getbootstrap.com/docs/
+    https://bulma.io/
+    https://chakra-ui.com/
+
+    Design Systems:
+    https://m3.material.io/
+    https://m3.material.io/develop/android/jetpack-compose
+    https://developer.apple.com/design/human-interface-guidelines/
+    https://ant.design/
+    https://www.radix-ui.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    TESTING & QUALITY
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Testing Frameworks:
+    https://jestjs.io/
+    https://jestjs.io/docs/getting-started
+    https://vitest.dev/
+    https://vitest.dev/guide/
+    https://docs.cypress.io/
+    https://playwright.dev/
+    https://testing-library.com/
+
+    Android Testing:
+    https://developer.android.com/training/testing
+    https://developer.android.com/training/testing/espresso
+    https://developer.android.com/training/testing/junit-rules
+    https://mockk.io/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    DEPLOYMENT & HOSTING
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Platforms:
+    https://vercel.com/
+    https://vercel.com/docs
+    https://www.netlify.com/
+    https://docs.netlify.com/
+    https://railway.app/
+    https://render.com/
+    https://fly.io/
+
+    Cloud Providers:
+    https://aws.amazon.com/
+    https://docs.aws.amazon.com/
+    https://cloud.google.com/
+    https://cloud.google.com/docs
+    https://azure.microsoft.com/
+    https://docs.microsoft.com/azure/
+    https://www.digitalocean.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    DATABASES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    SQL:
+    https://www.postgresql.org/
+    https://www.postgresql.org/docs/
+    https://dev.mysql.com/
+    https://dev.mysql.com/doc/
+    https://www.sqlite.org/
+
+    NoSQL:
+    https://www.mongodb.com/
+    https://docs.mongodb.com/
+    https://redis.io/
+    https://redis.io/documentation
+
+    Mobile/Cloud:
+    https://firebase.google.com/
+    https://firebase.google.com/docs
+    https://supabase.com/
+    https://supabase.com/docs
+    https://planetscale.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    TOOLS & UTILITIES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Developer Tools:
+    https://caniuse.com/
+    https://regexr.com/
+    https://jsonformatter.org/
+    https://codebeautify.org/
+    https://www.epochconverter.com/
+    https://www.base64encode.org/
+    https://htmlcolorcodes.com/color-picker/
+
+    Design Tools:
+    https://www.figma.com/
+    https://fonts.google.com/
+    https://fonts.google.com/icons
+    https://unsplash.com/
+    https://www.pexels.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    NEWS & BLOGS
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Tech News:
+    https://www.theverge.com/
+    https://techcrunch.com/
+    https://www.wired.com/
+    https://arstechnica.com/
+    https://www.engadget.com/
+
+    Developer Blogs:
+    https://overreacted.io/
+    https://kentcdodds.com/blog
+    https://www.joshwcomeau.com/
+    https://leerob.io/blog
+    https://jakewharton.com/
+
+    Android Blogs:
+    https://android-developers.googleblog.com/
+    https://proandroiddev.com/
+    https://androidweekly.net/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    YOUTUBE CHANNELS
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Web Development:
+    https://www.youtube.com/@Fireship
+    https://www.youtube.com/@TraversyMedia
+    https://www.youtube.com/@WebDevSimplified
+    https://www.youtube.com/@NetNinja
+    https://www.youtube.com/@KevinPowell
+
+    Android:
+    https://www.youtube.com/@AndroidDevelopers
+    https://www.youtube.com/@PhilippLackner
+    https://www.youtube.com/@CodingWithMitch
+    https://www.youtube.com/@stevdza-san
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    API RESOURCES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Public APIs:
+    https://github.com/public-apis/public-apis
+    https://rapidapi.com/
+    https://any-api.com/
+    https://apilist.fun/
+
+    API Tools:
+    https://www.postman.com/
+    https://insomnia.rest/
+    https://hoppscotch.io/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+    CODE CHALLENGES
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    Practice Platforms:
+    https://leetcode.com/
+    https://www.hackerrank.com/
+    https://www.codewars.com/
+    https://exercism.org/
+    https://projecteuler.net/
+    https://adventofcode.com/
+    https://www.codingame.com/
+
+    ═══════════════════════════════════════════════════════════════════════════════
+
+    This collection contains 200+ unique URLs across various categories.
+    Use this to test batch import performance, duplicate detection, and URL extraction.
+    """.trimIndent()
 }
