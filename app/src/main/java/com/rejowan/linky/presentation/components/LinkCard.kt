@@ -9,56 +9,48 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.ui.theme.SoftAccents
+import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * LinkCard component - Displays a link with preview image, title, URL, and actions
+ * LinkCard component - Modern vibrant design with preview image, title, URL, and actions
  * Supports selection mode for bulk operations
- *
- * @param link The link to display
- * @param onClick Callback when card is clicked
- * @param onFavoriteClick Callback when favorite icon is clicked
- * @param onMoreClick Callback when more icon is clicked (shows info sheet)
- * @param isSelectionMode Whether selection mode is active
- * @param isSelected Whether this link is selected
- * @param onLongPress Callback when card is long-pressed (enters selection mode)
- * @param onToggleSelection Callback when selection is toggled
- * @param modifier Modifier for styling
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,110 +65,156 @@ fun LinkCard(
     onToggleSelection: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val accentColor = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.primary
+    val domain = link.url.extractDomain()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
-                    onClick = {
-                        if (isSelectionMode) {
-                            onToggleSelection?.invoke()
-                        } else {
-                            onClick()
-                        }
-                    },
-                    onLongClick = {
-                        onLongPress?.invoke()
-                    }
-                )
-                .then(
-                    if (isSelected) {
-                        Modifier.border(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                onClick = {
+                    if (isSelectionMode) {
+                        onToggleSelection?.invoke()
                     } else {
-                        Modifier
+                        onClick()
                     }
-                ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                },
+                onLongClick = {
+                    onLongPress?.invoke()
+                }
             )
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .background(
+                    if (link.isFavorite) accentColor.copy(alpha = 0.04f)
+                    else Color.Transparent
+                )
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Selection indicator (shown in selection mode)
             if (isSelectionMode) {
-                Icon(
-                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
-                    contentDescription = if (isSelected) "Selected" else "Not selected",
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                        contentDescription = if (isSelected) "Selected" else "Not selected",
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
-            // Preview Image with Status Badge Overlay
+
+            // Preview Image Box with gradient background
             Box(
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                accentColor.copy(alpha = 0.15f),
+                                accentColor.copy(alpha = 0.08f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            start = Offset(0f, 0f),
+                            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                        )
+                    )
+                    .drawBehind {
+                        // Decorative circle
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.2f),
+                            radius = 24.dp.toPx(),
+                            center = Offset(size.width * 0.85f, size.height * 0.15f)
+                        )
+                    }
             ) {
                 if (link.previewImagePath != null || link.previewUrl != null) {
                     AsyncImage(
                         model = link.previewImagePath ?: link.previewUrl,
                         contentDescription = "Preview for ${link.title}",
                         modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(14.dp)),
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    // Placeholder when no preview
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = "No preview",
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Status Banner Overlay (Deleted takes priority over Archived)
-                if (link.isDeleted || link.isArchived) {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                    // Stylish placeholder
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Show only Deleted badge if deleted (deleted overrides archived)
-                        if (link.isDeleted) {
-                            StatusBanner(
-                                text = "Deleted",
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                labelColor = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        } else if (link.isArchived) {
-                            // Only show Archived if NOT deleted
-                            StatusBanner(
-                                text = "Archived",
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(accentColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Link,
+                                contentDescription = "No preview",
+                                modifier = Modifier.size(22.dp),
+                                tint = accentColor.copy(alpha = 0.7f)
                             )
                         }
                     }
                 }
+
+                // Status Badge (Deleted/Archived)
+                if (link.isDeleted || link.isArchived) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (link.isDeleted) MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                                else MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (link.isDeleted) "Deleted" else "Archived",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = Color.White
+                        )
+                    }
+                }
             }
 
-            // Content (Title, URL, Timestamp)
+            // Content (Title, Domain, Timestamp)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -184,20 +222,29 @@ fun LinkCard(
                 // Title
                 Text(
                     text = link.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // URL
-                Text(
-                    text = link.url.shortenUrl(),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Domain Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = domain,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 // Timestamp or Deletion Countdown
                 Text(
@@ -205,44 +252,342 @@ fun LinkCard(
                         val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
                         "$daysLeft days until auto-deletion"
                     } else {
-                        link.createdAt.toRelativeTime()
+                        link.updatedAt.toRelativeTime()
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (link.isDeleted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+                    color = if (link.isDeleted) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.outline
                 )
             }
 
             // Action Icons (Favorite + More) - hidden during selection mode
             if (!isSelectionMode) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Favorite Icon
-                    IconButton(
-                        onClick = onFavoriteClick,
-                        modifier = Modifier.size(40.dp)
+                    // Favorite Icon with circular background
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (link.isFavorite) SoftAccents.Pink.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                            .clickable { onFavoriteClick() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
-                            tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    // More Icon
-                    IconButton(
-                        onClick = onMoreClick,
-                        modifier = Modifier.size(40.dp)
+                    // More Icon with circular background
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .clickable { onMoreClick() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
                             contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * LinkGridCard component - Modern grid view with vibrant design
+ * Supports selection mode for bulk operations
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun LinkGridCard(
+    link: Link,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onLongPress: (() -> Unit)? = null,
+    onToggleSelection: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val accentColor = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.primary
+    val domain = link.url.extractDomain()
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        onToggleSelection?.invoke()
+                    } else {
+                        onClick()
+                    }
+                },
+                onLongClick = {
+                    onLongPress?.invoke()
+                }
+            )
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(18.dp)
+                    )
+                } else {
+                    Modifier
+                }
+            ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column {
+            // Preview Image Area with gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+            ) {
+                // Background gradient (shown when no image)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    accentColor.copy(alpha = 0.2f),
+                                    accentColor.copy(alpha = 0.08f),
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                            )
+                        )
+                        .drawBehind {
+                            // Decorative circles
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.15f),
+                                radius = 50.dp.toPx(),
+                                center = Offset(size.width * 0.9f, size.height * 0.2f)
+                            )
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.1f),
+                                radius = 35.dp.toPx(),
+                                center = Offset(size.width * 0.1f, size.height * 0.8f)
+                            )
+                        }
+                )
+
+                if (link.previewImagePath != null || link.previewUrl != null) {
+                    AsyncImage(
+                        model = link.previewImagePath ?: link.previewUrl,
+                        contentDescription = "Preview for ${link.title}",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    // Subtle gradient overlay on image for text readability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0.1f),
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.2f)
+                                    )
+                                )
+                            )
+                    )
+                } else {
+                    // Stylish placeholder
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Link,
+                                contentDescription = "No preview",
+                                modifier = Modifier.size(30.dp),
+                                tint = accentColor.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+
+                // Top-left: Favorite icon
+                if (!isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (link.isFavorite) SoftAccents.Pink.copy(alpha = 0.9f)
+                                else Color.Black.copy(alpha = 0.4f)
+                            )
+                            .clickable { onFavoriteClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Top-right: More icon or Selection indicator
+                if (isSelectionMode) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Black.copy(alpha = 0.4f)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
+                            contentDescription = if (isSelected) "Selected" else "Not selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
+                            .clickable { onMoreClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "More options",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Bottom: Status Badge or Domain pill
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            when {
+                                link.isDeleted -> MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                                link.isArchived -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f)
+                                else -> Color.Black.copy(alpha = 0.5f)
+                            }
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = when {
+                            link.isDeleted -> "Deleted"
+                            link.isArchived -> "Archived"
+                            else -> domain
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Content Area
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        if (link.isFavorite) accentColor.copy(alpha = 0.04f)
+                        else Color.Transparent
+                    )
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Title
+                Text(
+                    text = link.title,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                // Timestamp
+                Text(
+                    text = if (link.isDeleted) {
+                        val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
+                        "$daysLeft days left"
+                    } else {
+                        link.updatedAt.toRelativeTime()
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (link.isDeleted) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Extract domain from URL
+ */
+private fun String.extractDomain(): String {
+    return try {
+        val uri = URI(this)
+        val host = uri.host ?: return this.shortenUrl()
+        host.removePrefix("www.")
+    } catch (e: Exception) {
+        this.shortenUrl()
     }
 }
 
@@ -254,8 +599,8 @@ private fun String.shortenUrl(): String {
         .removePrefix("https://")
         .removePrefix("http://")
         .removePrefix("www.")
-        .take(40)
-        .let { if (this.length > 40) "$it..." else it }
+        .take(30)
+        .let { if (this.length > 30) "$it..." else it }
 }
 
 /**
@@ -279,256 +624,12 @@ private fun Long.toRelativeTime(): String {
 }
 
 /**
- * Status banner for overlay on preview image
- * Full-width banner at the top of the image with centered text
- */
-@Composable
-private fun StatusBanner(
-    text: String,
-    containerColor: androidx.compose.ui.graphics.Color,
-    labelColor: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = labelColor,
-        textAlign = TextAlign.Center,
-        modifier = modifier
-            .fillMaxWidth()
-            .background(color = containerColor.copy(alpha = 0.92f))
-            .padding(horizontal = 6.dp, vertical = 3.dp)
-    )
-}
-
-/**
  * Calculate days remaining until auto-deletion (30 days from deletedAt)
  */
 private fun calculateDaysUntilAutoDelete(deletedAt: Long): Int {
     val now = System.currentTimeMillis()
-    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L) // 30 days in milliseconds
+    val deletionTime = deletedAt + (30 * 24 * 60 * 60 * 1000L)
     val remainingTime = deletionTime - now
     val daysLeft = (remainingTime / (24 * 60 * 60 * 1000L)).toInt()
-    return maxOf(0, daysLeft) // Ensure it's never negative
-}
-
-/**
- * LinkGridCard component - Grid view variant of LinkCard
- * Displays link as a vertical card with image on top, title, URL below
- * Supports selection mode for bulk operations
- *
- * @param link The link to display
- * @param onClick Callback when card is clicked
- * @param onFavoriteClick Callback when favorite icon is clicked
- * @param onMoreClick Callback when more icon is clicked (shows info sheet)
- * @param isSelectionMode Whether selection mode is active
- * @param isSelected Whether this link is selected
- * @param onLongPress Callback when card is long-pressed (enters selection mode)
- * @param onToggleSelection Callback when selection is toggled
- * @param modifier Modifier for styling
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun LinkGridCard(
-    link: Link,
-    onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onMoreClick: () -> Unit,
-    isSelectionMode: Boolean = false,
-    isSelected: Boolean = false,
-    onLongPress: (() -> Unit)? = null,
-    onToggleSelection: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {
-                    if (isSelectionMode) {
-                        onToggleSelection?.invoke()
-                    } else {
-                        onClick()
-                    }
-                },
-                onLongClick = {
-                    onLongPress?.invoke()
-                }
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                } else {
-                    Modifier
-                }
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column {
-            // Preview Image with Status Badge
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-            ) {
-                if (link.previewImagePath != null || link.previewUrl != null) {
-                    AsyncImage(
-                        model = link.previewImagePath ?: link.previewUrl,
-                        contentDescription = "Preview for ${link.title}",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    // Placeholder when no preview
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = "No preview",
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Top-left: Favorite icon (clickable)
-                if (!isSelectionMode) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp)
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                            .clickable { onFavoriteClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = if (link.isFavorite) "Remove from favorites" else "Add to favorites",
-                            tint = if (link.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                // Top-right: More icon or Selection indicator
-                if (isSelectionMode) {
-                    // Selection indicator overlay
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Outlined.Circle,
-                            contentDescription = if (isSelected) "Selected" else "Not selected",
-                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                } else {
-                    // More icon (clickable)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                            .clickable { onMoreClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                // Status Banner (Deleted/Archived) - at bottom of image
-                if (link.isDeleted || link.isArchived) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .background(
-                                if (link.isDeleted) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-                                else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
-                            )
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (link.isDeleted) "Deleted" else "Archived",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (link.isDeleted) MaterialTheme.colorScheme.onErrorContainer
-                            else MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
-            }
-
-            // Content
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Title
-                Text(
-                    text = link.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                // URL
-                Text(
-                    text = link.url.shortenUrl(),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                // Timestamp
-                Text(
-                    text = if (link.isDeleted) {
-                        val daysLeft = calculateDaysUntilAutoDelete(link.deletedAt ?: 0)
-                        "$daysLeft days left"
-                    } else {
-                        link.createdAt.toRelativeTime()
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (link.isDeleted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
-                )
-            }
-        }
-    }
+    return maxOf(0, daysLeft)
 }

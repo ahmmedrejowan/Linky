@@ -94,8 +94,8 @@ fun ShimmerBox(
 }
 
 /**
- * Shimmer version of LinkCard - matches the exact structure
- * Row layout: 72x72dp image, title/URL/date column, action icons column
+ * Shimmer version of LinkCard - matches the modern vibrant design
+ * Row layout: 76dp gradient image box, title/domain/date column, circular action buttons
  */
 @Composable
 fun ShimmerLinkCard(
@@ -103,26 +103,26 @@ fun ShimmerLinkCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Preview Image placeholder (72x72dp)
+            // Preview Image placeholder (76dp with rounded corners)
             ShimmerBox(
-                modifier = Modifier.size(72.dp),
-                shape = RoundedCornerShape(8.dp)
+                modifier = Modifier.size(76.dp),
+                shape = RoundedCornerShape(14.dp)
             )
 
-            // Content (Title, URL, Timestamp)
+            // Content (Title, Domain Badge, Timestamp)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -135,39 +135,40 @@ fun ShimmerLinkCard(
                 )
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.6f)
+                        .fillMaxWidth(0.55f)
                         .height(18.dp)
                 )
 
-                // URL placeholder
+                // Domain badge placeholder
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(14.dp)
+                        .width(100.dp)
+                        .height(22.dp),
+                    shape = RoundedCornerShape(6.dp)
                 )
 
                 // Timestamp placeholder
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.3f)
+                        .fillMaxWidth(0.25f)
                         .height(12.dp)
                 )
             }
 
-            // Action Icons column
+            // Action Icons column (circular buttons)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Favorite icon placeholder
                 ShimmerBox(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(38.dp),
                     shape = CircleShape
                 )
 
                 // More icon placeholder
                 ShimmerBox(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(38.dp),
                     shape = CircleShape
                 )
             }
@@ -176,8 +177,8 @@ fun ShimmerLinkCard(
 }
 
 /**
- * Shimmer version of LinkGridCard - matches the exact structure
- * Vertical card: 120dp image at top, title/URL/date below
+ * Shimmer version of LinkGridCard - matches the modern vibrant design
+ * Vertical card: 130dp gradient image at top with overlays, title/timestamp below
  */
 @Composable
 fun ShimmerLinkGridCard(
@@ -185,30 +186,30 @@ fun ShimmerLinkGridCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column {
-            // Preview Image placeholder (full width, 120dp height)
+            // Preview Image placeholder (full width, 130dp height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(130.dp)
             ) {
                 ShimmerBox(
                     modifier = Modifier.fillMaxSize(),
-                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                    shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
                 )
 
                 // Favorite icon overlay (top-left)
                 ShimmerBox(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(6.dp)
-                        .size(28.dp),
+                        .padding(8.dp)
+                        .size(32.dp),
                     shape = CircleShape
                 )
 
@@ -216,9 +217,19 @@ fun ShimmerLinkGridCard(
                 ShimmerBox(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(28.dp),
+                        .padding(8.dp)
+                        .size(32.dp),
                     shape = CircleShape
+                )
+
+                // Domain badge (bottom-left)
+                ShimmerBox(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                        .width(80.dp)
+                        .height(24.dp),
+                    shape = RoundedCornerShape(8.dp)
                 )
             }
 
@@ -235,24 +246,17 @@ fun ShimmerLinkGridCard(
                 )
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.5f)
+                        .fillMaxWidth(0.55f)
                         .height(16.dp)
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // URL placeholder
-                ShimmerBox(
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(12.dp)
-                )
-
                 // Timestamp placeholder
                 ShimmerBox(
                     modifier = Modifier
                         .fillMaxWidth(0.3f)
-                        .height(10.dp)
+                        .height(12.dp)
                 )
             }
         }
