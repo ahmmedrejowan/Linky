@@ -105,6 +105,20 @@ class LinkRepositoryImplTest {
     }
 
     @Test
+    fun `getAllLinks returns all links including deleted`() = runTest {
+        val deletedEntity = testLinkEntity.copy(id = "deleted-id", deletedAt = 3000L)
+        every { linkDao.getAllLinks() } returns flowOf(listOf(testLinkEntity, deletedEntity))
+
+        repository.getAllLinks().test {
+            val result = awaitItem()
+            assertEquals(2, result.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify { linkDao.getAllLinks() }
+    }
+
+    @Test
     fun `getFavoriteLinks returns only favorite links`() = runTest {
         val favoriteEntity = testLinkEntity.copy(isFavorite = true)
         every { linkDao.getFavoriteLinks() } returns flowOf(listOf(favoriteEntity))
@@ -336,6 +350,25 @@ class LinkRepositoryImplTest {
         coEvery { linkDao.restore(any()) } throws RuntimeException("Restore failed")
 
         val result = repository.restoreLink("test-id-1")
+
+        assertTrue(result is Result.Error)
+    }
+
+    @Test
+    fun `deleteAllLinks returns Success when succeeds`() = runTest {
+        coEvery { linkDao.deleteAll() } just Runs
+
+        val result = repository.deleteAllLinks()
+
+        assertTrue(result is Result.Success)
+        coVerify { linkDao.deleteAll() }
+    }
+
+    @Test
+    fun `deleteAllLinks returns Error when fails`() = runTest {
+        coEvery { linkDao.deleteAll() } throws RuntimeException("Delete all failed")
+
+        val result = repository.deleteAllLinks()
 
         assertTrue(result is Result.Error)
     }

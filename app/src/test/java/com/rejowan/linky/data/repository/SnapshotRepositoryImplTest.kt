@@ -242,4 +242,23 @@ class SnapshotRepositoryImplTest {
 
         assertTrue(result is Result.Error)
     }
+
+    @Test
+    fun `deleteAllSnapshots returns Success when succeeds`() = runTest {
+        coEvery { snapshotDao.deleteAll() } just Runs
+
+        val result = repository.deleteAllSnapshots()
+
+        assertTrue(result is Result.Success)
+        coVerify { snapshotDao.deleteAll() }
+    }
+
+    @Test
+    fun `deleteAllSnapshots returns Error when fails`() = runTest {
+        coEvery { snapshotDao.deleteAll() } throws RuntimeException("Delete all failed")
+
+        val result = repository.deleteAllSnapshots()
+
+        assertTrue(result is Result.Error)
+    }
 }

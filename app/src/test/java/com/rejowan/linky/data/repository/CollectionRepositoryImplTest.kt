@@ -232,6 +232,25 @@ class CollectionRepositoryImplTest {
         assertTrue(result is Result.Error)
     }
 
+    @Test
+    fun `deleteAllCollections returns Success when succeeds`() = runTest {
+        coEvery { collectionDao.deleteAll() } just Runs
+
+        val result = repository.deleteAllCollections()
+
+        assertTrue(result is Result.Success)
+        coVerify { collectionDao.deleteAll() }
+    }
+
+    @Test
+    fun `deleteAllCollections returns Error when fails`() = runTest {
+        coEvery { collectionDao.deleteAll() } throws RuntimeException("Delete all failed")
+
+        val result = repository.deleteAllCollections()
+
+        assertTrue(result is Result.Error)
+    }
+
     // ============ Count Operations Tests ============
 
     @Test
@@ -241,5 +260,39 @@ class CollectionRepositoryImplTest {
         val result = repository.countCollections()
 
         assertEquals(5, result)
+    }
+
+    // ============ Search Operations Tests ============
+
+    @Test
+    fun `searchCollections returns matching collections`() = runTest {
+        val query = "Work"
+        val collectionWithCount = CollectionWithCount(
+            collection = testCollectionEntity,
+            linkCount = 3
+        )
+        every { collectionDao.searchCollections(query) } returns flowOf(listOf(collectionWithCount))
+        coEvery { collectionDao.getPreviewsForCollection(any()) } returns emptyList()
+
+        repository.searchCollections(query).test {
+            val result = awaitItem()
+            assertEquals(1, result.size)
+            assertEquals(testCollection.id, result[0].collection.id)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        verify { collectionDao.searchCollections(query) }
+    }
+
+    @Test
+    fun `searchCollections returns empty list when no matches`() = runTest {
+        val query = "NonExistent"
+        every { collectionDao.searchCollections(query) } returns flowOf(emptyList())
+
+        repository.searchCollections(query).test {
+            val result = awaitItem()
+            assertTrue(result.isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }
