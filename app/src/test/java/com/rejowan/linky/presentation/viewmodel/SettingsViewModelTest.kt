@@ -5,10 +5,12 @@ import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
+import com.rejowan.linky.domain.repository.UpdateRepository
 import com.rejowan.linky.domain.usecase.backup.ExportDataUseCase
 import com.rejowan.linky.domain.usecase.backup.ImportDataUseCase
 import com.rejowan.linky.presentation.feature.settings.SettingsEvent
 import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
+import com.rejowan.linky.util.ApkDownloadManager
 import com.rejowan.linky.util.FileStorageManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -38,6 +40,8 @@ class SettingsViewModelTest {
     private lateinit var fileStorageManager: FileStorageManager
     private lateinit var exportDataUseCase: ExportDataUseCase
     private lateinit var importDataUseCase: ImportDataUseCase
+    private lateinit var updateRepository: UpdateRepository
+    private lateinit var apkDownloadManager: ApkDownloadManager
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -52,6 +56,8 @@ class SettingsViewModelTest {
         fileStorageManager = mockk()
         exportDataUseCase = mockk()
         importDataUseCase = mockk()
+        updateRepository = mockk(relaxed = true)
+        apkDownloadManager = mockk(relaxed = true)
 
         coEvery { linkRepository.countLinks() } returns 10
         coEvery { collectionRepository.countCollections() } returns 5
@@ -74,7 +80,9 @@ class SettingsViewModelTest {
             themePreferences = themePreferences,
             fileStorageManager = fileStorageManager,
             exportDataUseCase = exportDataUseCase,
-            importDataUseCase = importDataUseCase
+            importDataUseCase = importDataUseCase,
+            updateRepository = updateRepository,
+            apkDownloadManager = apkDownloadManager
         )
     }
 
