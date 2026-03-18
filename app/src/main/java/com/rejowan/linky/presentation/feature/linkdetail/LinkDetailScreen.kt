@@ -67,6 +67,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -188,6 +190,9 @@ fun LinkDetailScreen(
                         duration = SnackbarDuration.Short
                     )
                 }
+                is LinkDetailUiEvent.NavigateToSnapshot -> {
+                    onOpenSnapshot(event.snapshotId)
+                }
             }
         }
     }
@@ -223,6 +228,7 @@ fun LinkDetailScreen(
                         onDeleteLink = { showDeleteDialog = true },
                         onRestoreLink = { showRestoreDialog = true },
                         onPermanentDelete = { showPermanentDeleteDialog = true },
+                        onOpenReaderMode = { viewModel.onEvent(LinkDetailEvent.OnOpenReaderMode) },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -298,6 +304,7 @@ private fun LinkDetailContent(
     onDeleteLink: () -> Unit,
     onRestoreLink: () -> Unit,
     onPermanentDelete: () -> Unit,
+    onOpenReaderMode: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -378,6 +385,12 @@ private fun LinkDetailContent(
                         Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
                     },
                     onDelete = onDeleteLink
+                )
+
+                // Reader Mode Button
+                ReaderModeButton(
+                    isLoading = isCapturingSnapshot,
+                    onClick = onOpenReaderMode
                 )
             }
 
@@ -690,6 +703,58 @@ private fun QuickActionButton(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun ReaderModeButton(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = !isLoading,
+        modifier = modifier.fillMaxWidth(),
+        color = SoftAccents.Teal.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = SoftAccents.Teal
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Loading Reader Mode...",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SoftAccents.Teal
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.AutoStories,
+                    contentDescription = null,
+                    tint = SoftAccents.Teal,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Reader Mode",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SoftAccents.Teal
+                )
+            }
+        }
     }
 }
 

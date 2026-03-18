@@ -71,6 +71,7 @@ class LinkDetailViewModel(
             is LinkDetailEvent.OnRefresh -> linkId?.let { loadLinkDetails(it) }
             is LinkDetailEvent.OnCreateSnapshot -> captureSnapshot()
             is LinkDetailEvent.OnDeleteSnapshot -> deleteSnapshot(event.snapshotId)
+            is LinkDetailEvent.OnOpenReaderMode -> openReaderMode()
         }
     }
 
@@ -276,6 +277,32 @@ class LinkDetailViewModel(
             }
         }
     }
+
+    private fun openReaderMode() {
+        val link = _state.value.link ?: return
+
+        Timber.d("openReaderMode: Fetching fresh content for link: ${link.id}")
+        _state.update { it.copy(isCapturingSnapshot = true) }
+
+        viewModelScope.launch {
+            when (val result = captureSnapshotUseCase(link.url, link.id)) {
+                is Result.Success -> {
+                    Timber.d("openReaderMode: Snapshot captured | ID: ${result.data.id}")
+                    _state.update { it.copy(isCapturingSnapshot = false) }
+                    _uiEvents.emit(LinkDetailUiEvent.NavigateToSnapshot(result.data.id))
+                }
+                is Result.Error -> {
+                    Timber.e(result.exception, "openReaderMode: Failed to capture reader mode")
+                    val errorMessage = result.exception.message ?: "Failed to load reader mode"
+                    _state.update { it.copy(isCapturingSnapshot = false) }
+                    _uiEvents.emit(LinkDetailUiEvent.ShowError(errorMessage))
+                }
+                is Result.Loading -> {
+                    Timber.d("openReaderMode: Capture in progress...")
+                }
+            }
+        }
+    }
 }
 
 sealed class LinkDetailUiEvent {
@@ -286,6 +313,7 @@ sealed class LinkDetailUiEvent {
     data class ShowLinkTrashed(val linkId: String) : LinkDetailUiEvent()
     data class ShowLinkRestored(val linkId: String) : LinkDetailUiEvent()
     data class ShowLinkDeleted(val linkId: String) : LinkDetailUiEvent()
+    data class NavigateToSnapshot(val snapshotId: String) : LinkDetailUiEvent()
 }
 
 sealed class LinkDetailEvent {
@@ -297,4 +325,5 @@ sealed class LinkDetailEvent {
     data object OnRefresh : LinkDetailEvent()
     data object OnCreateSnapshot : LinkDetailEvent()
     data class OnDeleteSnapshot(val snapshotId: String) : LinkDetailEvent()
+    data object OnOpenReaderMode : LinkDetailEvent()
 }
