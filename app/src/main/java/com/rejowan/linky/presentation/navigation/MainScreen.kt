@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rejowan.linky.presentation.components.AnimatedBottomNav
 import com.rejowan.linky.presentation.components.NavItem
@@ -84,6 +85,22 @@ fun MainScreen(
 
     // Selected nav index
     var selectedNavIndex by rememberSaveable { mutableIntStateOf(initialTab ?: 0) }
+
+    // Sync selectedNavIndex with actual navigation state (handles BackHandler)
+    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+    LaunchedEffect(navBackStackEntry) {
+        val currentRoute = navBackStackEntry?.destination?.route
+        val newIndex = when {
+            currentRoute?.contains("Home") == true -> 0
+            currentRoute?.contains("Collections") == true -> 1
+            currentRoute?.contains("Tools") == true -> 2
+            currentRoute?.contains("Settings") == true -> 3
+            else -> null
+        }
+        if (newIndex != null && newIndex != selectedNavIndex) {
+            selectedNavIndex = newIndex
+        }
+    }
 
     // Navigate to initial tab if specified
     LaunchedEffect(initialTab) {
