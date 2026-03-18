@@ -19,6 +19,7 @@ import com.rejowan.linky.presentation.feature.settings.appearance.AppearanceScre
 import com.rejowan.linky.presentation.feature.settings.data_storage.DataStorageScreen
 import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionScreen
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckScreen
+import com.rejowan.linky.presentation.feature.settings.importexport.ImportExportScreen
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
@@ -201,6 +202,12 @@ fun LinkyNavHost(
 
         composable<Route.LinkHealthCheck> {
             LinkHealthCheckScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Route.ImportExport> {
+            ImportExportScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

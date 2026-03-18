@@ -157,6 +157,13 @@ sealed class Route {
     data object LinkHealthCheck : Route()
 
     /**
+     * Import/Export screen
+     * Data backup and restore functionality
+     */
+    @Serializable
+    data object ImportExport : Route()
+
+    /**
      * Batch Import screen
      * Import multiple links at once from pasted text
      * @param prefillText Optional text to pre-fill in the paste field (from share intent)

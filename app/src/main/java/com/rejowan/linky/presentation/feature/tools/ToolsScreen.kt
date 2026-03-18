@@ -52,7 +52,7 @@ fun ToolsScreen(
     onNavigateToBatchImport: () -> Unit,
     onNavigateToVault: () -> Unit,
     onNavigateToTrash: () -> Unit,
-    onNavigateToDataStorage: () -> Unit,
+    onNavigateToImportExport: () -> Unit,
     onNavigateToDuplicateDetection: () -> Unit,
     onNavigateToLinkHealthCheck: () -> Unit,
     modifier: Modifier = Modifier
@@ -105,7 +105,7 @@ fun ToolsScreen(
                     title = "Import/Export",
                     description = "Backup and restore your data",
                     accentColor = SoftAccents.Teal,
-                    onClick = onNavigateToDataStorage
+                    onClick = onNavigateToImportExport
                 )
             }
 

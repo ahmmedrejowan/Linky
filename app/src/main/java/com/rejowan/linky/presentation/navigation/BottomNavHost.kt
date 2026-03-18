@@ -99,8 +99,8 @@ fun BottomNavHost(
                 onNavigateToTrash = {
                     parentNavController.navigate(Route.Trash)
                 },
-                onNavigateToDataStorage = {
-                    parentNavController.navigate(Route.DataStorage)
+                onNavigateToImportExport = {
+                    parentNavController.navigate(Route.ImportExport)
                 },
                 onNavigateToDuplicateDetection = {
                     parentNavController.navigate(Route.DuplicateDetection)
