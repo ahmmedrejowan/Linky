@@ -23,6 +23,5 @@ data class AddEditLinkState(
     // Create collection dialog state
     val showCreateCollectionDialog: Boolean = false,
     val newCollectionName: String = "",
-    val newCollectionColor: String? = null,
-    val newCollectionIsFavorite: Boolean = false
+    val newCollectionColor: String? = null
 )

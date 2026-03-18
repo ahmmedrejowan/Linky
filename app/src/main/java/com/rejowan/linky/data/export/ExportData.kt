@@ -56,7 +56,6 @@ data class CollectionExport(
     val name: String,
     val icon: String? = null,
     val color: String? = null,
-    val isFavorite: Boolean = false,
     val sortOrder: Int = 0,
     val createdAt: Long,
     val updatedAt: Long

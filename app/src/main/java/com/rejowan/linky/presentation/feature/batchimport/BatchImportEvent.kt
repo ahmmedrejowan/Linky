@@ -38,7 +38,6 @@ sealed class BatchImportEvent {
     data object OnCreateCollectionClick : BatchImportEvent()
     data class OnNewCollectionNameChange(val name: String) : BatchImportEvent()
     data class OnNewCollectionColorChange(val color: String?) : BatchImportEvent()
-    data object OnNewCollectionToggleFavorite : BatchImportEvent()
     data object OnCreateCollectionConfirm : BatchImportEvent()
     data object OnCreateCollectionDismiss : BatchImportEvent()
 

@@ -123,7 +123,6 @@ class ExportManager(
                 name = entity.name,
                 icon = entity.icon,
                 color = entity.color,
-                isFavorite = entity.isFavorite,
                 sortOrder = entity.sortOrder,
                 createdAt = entity.createdAt,
                 updatedAt = entity.updatedAt

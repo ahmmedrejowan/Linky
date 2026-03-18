@@ -15,14 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,7 +49,6 @@ import kotlin.math.min
  * @param linkCount Number of links in this collection
  * @param linkPreviews List of preview image paths (up to 3)
  * @param onClick Callback when card is clicked
- * @param onFavoriteClick Callback when favorite icon is clicked
  * @param modifier Modifier for styling
  */
 @Composable
@@ -60,7 +56,6 @@ fun CollectionCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier,
     linkPreviews: List<String?> = emptyList()
 ) {
@@ -131,7 +126,7 @@ fun CollectionCard(
                 }
             }
 
-            // Middle: Collection Info
+            // Collection Info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -148,24 +143,19 @@ fun CollectionCard(
                 )
 
                 // Link Count Badge
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(baseColor.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(baseColor.copy(alpha = 0.12f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = baseColor
-                        )
-                    }
+                    Text(
+                        text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = baseColor
+                    )
                 }
 
                 // Preview Thumbnails (only show if present)
@@ -201,28 +191,6 @@ fun CollectionCard(
                         }
                     }
                 }
-            }
-
-            // Right: Favorite Button
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (collection.isFavorite)
-                            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-                        else
-                            baseColor.copy(alpha = 0.08f)
-                    )
-                    .clickable { onFavoriteClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else baseColor,
-                    modifier = Modifier.size(22.dp)
-                )
             }
         }
     }
@@ -281,7 +249,6 @@ fun CollectionGridCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val baseColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primary
@@ -365,30 +332,6 @@ fun CollectionGridCard(
                             fontWeight = FontWeight.Bold
                         ),
                         color = Color.White
-                    )
-                }
-
-                // Favorite button (top-right)
-                Box(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (collection.isFavorite)
-                                MaterialTheme.colorScheme.error
-                            else
-                                Color.White.copy(alpha = 0.9f)
-                        )
-                        .clickable { onFavoriteClick() }
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (collection.isFavorite) Color.White else baseColor,
-                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

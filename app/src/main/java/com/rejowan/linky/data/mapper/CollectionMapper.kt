@@ -11,7 +11,6 @@ object CollectionMapper {
             name = name,
             color = color,
             icon = icon,
-            isFavorite = isFavorite,
             sortOrder = sortOrder,
             createdAt = createdAt,
             updatedAt = updatedAt,
@@ -27,7 +26,6 @@ object CollectionMapper {
             name = name,
             color = color,
             icon = icon,
-            isFavorite = isFavorite,
             sortOrder = sortOrder,
             createdAt = createdAt,
             updatedAt = updatedAt

@@ -150,7 +150,6 @@ class ImportManager(
                             name = collection.name,
                             icon = collection.icon,
                             color = collection.color,
-                            isFavorite = collection.isFavorite,
                             sortOrder = collection.sortOrder,
                             createdAt = existing.createdAt,
                             updatedAt = System.currentTimeMillis()
@@ -167,7 +166,6 @@ class ImportManager(
                             name = collection.name,
                             icon = collection.icon,
                             color = collection.color,
-                            isFavorite = collection.isFavorite,
                             sortOrder = collection.sortOrder,
                             createdAt = collection.createdAt,
                             updatedAt = collection.updatedAt

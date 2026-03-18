@@ -154,11 +154,6 @@ class BatchImportViewModel(
                 _state.update { it.copy(newCollectionColor = event.color) }
             }
 
-            is BatchImportEvent.OnNewCollectionToggleFavorite -> {
-                val newValue = !_state.value.newCollectionIsFavorite
-                _state.update { it.copy(newCollectionIsFavorite = newValue) }
-            }
-
             is BatchImportEvent.OnCreateCollectionConfirm -> {
                 Timber.d("Create collection confirm")
                 createCollection()
@@ -170,8 +165,7 @@ class BatchImportViewModel(
                     it.copy(
                         showCreateCollectionDialog = false,
                         newCollectionName = "",
-                        newCollectionColor = null,
-                        newCollectionIsFavorite = false
+                        newCollectionColor = null
                     )
                 }
             }
@@ -797,8 +791,7 @@ class BatchImportViewModel(
             try {
                 val newCollection = Collection(
                     name = collectionName,
-                    color = _state.value.newCollectionColor,
-                    isFavorite = _state.value.newCollectionIsFavorite
+                    color = _state.value.newCollectionColor
                 )
 
                 when (val result = saveCollectionUseCase(newCollection)) {
@@ -810,7 +803,6 @@ class BatchImportViewModel(
                                 showCreateCollectionDialog = false,
                                 newCollectionName = "",
                                 newCollectionColor = null,
-                                newCollectionIsFavorite = false,
                                 selectedCollectionId = newCollection.id
                             )
                         }
@@ -821,8 +813,7 @@ class BatchImportViewModel(
                             it.copy(
                                 showCreateCollectionDialog = false,
                                 newCollectionName = "",
-                                newCollectionColor = null,
-                                newCollectionIsFavorite = false
+                                newCollectionColor = null
                             )
                         }
                     }
@@ -836,8 +827,7 @@ class BatchImportViewModel(
                     it.copy(
                         showCreateCollectionDialog = false,
                         newCollectionName = "",
-                        newCollectionColor = null,
-                        newCollectionIsFavorite = false
+                        newCollectionColor = null
                     )
                 }
             }

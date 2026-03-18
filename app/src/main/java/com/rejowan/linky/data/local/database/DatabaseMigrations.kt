@@ -31,9 +31,53 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 }
 
 /**
+ * Migration 2 to 3: Remove isFavorite from collections
+ * Date: March 2026
+ * Description: Removes isFavorite column from collections table as favorite functionality
+ *              has been removed from collections
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // SQLite doesn't support DROP COLUMN directly, so we need to recreate the table
+        // 1. Create a new table without isFavorite column
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS collections_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                color TEXT,
+                icon TEXT,
+                sortOrder INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                syncToRemote INTEGER NOT NULL DEFAULT 0,
+                userId TEXT
+            )
+        """.trimIndent())
+
+        // 2. Copy data from old table to new table (excluding isFavorite)
+        db.execSQL("""
+            INSERT INTO collections_new (id, name, color, icon, sortOrder, createdAt, updatedAt, syncToRemote, userId)
+            SELECT id, name, color, icon, sortOrder, createdAt, updatedAt, syncToRemote, userId
+            FROM collections
+        """.trimIndent())
+
+        // 3. Drop the old table
+        db.execSQL("DROP TABLE collections")
+
+        // 4. Rename new table to original name
+        db.execSQL("ALTER TABLE collections_new RENAME TO collections")
+
+        // 5. Recreate indexes
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_collections_sortOrder ON collections(sortOrder)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_collections_updatedAt ON collections(updatedAt)")
+    }
+}
+
+/**
  * List of all migrations to be applied
  * Add new migrations to this list as they are created
  */
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
-    MIGRATION_1_2
+    MIGRATION_1_2,
+    MIGRATION_2_3
 )

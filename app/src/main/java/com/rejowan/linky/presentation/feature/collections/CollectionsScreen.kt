@@ -46,8 +46,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -136,22 +134,6 @@ fun CollectionsScreen(
                         duration = SnackbarDuration.Long
                     )
                 }
-                is CollectionsUiEvent.ShowFavoriteToggled -> {
-                    val message = if (event.isFavorite) {
-                        "Added to favorites"
-                    } else {
-                        "Removed from favorites"
-                    }
-                    val result = snackbarHostState.showSnackbar(
-                        message = message,
-                        actionLabel = "Undo",
-                        duration = SnackbarDuration.Short
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        // Undo the favorite toggle
-                        viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(event.collectionId))
-                    }
-                }
             }
         }
     }
@@ -213,10 +195,7 @@ fun CollectionsScreen(
                         CollectionsContent(
                             collections = state.collections,
                             viewMode = state.viewMode,
-                            onCollectionClick = onCollectionClick,
-                            onFavoriteClick = { collectionId ->
-                                viewModel.onEvent(CollectionsEvent.OnToggleCollectionFavorite(collectionId))
-                            }
+                            onCollectionClick = onCollectionClick
                         )
                     }
                 }
@@ -229,10 +208,8 @@ fun CollectionsScreen(
         CreateCollectionDialog(
             collectionName = state.newCollectionName,
             selectedColor = state.selectedCollectionColor,
-            isFavorite = state.isNewCollectionFavorite,
             onCollectionNameChange = { viewModel.onEvent(CollectionsEvent.OnCollectionNameChange(it)) },
             onColorChange = { viewModel.onEvent(CollectionsEvent.OnCollectionColorChange(it)) },
-            onToggleFavorite = { viewModel.onEvent(CollectionsEvent.OnToggleFavorite) },
             onSave = { viewModel.onEvent(CollectionsEvent.OnSaveCollection) },
             onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissCreateDialog) }
         )
@@ -392,7 +369,6 @@ private fun CollectionsContent(
     collections: List<CollectionWithLinkCount>,
     viewMode: ViewMode,
     onCollectionClick: (String) -> Unit,
-    onFavoriteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (viewMode) {
@@ -410,7 +386,6 @@ private fun CollectionsContent(
                         collection = collectionWithCount.collection,
                         linkCount = collectionWithCount.linkCount,
                         onClick = { onCollectionClick(collectionWithCount.collection.id) },
-                        onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
                         linkPreviews = collectionWithCount.linkPreviews,
                         modifier = Modifier.animateItem()
                     )
@@ -433,7 +408,6 @@ private fun CollectionsContent(
                         collection = collectionWithCount.collection,
                         linkCount = collectionWithCount.linkCount,
                         onClick = { onCollectionClick(collectionWithCount.collection.id) },
-                        onFavoriteClick = { onFavoriteClick(collectionWithCount.collection.id) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -771,16 +745,14 @@ private fun getSortOptionDetails(option: CollectionSortType): Pair<ImageVector, 
 
 /**
  * Create Collection Dialog
- * Allows users to create a new collection with name, color, and favorite status
+ * Allows users to create a new collection with name and color
  */
 @Composable
 private fun CreateCollectionDialog(
     collectionName: String,
     selectedColor: String?,
-    isFavorite: Boolean,
     onCollectionNameChange: (String) -> Unit,
     onColorChange: (String?) -> Unit,
-    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -819,24 +791,6 @@ private fun CreateCollectionDialog(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Favorite toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Add to Favourite",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = isFavorite,
-                        onCheckedChange = { onToggleFavorite() }
-                    )
-                }
             }
         },
         confirmButton = {

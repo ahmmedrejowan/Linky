@@ -44,7 +44,6 @@ data class BatchImportState(
     val showCreateCollectionDialog: Boolean = false,
     val newCollectionName: String = "",
     val newCollectionColor: String? = null,
-    val newCollectionIsFavorite: Boolean = false,
 
     // Error states
     val error: BatchImportError? = null

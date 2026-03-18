@@ -35,11 +35,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.rounded.ArrowDownward
@@ -67,7 +65,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -104,8 +101,8 @@ import java.util.Locale
  * Shows all links within a specific collection
  *
  * Features:
- * - Collection info header (name, color, favorite status)
- * - TopAppBar actions: favorite toggle, add link, edit/delete menu
+ * - Collection info header (name, color)
+ * - TopAppBar actions: add link, edit/delete menu
  * - Info card with link count and dates
  * - List of links in the collection using LinkCard
  * - Edit collection dialog
@@ -245,27 +242,6 @@ fun CollectionDetailScreen(
                         )
                     }
 
-                    // Favorite toggle button
-                    IconButton(onClick = { viewModel.onEvent(CollectionDetailEvent.OnToggleFavorite) }) {
-                        Icon(
-                            imageVector = if (state.collection?.isFavorite == true) {
-                                Icons.Filled.Favorite
-                            } else {
-                                Icons.Outlined.FavoriteBorder
-                            },
-                            contentDescription = if (state.collection?.isFavorite == true) {
-                                "Remove from favorites"
-                            } else {
-                                "Add to favorites"
-                            },
-                            tint = if (state.collection?.isFavorite == true) {
-                                SoftAccents.Pink
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
-
                     // Add link button
                     IconButton(onClick = {
                         state.collection?.id?.let { onAddLinkClick(it) }
@@ -401,10 +377,8 @@ fun CollectionDetailScreen(
         EditCollectionDialog(
             collectionName = state.editName,
             selectedColor = state.editColor,
-            isFavorite = state.editIsFavorite,
             onCollectionNameChange = { viewModel.onEvent(CollectionDetailEvent.OnEditNameChange(it)) },
             onColorChange = { viewModel.onEvent(CollectionDetailEvent.OnEditColorChange(it)) },
-            onToggleFavorite = { viewModel.onEvent(CollectionDetailEvent.OnEditIsFavoriteChange(!state.editIsFavorite)) },
             onSave = { viewModel.onEvent(CollectionDetailEvent.OnEditConfirm) },
             onDismiss = { viewModel.onEvent(CollectionDetailEvent.OnEditDismiss) }
         )
@@ -893,16 +867,14 @@ private fun getSortOptionDetails(option: SortType): Pair<ImageVector, String> {
 
 /**
  * Edit Collection Dialog
- * Allows users to edit collection name, color, and favorite status
+ * Allows users to edit collection name and color
  */
 @Composable
 private fun EditCollectionDialog(
     collectionName: String,
     selectedColor: String?,
-    isFavorite: Boolean,
     onCollectionNameChange: (String) -> Unit,
     onColorChange: (String?) -> Unit,
-    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -941,24 +913,6 @@ private fun EditCollectionDialog(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Favorite toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Add to Favourite",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = isFavorite,
-                        onCheckedChange = { onToggleFavorite() }
-                    )
-                }
             }
         },
         confirmButton = {

@@ -261,7 +261,7 @@ fun ShimmerLinkGridCard(
 
 /**
  * Shimmer version of CollectionCard - matches the vibrant list design
- * Row layout: 68dp gradient icon box, name/badge/previews column, favorite button
+ * Row layout: 68dp gradient icon box, name/badge/previews column
  */
 @Composable
 fun ShimmerCollectionCard(
@@ -315,18 +315,12 @@ fun ShimmerCollectionCard(
                     }
                 }
             }
-
-            // Favorite Button placeholder
-            ShimmerBox(
-                modifier = Modifier.size(40.dp),
-                shape = CircleShape
-            )
         }
     }
 }
 
 /**
- * Shimmer version of CollectionGridCard - matches the new vibrant design
+ * Shimmer version of CollectionGridCard - matches the vibrant design
  * Vertical card: 90dp gradient banner with icon, name/count below
  */
 @Composable
@@ -368,15 +362,6 @@ fun ShimmerCollectionGridCard(
                         .height(22.dp)
                         .align(Alignment.TopStart),
                     shape = RoundedCornerShape(12.dp)
-                )
-
-                // Favorite button placeholder (top-right)
-                ShimmerBox(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(32.dp)
-                        .align(Alignment.TopEnd),
-                    shape = CircleShape
                 )
             }
 

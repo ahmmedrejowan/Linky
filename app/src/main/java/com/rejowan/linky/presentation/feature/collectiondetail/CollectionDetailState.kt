@@ -16,7 +16,6 @@ data class CollectionDetailState(
     val showEditDialog: Boolean = false,
     val editName: String = "",
     val editColor: String? = null,
-    val editIsFavorite: Boolean = false,
     // Delete dialog state
     val showDeleteDialog: Boolean = false,
     val deleteWithLinks: Boolean = false

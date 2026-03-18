@@ -47,7 +47,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -530,10 +529,8 @@ fun BatchImportScreen(
         CreateCollectionDialog(
             collectionName = state.newCollectionName,
             selectedColor = state.newCollectionColor,
-            isFavorite = state.newCollectionIsFavorite,
             onCollectionNameChange = { viewModel.onEvent(BatchImportEvent.OnNewCollectionNameChange(it)) },
             onColorChange = { viewModel.onEvent(BatchImportEvent.OnNewCollectionColorChange(it)) },
-            onToggleFavorite = { viewModel.onEvent(BatchImportEvent.OnNewCollectionToggleFavorite) },
             onSave = { viewModel.onEvent(BatchImportEvent.OnCreateCollectionConfirm) },
             onDismiss = { viewModel.onEvent(BatchImportEvent.OnCreateCollectionDismiss) }
         )
@@ -2079,16 +2076,14 @@ private fun CollectionPicker(
 
 /**
  * Create Collection Dialog
- * Allows users to create a new collection with name, color, and favorite status
+ * Allows users to create a new collection with name and color
  */
 @Composable
 private fun CreateCollectionDialog(
     collectionName: String,
     selectedColor: String?,
-    isFavorite: Boolean,
     onCollectionNameChange: (String) -> Unit,
     onColorChange: (String?) -> Unit,
-    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -2127,24 +2122,6 @@ private fun CreateCollectionDialog(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Favorite toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Add to Favourite",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Switch(
-                        checked = isFavorite,
-                        onCheckedChange = { onToggleFavorite() }
-                    )
-                }
             }
         },
         confirmButton = {

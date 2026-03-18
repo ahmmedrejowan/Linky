@@ -364,10 +364,8 @@ fun AddEditLinkScreen(
         CreateCollectionDialog(
             collectionName = state.newCollectionName,
             selectedColor = state.newCollectionColor,
-            isFavorite = state.newCollectionIsFavorite,
             onCollectionNameChange = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionNameChange(it)) },
             onColorChange = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionColorChange(it)) },
-            onToggleFavorite = { viewModel.onEvent(AddEditLinkEvent.OnNewCollectionToggleFavorite) },
             onSave = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionConfirm) },
             onDismiss = { viewModel.onEvent(AddEditLinkEvent.OnCreateCollectionDismiss) }
         )
@@ -1005,10 +1003,8 @@ private fun DiscardChangesDialog(
 private fun CreateCollectionDialog(
     collectionName: String,
     selectedColor: String?,
-    isFavorite: Boolean,
     onCollectionNameChange: (String) -> Unit,
     onColorChange: (String?) -> Unit,
-    onToggleFavorite: () -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1037,18 +1033,6 @@ private fun CreateCollectionDialog(
                     selectedColor = selectedColor,
                     onColorSelected = onColorChange
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Add to Favorites")
-                    Switch(
-                        checked = isFavorite,
-                        onCheckedChange = { onToggleFavorite() }
-                    )
-                }
             }
         },
         confirmButton = {

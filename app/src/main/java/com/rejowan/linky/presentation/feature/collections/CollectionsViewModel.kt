@@ -49,8 +49,7 @@ class CollectionsViewModel(
                     it.copy(
                         showCreateDialog = false,
                         newCollectionName = "",
-                        selectedCollectionColor = null,
-                        isNewCollectionFavorite = false
+                        selectedCollectionColor = null
                     )
                 }
             }
@@ -59,9 +58,6 @@ class CollectionsViewModel(
             }
             is CollectionsEvent.OnCollectionColorChange -> {
                 _state.update { it.copy(selectedCollectionColor = event.color) }
-            }
-            is CollectionsEvent.OnToggleFavorite -> {
-                _state.update { it.copy(isNewCollectionFavorite = !it.isNewCollectionFavorite) }
             }
             is CollectionsEvent.OnSaveCollection -> {
                 saveCollection()
@@ -78,9 +74,6 @@ class CollectionsViewModel(
             }
             is CollectionsEvent.OnViewModeChange -> {
                 _state.update { it.copy(viewMode = event.viewMode) }
-            }
-            is CollectionsEvent.OnToggleCollectionFavorite -> {
-                toggleCollectionFavorite(event.collectionId)
             }
         }
     }
@@ -113,14 +106,12 @@ class CollectionsViewModel(
 
     /**
      * Sort collections based on sort type
-     * Favorites are always prioritized at the top
      */
     private fun sortCollections(
         collections: List<com.rejowan.linky.domain.model.CollectionWithLinkCount>,
         sortType: CollectionSortType
     ): List<com.rejowan.linky.domain.model.CollectionWithLinkCount> {
-        // Apply the selected sort to all collections
-        val sorted = when (sortType) {
+        return when (sortType) {
             CollectionSortType.DATE_CREATED_DESC -> collections.sortedByDescending { it.collection.createdAt }
             CollectionSortType.DATE_CREATED_ASC -> collections.sortedBy { it.collection.createdAt }
             CollectionSortType.NAME_ASC -> collections.sortedBy { it.collection.name.lowercase() }
@@ -129,11 +120,6 @@ class CollectionsViewModel(
             CollectionSortType.MOST_LINKS -> collections.sortedByDescending { it.linkCount }
             CollectionSortType.LEAST_LINKS -> collections.sortedBy { it.linkCount }
         }
-
-        // Always prioritize favorite collections at the top
-        val favorites = sorted.filter { it.collection.isFavorite }
-        val nonFavorites = sorted.filter { !it.collection.isFavorite }
-        return favorites + nonFavorites
     }
 
     private fun saveCollection() {
@@ -159,7 +145,6 @@ class CollectionsViewModel(
             val collection = Collection(
                 name = currentState.newCollectionName.trim(),
                 color = currentState.selectedCollectionColor,
-                isFavorite = currentState.isNewCollectionFavorite,
                 sortOrder = currentState.collections.size
             )
 
@@ -171,7 +156,6 @@ class CollectionsViewModel(
                             showCreateDialog = false,
                             newCollectionName = "",
                             selectedCollectionColor = null,
-                            isNewCollectionFavorite = false,
                             error = null
                         )
                     }
@@ -200,39 +184,6 @@ class CollectionsViewModel(
         }
     }
 
-    private fun toggleCollectionFavorite(collectionId: String) {
-        viewModelScope.launch {
-            // Find the collection in current state
-            val collectionWithCount = _state.value.collections.find { it.collection.id == collectionId }
-            if (collectionWithCount == null) {
-                Timber.w("toggleCollectionFavorite: Collection not found | CollectionId: $collectionId")
-                return@launch
-            }
-
-            val collection = collectionWithCount.collection
-            val updatedCollection = collection.copy(isFavorite = !collection.isFavorite)
-            Timber.d("toggleCollectionFavorite: Toggling favorite | CollectionId: $collectionId | NewValue: ${updatedCollection.isFavorite}")
-
-            when (val result = updateCollectionUseCase(updatedCollection)) {
-                is Result.Success -> {
-                    Timber.d("toggleCollectionFavorite: Successfully updated favorite status")
-                    // Emit UI event for snackbar with undo
-                    _uiEvents.emit(
-                        CollectionsUiEvent.ShowFavoriteToggled(
-                            collectionId = collectionId,
-                            isFavorite = updatedCollection.isFavorite
-                        )
-                    )
-                }
-                is Result.Error -> {
-                    Timber.e(result.exception, "toggleCollectionFavorite: Failed to update favorite status")
-                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.UPDATE)
-                    _uiEvents.emit(CollectionsUiEvent.ShowError(errorMessage))
-                }
-                is Result.Loading -> { /* No-op */ }
-            }
-        }
-    }
 }
 
 sealed class CollectionsEvent {
@@ -240,10 +191,8 @@ sealed class CollectionsEvent {
     data object OnDismissCreateDialog : CollectionsEvent()
     data class OnCollectionNameChange(val name: String) : CollectionsEvent()
     data class OnCollectionColorChange(val color: String?) : CollectionsEvent()
-    data object OnToggleFavorite : CollectionsEvent()
     data object OnSaveCollection : CollectionsEvent()
     data class OnDeleteCollection(val collectionId: String) : CollectionsEvent()
-    data class OnToggleCollectionFavorite(val collectionId: String) : CollectionsEvent()
     data object OnRefresh : CollectionsEvent()
     data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
     data class OnViewModeChange(val viewMode: com.rejowan.linky.presentation.feature.home.ViewMode) : CollectionsEvent()
@@ -251,5 +200,4 @@ sealed class CollectionsEvent {
 
 sealed class CollectionsUiEvent {
     data class ShowError(val message: String) : CollectionsUiEvent()
-    data class ShowFavoriteToggled(val collectionId: String, val isFavorite: Boolean) : CollectionsUiEvent()
 }

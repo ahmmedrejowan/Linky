@@ -153,11 +153,6 @@ class AddEditLinkViewModel(
                 Timber.d("New collection color changed: ${event.color}")
                 _state.update { it.copy(newCollectionColor = event.color) }
             }
-            is AddEditLinkEvent.OnNewCollectionToggleFavorite -> {
-                val newValue = !_state.value.newCollectionIsFavorite
-                Timber.d("New collection favorite toggled: $newValue")
-                _state.update { it.copy(newCollectionIsFavorite = newValue) }
-            }
             is AddEditLinkEvent.OnCreateCollectionConfirm -> {
                 Timber.d("Create collection confirm")
                 createCollection()
@@ -168,8 +163,7 @@ class AddEditLinkViewModel(
                     it.copy(
                         showCreateCollectionDialog = false,
                         newCollectionName = "",
-                        newCollectionColor = null,
-                        newCollectionIsFavorite = false
+                        newCollectionColor = null
                     )
                 }
             }
@@ -211,13 +205,12 @@ class AddEditLinkViewModel(
                 id = UUID.randomUUID().toString(),
                 name = name,
                 color = _state.value.newCollectionColor,
-                isFavorite = _state.value.newCollectionIsFavorite,
                 sortOrder = _state.value.collections.size,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
             )
 
-            Timber.d("createCollection: Saving collection | Name: $name | Color: ${_state.value.newCollectionColor} | IsFavorite: ${_state.value.newCollectionIsFavorite}")
+            Timber.d("createCollection: Saving collection | Name: $name | Color: ${_state.value.newCollectionColor}")
 
             when (val result = saveCollectionUseCase(collection)) {
                 is Result.Success -> {
@@ -228,7 +221,6 @@ class AddEditLinkViewModel(
                             showCreateCollectionDialog = false,
                             newCollectionName = "",
                             newCollectionColor = null,
-                            newCollectionIsFavorite = false,
                             selectedCollectionId = collection.id
                         )
                     }
@@ -531,7 +523,6 @@ sealed class AddEditLinkEvent {
     data object OnCreateCollectionClick : AddEditLinkEvent()
     data class OnNewCollectionNameChange(val name: String) : AddEditLinkEvent()
     data class OnNewCollectionColorChange(val color: String?) : AddEditLinkEvent()
-    data object OnNewCollectionToggleFavorite : AddEditLinkEvent()
     data object OnCreateCollectionConfirm : AddEditLinkEvent()
     data object OnCreateCollectionDismiss : AddEditLinkEvent()
 }

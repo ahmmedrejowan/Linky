@@ -11,8 +11,7 @@ data class CollectionsState(
     val viewMode: ViewMode = ViewMode.LIST,
     val showCreateDialog: Boolean = false,
     val newCollectionName: String = "",
-    val selectedCollectionColor: String? = null,
-    val isNewCollectionFavorite: Boolean = false
+    val selectedCollectionColor: String? = null
 )
 
 /**

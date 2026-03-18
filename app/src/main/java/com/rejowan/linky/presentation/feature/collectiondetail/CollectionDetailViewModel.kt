@@ -65,9 +65,6 @@ class CollectionDetailViewModel(
                     loadCollectionDetails(collectionId)
                 }
             }
-            is CollectionDetailEvent.OnToggleFavorite -> {
-                toggleFavorite()
-            }
             is CollectionDetailEvent.OnToggleLinkFavorite -> {
                 toggleLinkFavorite(event.linkId, event.silent)
             }
@@ -99,8 +96,7 @@ class CollectionDetailViewModel(
                         it.copy(
                             showEditDialog = true,
                             editName = collection.name,
-                            editColor = collection.color,
-                            editIsFavorite = collection.isFavorite
+                            editColor = collection.color
                         )
                     }
                 }
@@ -111,16 +107,12 @@ class CollectionDetailViewModel(
             is CollectionDetailEvent.OnEditColorChange -> {
                 _state.update { it.copy(editColor = event.color) }
             }
-            is CollectionDetailEvent.OnEditIsFavoriteChange -> {
-                _state.update { it.copy(editIsFavorite = event.isFavorite) }
-            }
             is CollectionDetailEvent.OnEditDismiss -> {
                 _state.update {
                     it.copy(
                         showEditDialog = false,
                         editName = "",
-                        editColor = null,
-                        editIsFavorite = false
+                        editColor = null
                     )
                 }
             }
@@ -183,34 +175,6 @@ class CollectionDetailViewModel(
         }
     }
 
-    private fun toggleFavorite() {
-        Timber.d("toggleFavorite: Toggling favorite status")
-        val collection = _state.value.collection ?: run {
-            Timber.w("toggleFavorite: No collection to toggle favorite")
-            return
-        }
-
-        viewModelScope.launch {
-            val updatedCollection = collection.copy(isFavorite = !collection.isFavorite)
-            Timber.d("toggleFavorite: Updating collection | NewFavoriteStatus: ${updatedCollection.isFavorite}")
-
-            when (val result = updateCollectionUseCase(updatedCollection)) {
-                is Result.Success -> {
-                    Timber.d("toggleFavorite: Successfully updated favorite status")
-                    _state.update { it.copy(collection = updatedCollection) }
-                }
-                is Result.Error -> {
-                    Timber.e(result.exception, "toggleFavorite: Failed to update favorite status")
-                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.UPDATE)
-                    _state.update { it.copy(error = errorMessage) }
-                }
-                is Result.Loading -> {
-                    // Already handling loading state
-                }
-            }
-        }
-    }
-
     private fun saveEditedCollection() {
         Timber.d("saveEditedCollection: Saving edited collection")
         val collection = _state.value.collection ?: run {
@@ -235,10 +199,9 @@ class CollectionDetailViewModel(
         viewModelScope.launch {
             val updatedCollection = collection.copy(
                 name = name,
-                color = _state.value.editColor,
-                isFavorite = _state.value.editIsFavorite
+                color = _state.value.editColor
             )
-            Timber.d("saveEditedCollection: Updating collection | Name: $name | Color: ${_state.value.editColor} | IsFavorite: ${_state.value.editIsFavorite}")
+            Timber.d("saveEditedCollection: Updating collection | Name: $name | Color: ${_state.value.editColor}")
 
             when (val result = updateCollectionUseCase(updatedCollection)) {
                 is Result.Success -> {
@@ -248,8 +211,7 @@ class CollectionDetailViewModel(
                             collection = updatedCollection,
                             showEditDialog = false,
                             editName = "",
-                            editColor = null,
-                            editIsFavorite = false
+                            editColor = null
                         )
                     }
                 }
@@ -471,7 +433,6 @@ class CollectionDetailViewModel(
 
 sealed class CollectionDetailEvent {
     data object OnRefresh : CollectionDetailEvent()
-    data object OnToggleFavorite : CollectionDetailEvent()
     data class OnToggleLinkFavorite(val linkId: String, val silent: Boolean = false) : CollectionDetailEvent()
     data class OnArchiveLink(val linkId: String, val silent: Boolean = false) : CollectionDetailEvent()
     data class OnTrashLink(val linkId: String) : CollectionDetailEvent()
@@ -481,7 +442,6 @@ sealed class CollectionDetailEvent {
     data object OnEditClick : CollectionDetailEvent()
     data class OnEditNameChange(val name: String) : CollectionDetailEvent()
     data class OnEditColorChange(val color: String?) : CollectionDetailEvent()
-    data class OnEditIsFavoriteChange(val isFavorite: Boolean) : CollectionDetailEvent()
     data object OnEditDismiss : CollectionDetailEvent()
     data object OnEditConfirm : CollectionDetailEvent()
     data object OnDeleteClick : CollectionDetailEvent()
