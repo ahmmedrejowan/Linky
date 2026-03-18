@@ -153,7 +153,11 @@ fun LinkyNavHost(
 
         composable<Route.Trash> {
             TrashScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.Trash> { inclusive = true }
+                    }
+                },
                 onLinkClick = { linkId ->
                     navController.navigate(Route.LinkDetail(linkId))
                 }
@@ -197,25 +201,41 @@ fun LinkyNavHost(
 
         composable<Route.DuplicateDetection> {
             DuplicateDetectionScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.DuplicateDetection> { inclusive = true }
+                    }
+                }
             )
         }
 
         composable<Route.LinkHealthCheck> {
             LinkHealthCheckScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.LinkHealthCheck> { inclusive = true }
+                    }
+                }
             )
         }
 
         composable<Route.ImportExport> {
             ImportExportScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.ImportExport> { inclusive = true }
+                    }
+                }
             )
         }
 
         composable<Route.DangerZone> {
             DangerZoneScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.navigate(Route.Main(initialTab = 0)) {
+                        popUpTo<Route.DangerZone> { inclusive = true }
+                    }
+                }
             )
         }
 

@@ -115,6 +115,16 @@ fun SettingsScreen(
             .padding(horizontal = 16.dp)
             .padding(top = 16.dp, bottom = 100.dp)
     ) {
+        // Settings Title
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+
         // App Header Card
         SettingsHeaderCard()
 
