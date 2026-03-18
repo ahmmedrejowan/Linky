@@ -1,16 +1,29 @@
 package com.rejowan.linky.util
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.koin.core.context.stopKoin
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@Config(manifest = Config.NONE, sdk = [34])
 class UrlExtractorTest {
+
+    @Before
+    fun setUp() {
+        stopKoin() // Ensure clean state
+    }
+
+    @After
+    fun tearDown() {
+        stopKoin()
+    }
 
     // ============ extractUrls Tests ============
 

@@ -81,13 +81,28 @@ class DuplicateDetectionViewModelTest {
     }
 
     @Test
-    fun `initial state scans and finds duplicates`() = runTest {
+    fun `initial state has not scanned`() = runTest {
         createViewModel()
+
+        viewModel.state.test {
+            val state = awaitItem()
+            assertFalse(state.isScanning)
+            assertFalse(state.hasScanned)
+            assertEquals(0, state.duplicateGroups.size)
+        }
+    }
+
+    @Test
+    fun `OnScan finds duplicates`() = runTest {
+        createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.state.test {
             val state = awaitItem()
             assertFalse(state.isScanning)
+            assertTrue(state.hasScanned)
             assertEquals(1, state.duplicateGroups.size) // One group of duplicates
             assertEquals(1, state.totalDuplicatesFound) // 2 links, 1 is duplicate
         }
@@ -100,7 +115,9 @@ class DuplicateDetectionViewModelTest {
         createViewModel()
 
         viewModel.uiEvents.test {
+            viewModel.onEvent(DuplicateEvent.OnScan)
             advanceUntilIdle()
+
             val event = awaitItem()
             assertTrue(event is DuplicateUiEvent.ShowMessage)
             assertTrue((event as DuplicateUiEvent.ShowMessage).message.contains("No duplicates"))
@@ -110,6 +127,8 @@ class DuplicateDetectionViewModelTest {
     @Test
     fun `OnScan rescans for duplicates`() = runTest {
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.onEvent(DuplicateEvent.OnScan)
@@ -123,10 +142,12 @@ class DuplicateDetectionViewModelTest {
     }
 
     @Test
-    fun `OnDeleteLink deletes link and rescans`() = runTest {
+    fun `OnDeleteLink deletes link`() = runTest {
         coEvery { deleteLinkUseCase("link-2", softDelete = true) } returns Result.Success(Unit)
 
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.onEvent(DuplicateEvent.OnDeleteLink("link-2"))
@@ -140,12 +161,13 @@ class DuplicateDetectionViewModelTest {
         coEvery { deleteLinkUseCase(any(), softDelete = true) } returns Result.Success(Unit)
 
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.onEvent(DuplicateEvent.OnDeleteAllInGroup(0, keepFirst = true))
         advanceUntilIdle()
 
-        // Verify delete was attempted on duplicates (not the first/oldest)
         viewModel.state.test {
             val state = awaitItem()
             assertFalse(state.isDeleting)
@@ -157,12 +179,13 @@ class DuplicateDetectionViewModelTest {
         coEvery { deleteLinkUseCase(any(), softDelete = true) } returns Result.Success(Unit)
 
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.onEvent(DuplicateEvent.OnDeleteAllDuplicates)
         advanceUntilIdle()
 
-        // Verify state after deletion
         viewModel.state.test {
             val state = awaitItem()
             assertFalse(state.isDeleting)
@@ -172,6 +195,8 @@ class DuplicateDetectionViewModelTest {
     @Test
     fun `OnExpandGroup toggles group expansion`() = runTest {
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.onEvent(DuplicateEvent.OnExpandGroup(0))
@@ -181,7 +206,6 @@ class DuplicateDetectionViewModelTest {
             assertTrue(state.expandedGroups.contains(0))
         }
 
-        // Toggle again
         viewModel.onEvent(DuplicateEvent.OnExpandGroup(0))
 
         viewModel.state.test {
@@ -211,6 +235,8 @@ class DuplicateDetectionViewModelTest {
         every { linkRepository.getAllLinks() } returns flowOf(listOf(linkWithWww, linkWithoutWww))
 
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.state.test {
@@ -233,6 +259,8 @@ class DuplicateDetectionViewModelTest {
         every { linkRepository.getAllLinks() } returns flowOf(listOf(testLink1, trashedLink))
 
         createViewModel()
+
+        viewModel.onEvent(DuplicateEvent.OnScan)
         advanceUntilIdle()
 
         viewModel.state.test {
