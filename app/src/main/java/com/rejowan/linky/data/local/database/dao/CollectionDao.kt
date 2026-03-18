@@ -51,17 +51,15 @@ interface CollectionDao {
     """)
     fun getCollectionsWithCount(): Flow<List<CollectionWithCount>>
 
-    // Get collection with link count and preview images (up to 3 most recent links, excludes archived)
+    // Get collection with link count and preview images (excludes archived and deleted)
+    // Note: Preview images are concatenated - limit to first few in code
     @Query("""
         SELECT collections.*, COUNT(links.id) as linkCount,
         GROUP_CONCAT(links.previewImagePath, '|') as previewImages
         FROM collections
-        LEFT JOIN (
-            SELECT * FROM links
-            WHERE deletedAt IS NULL AND isArchived = 0
-            ORDER BY createdAt DESC
-            LIMIT 3
-        ) as links ON collections.id = links.collectionId
+        LEFT JOIN links ON collections.id = links.collectionId
+            AND links.deletedAt IS NULL
+            AND links.isArchived = 0
         GROUP BY collections.id
         ORDER BY collections.sortOrder ASC
     """)

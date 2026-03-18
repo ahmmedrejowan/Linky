@@ -32,10 +32,11 @@ class CollectionRepositoryImpl(
         // Use single query with GROUP_CONCAT to avoid N+1 query problem
         return collectionDao.getCollectionsWithCountAndPreviews().map { collectionWithCountList ->
             collectionWithCountList.map { item ->
-                // Parse pipe-separated preview paths
+                // Parse pipe-separated preview paths, limit to 4 for display
                 val previews = item.previewImages
                     ?.split("|")
                     ?.filter { it.isNotBlank() }
+                    ?.take(4)
                     ?: emptyList()
 
                 CollectionWithLinkCount(
