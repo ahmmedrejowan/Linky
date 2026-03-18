@@ -59,6 +59,12 @@ class SettingsViewModelTest {
         updateRepository = mockk(relaxed = true)
         apkDownloadManager = mockk(relaxed = true)
 
+        // Mock UpdateRepository methods called in init
+        coEvery { updateRepository.getLastCheckTime() } returns 0L
+        coEvery { updateRepository.checkForUpdate(any(), any(), any()) } returns Result.success(null)
+        every { apkDownloadManager.hasPendingApk(any()) } returns false
+        every { apkDownloadManager.getPendingApkVersion() } returns null
+
         coEvery { linkRepository.countLinks() } returns 10
         coEvery { collectionRepository.countCollections() } returns 5
         coEvery { snapshotRepository.getTotalStorageUsed() } returns 1024L * 1024L
