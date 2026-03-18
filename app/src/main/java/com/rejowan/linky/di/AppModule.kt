@@ -4,6 +4,7 @@ import com.rejowan.linky.data.export.ExportManager
 import com.rejowan.linky.data.export.ImportManager
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.util.ApkDownloadManager
+import com.rejowan.linky.util.DataPreloader
 import com.rejowan.linky.util.FileStorageManager
 import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.PreferencesManager
@@ -21,4 +22,7 @@ val appModule = module {
     // Export/Import managers
     single { ExportManager(get(), get(), get(), get()) }
     single { ImportManager(get(), get(), get(), get()) }
+
+    // Data preloader for warming up cache at app start
+    single { DataPreloader(get(), get()) }
 }

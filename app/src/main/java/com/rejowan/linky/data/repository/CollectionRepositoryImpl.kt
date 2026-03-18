@@ -29,19 +29,18 @@ class CollectionRepositoryImpl(
     }
 
     override fun getCollectionsWithLinkCount(): Flow<List<CollectionWithLinkCount>> {
-        return collectionDao.getCollectionsWithCount().map { collectionWithCountList ->
-            collectionWithCountList.map { collectionWithCount ->
-                // Fetch preview images for this collection (up to 3)
-                val previews = try {
-                    collectionDao.getPreviewsForCollection(collectionWithCount.collection.id)
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to fetch previews for collection ${collectionWithCount.collection.id}")
-                    emptyList()
-                }
+        // Use single query with GROUP_CONCAT to avoid N+1 query problem
+        return collectionDao.getCollectionsWithCountAndPreviews().map { collectionWithCountList ->
+            collectionWithCountList.map { item ->
+                // Parse pipe-separated preview paths
+                val previews = item.previewImages
+                    ?.split("|")
+                    ?.filter { it.isNotBlank() }
+                    ?: emptyList()
 
                 CollectionWithLinkCount(
-                    collection = collectionWithCount.collection.toDomain(),
-                    linkCount = collectionWithCount.linkCount,
+                    collection = item.collection.toDomain(),
+                    linkCount = item.linkCount,
                     linkPreviews = previews
                 )
             }

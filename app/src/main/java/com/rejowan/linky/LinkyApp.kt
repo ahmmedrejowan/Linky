@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.rejowan.linky.util.DataPreloader
+import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import timber.log.Timber
@@ -70,5 +72,8 @@ class LinkyApp : Application() {
             )
         }
 
+        // Preload data to warm up cache for faster screen loads
+        val dataPreloader: DataPreloader by inject()
+        dataPreloader.preload()
     }
 }
