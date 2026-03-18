@@ -442,7 +442,7 @@ private fun SettingsHeaderCard() {
         ) {
             // App logo
             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                 contentDescription = "App logo",
                 modifier = Modifier.size(56.dp)
             )
