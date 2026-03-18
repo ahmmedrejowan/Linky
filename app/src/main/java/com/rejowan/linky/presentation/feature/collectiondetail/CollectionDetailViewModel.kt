@@ -408,13 +408,13 @@ class CollectionDetailViewModel(
      * Matches HomeViewModel logic: applies sort, then prioritizes favorites at top
      */
     private fun sortLinks(links: List<com.rejowan.linky.domain.model.Link>, sortType: com.rejowan.linky.presentation.feature.home.SortType): List<com.rejowan.linky.domain.model.Link> {
-        // Apply the selected sort to all links
+        // Apply the selected sort to all links (use updatedAt for date sorting)
         val sorted = when (sortType) {
             com.rejowan.linky.presentation.feature.home.SortType.DATE_DESC -> {
-                links.sortedByDescending { it.createdAt }
+                links.sortedByDescending { it.updatedAt }
             }
             com.rejowan.linky.presentation.feature.home.SortType.DATE_ASC -> {
-                links.sortedBy { it.createdAt }
+                links.sortedBy { it.updatedAt }
             }
             com.rejowan.linky.presentation.feature.home.SortType.NAME_ASC -> {
                 links.sortedBy { it.title.lowercase() }

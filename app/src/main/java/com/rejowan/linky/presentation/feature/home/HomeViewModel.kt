@@ -369,10 +369,10 @@ class HomeViewModel(
     }
 
     private fun sortLinks(links: List<Link>, sortType: SortType, filterType: FilterType): List<Link> {
-        // Apply the selected sort to all links
+        // Apply the selected sort to all links (use updatedAt for date sorting)
         return when (sortType) {
-            SortType.DATE_DESC -> links.sortedByDescending { it.createdAt }
-            SortType.DATE_ASC -> links.sortedBy { it.createdAt }
+            SortType.DATE_DESC -> links.sortedByDescending { it.updatedAt }
+            SortType.DATE_ASC -> links.sortedBy { it.updatedAt }
             SortType.NAME_ASC -> links.sortedBy { it.title.lowercase() }
             SortType.NAME_DESC -> links.sortedByDescending { it.title.lowercase() }
         }

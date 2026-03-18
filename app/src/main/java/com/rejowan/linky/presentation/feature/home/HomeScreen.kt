@@ -783,8 +783,8 @@ private fun getSortOptionDetails(option: SortType): Pair<ImageVector, String> {
     return when (option) {
         SortType.NAME_ASC -> Icons.Rounded.ArrowUpward to "A → Z"
         SortType.NAME_DESC -> Icons.Rounded.ArrowDownward to "Z → A"
-        SortType.DATE_DESC -> Icons.Rounded.ArrowDownward to "Newest"
-        SortType.DATE_ASC -> Icons.Rounded.ArrowUpward to "Oldest"
+        SortType.DATE_DESC -> Icons.Rounded.ArrowDownward to "Latest"
+        SortType.DATE_ASC -> Icons.Rounded.ArrowUpward to "Earliest"
     }
 }
 
