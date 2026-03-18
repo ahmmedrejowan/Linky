@@ -70,7 +70,10 @@ interface CollectionDao {
     // Get preview images for a specific collection (up to 3 most recent, excludes archived)
     @Query("""
         SELECT previewImagePath FROM links
-        WHERE collectionId = :collectionId AND deletedAt IS NULL AND isArchived = 0
+        WHERE collectionId = :collectionId
+            AND deletedAt IS NULL
+            AND isArchived = 0
+            AND previewImagePath IS NOT NULL
         ORDER BY createdAt DESC
         LIMIT 3
     """)
