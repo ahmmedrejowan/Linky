@@ -43,4 +43,8 @@ interface SnapshotDao {
     // Get snapshot count for a link
     @Query("SELECT COUNT(*) FROM snapshots WHERE linkId = :linkId")
     suspend fun getSnapshotCount(linkId: String): Int
+
+    // Delete all snapshots
+    @Query("DELETE FROM snapshots")
+    suspend fun deleteAll()
 }

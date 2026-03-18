@@ -18,6 +18,7 @@ interface CollectionRepository {
 
     // Delete operations
     suspend fun deleteCollection(collectionId: String): Result<Unit>
+    suspend fun deleteAllCollections(): Result<Unit>
 
     // Count operations
     suspend fun countCollections(): Int

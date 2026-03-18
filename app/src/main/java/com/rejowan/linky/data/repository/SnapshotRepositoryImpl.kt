@@ -70,4 +70,14 @@ class SnapshotRepositoryImpl(
             Result.Error(e)
         }
     }
+
+    override suspend fun deleteAllSnapshots(): Result<Unit> {
+        return try {
+            snapshotDao.deleteAll()
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete all snapshots")
+            Result.Error(e)
+        }
+    }
 }

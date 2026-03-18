@@ -1,7 +1,9 @@
 package com.rejowan.linky.presentation.viewmodel
 
 import app.cash.turbine.test
+import com.rejowan.linky.domain.model.CollectionWithLinkCount
 import com.rejowan.linky.domain.model.Link
+import com.rejowan.linky.domain.usecase.collection.SearchCollectionsUseCase
 import com.rejowan.linky.domain.usecase.link.SearchLinksUseCase
 import com.rejowan.linky.domain.usecase.link.ToggleFavoriteUseCase
 import com.rejowan.linky.presentation.feature.search.SearchEvent
@@ -14,7 +16,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -32,6 +33,7 @@ class SearchViewModelTest {
 
     private lateinit var viewModel: SearchViewModel
     private lateinit var searchLinksUseCase: SearchLinksUseCase
+    private lateinit var searchCollectionsUseCase: SearchCollectionsUseCase
     private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
 
     private val testDispatcher = StandardTestDispatcher()
@@ -63,7 +65,11 @@ class SearchViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         searchLinksUseCase = mockk()
+        searchCollectionsUseCase = mockk()
         toggleFavoriteUseCase = mockk()
+
+        // Default empty results for collections
+        every { searchCollectionsUseCase(any()) } returns flowOf(emptyList())
     }
 
     @After
@@ -72,7 +78,11 @@ class SearchViewModelTest {
     }
 
     private fun createViewModel() {
-        viewModel = SearchViewModel(searchLinksUseCase, toggleFavoriteUseCase)
+        viewModel = SearchViewModel(
+            searchLinksUseCase = searchLinksUseCase,
+            searchCollectionsUseCase = searchCollectionsUseCase,
+            toggleFavoriteUseCase = toggleFavoriteUseCase
+        )
     }
 
     @Test
@@ -82,7 +92,8 @@ class SearchViewModelTest {
         viewModel.state.test {
             val state = awaitItem()
             assertEquals("", state.searchQuery)
-            assertTrue(state.searchResults.isEmpty())
+            assertTrue(state.linkResults.isEmpty())
+            assertTrue(state.collectionResults.isEmpty())
             assertFalse(state.isSearching)
             assertFalse(state.hasSearched)
             assertNull(state.error)
@@ -117,7 +128,7 @@ class SearchViewModelTest {
 
         viewModel.state.test {
             val state = awaitItem()
-            assertTrue(state.searchResults.isEmpty())
+            assertTrue(state.linkResults.isEmpty())
             assertFalse(state.hasSearched)
         }
     }
@@ -134,8 +145,8 @@ class SearchViewModelTest {
 
         viewModel.state.test {
             val state = awaitItem()
-            assertEquals(1, state.searchResults.size)
-            assertEquals(testLink1, state.searchResults[0])
+            assertEquals(1, state.linkResults.size)
+            assertEquals(testLink1, state.linkResults[0])
             assertTrue(state.hasSearched)
         }
     }
@@ -152,7 +163,7 @@ class SearchViewModelTest {
 
         viewModel.state.test {
             val state = awaitItem()
-            assertEquals(2, state.searchResults.size)
+            assertEquals(2, state.linkResults.size)
             assertTrue(state.hasSearched)
         }
     }
@@ -166,7 +177,7 @@ class SearchViewModelTest {
 
         viewModel.state.test {
             val state = awaitItem()
-            assertTrue(state.searchResults.isEmpty())
+            assertTrue(state.linkResults.isEmpty())
             assertFalse(state.hasSearched)
         }
     }
@@ -186,7 +197,7 @@ class SearchViewModelTest {
         viewModel.state.test {
             val state = awaitItem()
             assertEquals("", state.searchQuery)
-            assertTrue(state.searchResults.isEmpty())
+            assertTrue(state.linkResults.isEmpty())
             assertFalse(state.hasSearched)
             assertNull(state.error)
         }
@@ -253,7 +264,7 @@ class SearchViewModelTest {
 
         viewModel.state.test {
             val state = awaitItem()
-            assertEquals(2, state.searchResults.size)
+            assertEquals(2, state.linkResults.size)
         }
     }
 
@@ -271,6 +282,30 @@ class SearchViewModelTest {
             advanceUntilIdle()
             val state = awaitItem()
             assertFalse(state.isSearching)
+        }
+    }
+
+    @Test
+    fun `search returns both links and collections`() = runTest {
+        createViewModel()
+
+        val testCollection = CollectionWithLinkCount(
+            collection = mockk(relaxed = true),
+            linkCount = 5
+        )
+
+        every { searchLinksUseCase("test") } returns flowOf(listOf(testLink1))
+        every { searchCollectionsUseCase("test") } returns flowOf(listOf(testCollection))
+
+        viewModel.onEvent(SearchEvent.OnSearchQueryChange("test"))
+        advanceTimeBy(500)
+        advanceUntilIdle()
+
+        viewModel.state.test {
+            val state = awaitItem()
+            assertEquals(1, state.linkResults.size)
+            assertEquals(1, state.collectionResults.size)
+            assertEquals(2, state.totalResults)
         }
     }
 }

@@ -8,6 +8,7 @@ import com.rejowan.linky.presentation.feature.settings.healthcheck.HealthCheckEv
 import com.rejowan.linky.presentation.feature.settings.healthcheck.HealthCheckUiEvent
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckViewModel
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthStatus
+import com.rejowan.linky.util.LinkPreviewFetcher
 import com.rejowan.linky.util.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,6 +33,7 @@ class LinkHealthCheckViewModelTest {
     private lateinit var viewModel: LinkHealthCheckViewModel
     private lateinit var linkRepository: LinkRepository
     private lateinit var deleteLinkUseCase: DeleteLinkUseCase
+    private lateinit var linkPreviewFetcher: LinkPreviewFetcher
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -49,6 +51,7 @@ class LinkHealthCheckViewModelTest {
 
         linkRepository = mockk()
         deleteLinkUseCase = mockk()
+        linkPreviewFetcher = mockk()
 
         every { linkRepository.getAllLinks() } returns flowOf(listOf(testLink))
     }
@@ -60,8 +63,9 @@ class LinkHealthCheckViewModelTest {
 
     private fun createViewModel() {
         viewModel = LinkHealthCheckViewModel(
-            linkRepository,
-            deleteLinkUseCase
+            linkRepository = linkRepository,
+            deleteLinkUseCase = deleteLinkUseCase,
+            linkPreviewFetcher = linkPreviewFetcher
         )
     }
 
@@ -232,6 +236,30 @@ class LinkHealthCheckViewModelTest {
             val state = awaitItem()
             // Filtered results should only contain HEALTHY status items
             assertTrue(state.filteredResults.all { it.status == LinkHealthStatus.HEALTHY || state.healthResults.isEmpty() })
+        }
+    }
+
+    @Test
+    fun `OnToggleRefetchThumbnails updates state`() = runTest {
+        createViewModel()
+
+        viewModel.onEvent(HealthCheckEvent.OnToggleRefetchThumbnails(true))
+
+        viewModel.state.test {
+            val state = awaitItem()
+            assertTrue(state.refetchThumbnailsEnabled)
+        }
+    }
+
+    @Test
+    fun `OnToggleRefetchTitles updates state`() = runTest {
+        createViewModel()
+
+        viewModel.onEvent(HealthCheckEvent.OnToggleRefetchTitles(true))
+
+        viewModel.state.test {
+            val state = awaitItem()
+            assertTrue(state.refetchTitlesEnabled)
         }
     }
 }

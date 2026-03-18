@@ -67,6 +67,7 @@ import com.rejowan.linky.data.update.UpdateState
 import com.rejowan.linky.presentation.feature.settings.components.ChangelogSheet
 import com.rejowan.linky.presentation.feature.settings.components.CreatorSheet
 import com.rejowan.linky.presentation.feature.settings.components.LicenseSheet
+import com.rejowan.linky.presentation.feature.settings.components.OpenSourceLicensesSheet
 import com.rejowan.linky.presentation.feature.settings.components.PrivacyPolicySheet
 import com.rejowan.linky.presentation.feature.settings.components.ThemePickerSheet
 import com.rejowan.linky.presentation.feature.settings.components.UpdateAvailableSheet
@@ -103,6 +104,7 @@ fun SettingsScreen(
     var showUpdateIntervalSheet by remember { mutableStateOf(false) }
     var showChangelogSheet by remember { mutableStateOf(false) }
     var showPrivacyPolicySheet by remember { mutableStateOf(false) }
+    var showOpenSourceLicensesSheet by remember { mutableStateOf(false) }
     var showLicenseSheet by remember { mutableStateOf(false) }
     var showCreatorSheet by remember { mutableStateOf(false) }
 
@@ -244,10 +246,10 @@ fun SettingsScreen(
 
         SettingsOptionItem(
             icon = Icons.Rounded.Gavel,
-            title = "License",
-            subtitle = "Apache License 2.0",
+            title = "Open Source Licenses",
+            subtitle = "View third-party libraries",
             accentColor = SoftAccents.Purple,
-            onClick = { showLicenseSheet = true },
+            onClick = { showOpenSourceLicensesSheet = true },
             animationDelay = 550
         )
 
@@ -265,18 +267,29 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsOptionItem(
+            icon = Icons.Rounded.Gavel,
+            title = "App License",
+            subtitle = "GPL-3.0 License",
+            accentColor = SoftAccents.Blue,
+            onClick = { showLicenseSheet = true },
+            animationDelay = 650
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SettingsOptionItem(
             icon = Icons.Rounded.Email,
             title = "Contact",
-            subtitle = "Send feedback or report issues",
+            subtitle = "Get in touch",
             accentColor = SoftAccents.Teal,
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = "mailto:nicoly9867@gmail.com".toUri()
+                    data = "mailto:kmrejowan@gmail.com".toUri()
                     putExtra(Intent.EXTRA_SUBJECT, "Linky Feedback")
                 }
                 context.startActivity(intent)
             },
-            animationDelay = 650
+            animationDelay = 700
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -323,6 +336,10 @@ fun SettingsScreen(
 
     if (showPrivacyPolicySheet) {
         PrivacyPolicySheet(onDismiss = { showPrivacyPolicySheet = false })
+    }
+
+    if (showOpenSourceLicensesSheet) {
+        OpenSourceLicensesSheet(onDismiss = { showOpenSourceLicensesSheet = false })
     }
 
     if (showLicenseSheet) {

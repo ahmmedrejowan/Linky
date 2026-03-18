@@ -78,6 +78,10 @@ interface LinkDao {
     @Delete
     suspend fun delete(link: LinkEntity)
 
+    // Delete all links
+    @Query("DELETE FROM links")
+    suspend fun deleteAll()
+
     // Soft delete
     @Query("UPDATE links SET deletedAt = :timestamp WHERE id = :id")
     suspend fun softDelete(id: String, timestamp: Long = System.currentTimeMillis())

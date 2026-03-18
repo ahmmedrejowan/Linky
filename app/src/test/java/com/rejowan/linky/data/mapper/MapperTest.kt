@@ -1,10 +1,8 @@
 package com.rejowan.linky.data.mapper
 
-import com.rejowan.linky.data.local.database.dao.TagWithLinkCount
 import com.rejowan.linky.data.local.database.entity.CollectionEntity
 import com.rejowan.linky.data.local.database.entity.LinkEntity
 import com.rejowan.linky.data.local.database.entity.SnapshotEntity
-import com.rejowan.linky.data.local.database.entity.TagEntity
 import com.rejowan.linky.data.mapper.CollectionMapper.toDomain
 import com.rejowan.linky.data.mapper.CollectionMapper.toDomainList
 import com.rejowan.linky.data.mapper.CollectionMapper.toEntity
@@ -17,16 +15,10 @@ import com.rejowan.linky.data.mapper.SnapshotMapper.toDomain
 import com.rejowan.linky.data.mapper.SnapshotMapper.toDomainList
 import com.rejowan.linky.data.mapper.SnapshotMapper.toEntity
 import com.rejowan.linky.data.mapper.SnapshotMapper.toEntityList
-import com.rejowan.linky.data.mapper.TagMapper.toDomain
-import com.rejowan.linky.data.mapper.TagMapper.toDomainList
-import com.rejowan.linky.data.mapper.TagMapper.toDomainWithCountList
-import com.rejowan.linky.data.mapper.TagMapper.toEntity
-import com.rejowan.linky.data.mapper.TagMapper.toEntityList
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.Snapshot
 import com.rejowan.linky.domain.model.SnapshotType
-import com.rejowan.linky.domain.model.Tag
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -235,114 +227,6 @@ class MapperTest {
         assertEquals(2, backToCollections.size)
         assertEquals("Work", backToCollections[0].name)
         assertEquals("Personal", backToCollections[1].name)
-    }
-
-    // =================== Tag Mapper Tests ===================
-
-    @Test
-    fun `TagMapper toEntity maps all fields correctly`() {
-        val tag = Tag(
-            id = "tag-1",
-            name = "Android",
-            color = "#3DDC84",
-            createdAt = 1000L,
-            updatedAt = 2000L
-        )
-
-        val entity = tag.toEntity()
-
-        assertEquals(tag.id, entity.id)
-        assertEquals(tag.name, entity.name)
-        assertEquals(tag.color, entity.color)
-        assertEquals(tag.createdAt, entity.createdAt)
-        assertEquals(tag.updatedAt, entity.updatedAt)
-    }
-
-    @Test
-    fun `TagMapper toDomain maps all fields correctly`() {
-        val entity = TagEntity(
-            id = "tag-1",
-            name = "Android",
-            color = "#3DDC84",
-            createdAt = 1000L,
-            updatedAt = 2000L
-        )
-
-        val tag = entity.toDomain()
-
-        assertEquals(entity.id, tag.id)
-        assertEquals(entity.name, tag.name)
-        assertEquals(entity.color, tag.color)
-        assertEquals(entity.createdAt, tag.createdAt)
-        assertEquals(entity.updatedAt, tag.updatedAt)
-    }
-
-    @Test
-    fun `TagMapper handles null color correctly`() {
-        val tag = Tag(
-            id = "tag-1",
-            name = "Test",
-            color = null,
-            createdAt = 1000L,
-            updatedAt = 2000L
-        )
-
-        val entity = tag.toEntity()
-        assertNull(entity.color)
-
-        val backToTag = entity.toDomain()
-        assertNull(backToTag.color)
-    }
-
-    @Test
-    fun `TagMapper list conversion works correctly`() {
-        val tags = listOf(
-            Tag(id = "1", name = "Android", createdAt = 1000L, updatedAt = 1000L),
-            Tag(id = "2", name = "Kotlin", createdAt = 2000L, updatedAt = 2000L)
-        )
-
-        val entities = tags.toEntityList()
-        assertEquals(2, entities.size)
-
-        val backToTags = entities.toDomainList()
-        assertEquals(2, backToTags.size)
-        assertEquals("Android", backToTags[0].name)
-        assertEquals("Kotlin", backToTags[1].name)
-    }
-
-    @Test
-    fun `TagMapper TagWithLinkCount toDomain maps correctly`() {
-        val tagWithCount = TagWithLinkCount(
-            id = "tag-1",
-            name = "Android",
-            color = "#3DDC84",
-            createdAt = 1000L,
-            updatedAt = 2000L,
-            linkCount = 10
-        )
-
-        val domain = tagWithCount.toDomain()
-
-        assertEquals(tagWithCount.id, domain.id)
-        assertEquals(tagWithCount.name, domain.name)
-        assertEquals(tagWithCount.color, domain.color)
-        assertEquals(tagWithCount.createdAt, domain.createdAt)
-        assertEquals(tagWithCount.updatedAt, domain.updatedAt)
-        assertEquals(tagWithCount.linkCount, domain.linkCount)
-    }
-
-    @Test
-    fun `TagMapper TagWithLinkCount list conversion works correctly`() {
-        val tagsWithCount = listOf(
-            TagWithLinkCount("1", "Android", "#3DDC84", 1000L, 1000L, 5),
-            TagWithLinkCount("2", "Kotlin", "#7F52FF", 2000L, 2000L, 10)
-        )
-
-        val domainList = tagsWithCount.toDomainWithCountList()
-
-        assertEquals(2, domainList.size)
-        assertEquals(5, domainList[0].linkCount)
-        assertEquals(10, domainList[1].linkCount)
     }
 
     // =================== Snapshot Mapper Tests ===================

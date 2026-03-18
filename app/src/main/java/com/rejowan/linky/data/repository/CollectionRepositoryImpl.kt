@@ -85,6 +85,16 @@ class CollectionRepositoryImpl(
         }
     }
 
+    override suspend fun deleteAllCollections(): Result<Unit> {
+        return try {
+            collectionDao.deleteAll()
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete all collections")
+            Result.Error(e)
+        }
+    }
+
     override suspend fun countCollections(): Int {
         return collectionDao.countCollections()
     }

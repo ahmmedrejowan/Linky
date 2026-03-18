@@ -4,16 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.model.Link
-import com.rejowan.linky.domain.model.Tag
 import com.rejowan.linky.domain.usecase.collection.GetAllCollectionsUseCase
 import com.rejowan.linky.domain.usecase.collection.SaveCollectionUseCase
 import com.rejowan.linky.domain.usecase.link.GetLinkByIdUseCase
 import com.rejowan.linky.domain.usecase.link.SaveLinkUseCase
 import com.rejowan.linky.domain.usecase.link.UpdateLinkUseCase
-import com.rejowan.linky.domain.usecase.tag.GetAllTagsUseCase
-import com.rejowan.linky.domain.usecase.tag.GetTagsForLinkUseCase
-import com.rejowan.linky.domain.usecase.tag.SaveTagUseCase
-import com.rejowan.linky.domain.usecase.tag.SetTagsForLinkUseCase
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkEvent
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkUiEvent
 import com.rejowan.linky.presentation.feature.addlink.AddEditLinkViewModel
@@ -51,10 +46,6 @@ class AddEditLinkViewModelTest {
     private lateinit var linkPreviewFetcher: LinkPreviewFetcher
     private lateinit var fileStorageManager: FileStorageManager
     private lateinit var preferencesManager: PreferencesManager
-    private lateinit var getAllTagsUseCase: GetAllTagsUseCase
-    private lateinit var getTagsForLinkUseCase: GetTagsForLinkUseCase
-    private lateinit var saveTagUseCase: SaveTagUseCase
-    private lateinit var setTagsForLinkUseCase: SetTagsForLinkUseCase
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -64,12 +55,6 @@ class AddEditLinkViewModelTest {
         color = "#FF5733",
         createdAt = 1000L,
         updatedAt = 2000L
-    )
-
-    private val testTag = Tag(
-        id = "tag-1",
-        name = "Important",
-        color = "#00FF00"
     )
 
     private val testLink = Link(
@@ -97,15 +82,9 @@ class AddEditLinkViewModelTest {
         linkPreviewFetcher = mockk()
         fileStorageManager = mockk()
         preferencesManager = mockk()
-        getAllTagsUseCase = mockk()
-        getTagsForLinkUseCase = mockk()
-        saveTagUseCase = mockk()
-        setTagsForLinkUseCase = mockk()
 
         every { getAllCollectionsUseCase() } returns flowOf(listOf(testCollection))
-        every { getAllTagsUseCase() } returns flowOf(listOf(testTag))
         every { preferencesManager.shouldShowPreviewFetchSuggestion() } returns true
-        coEvery { setTagsForLinkUseCase(any(), any()) } returns Result.Success(Unit)
     }
 
     @After
@@ -123,23 +102,18 @@ class AddEditLinkViewModelTest {
             saveCollectionUseCase,
             linkPreviewFetcher,
             fileStorageManager,
-            preferencesManager,
-            getAllTagsUseCase,
-            getTagsForLinkUseCase,
-            saveTagUseCase,
-            setTagsForLinkUseCase
+            preferencesManager
         )
     }
 
     @Test
-    fun `initial state loads collections and tags`() = runTest {
+    fun `initial state loads collections`() = runTest {
         createViewModel()
         advanceUntilIdle()
 
         viewModel.state.test {
             val state = awaitItem()
             assertEquals(1, state.collections.size)
-            assertEquals(1, state.allTags.size)
         }
     }
 
@@ -306,33 +280,6 @@ class AddEditLinkViewModelTest {
     }
 
     @Test
-    fun `OnTagSelected adds tag to selected tags`() = runTest {
-        createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onEvent(AddEditLinkEvent.OnTagSelected(testTag))
-
-        viewModel.state.test {
-            val state = awaitItem()
-            assertTrue(state.selectedTags.any { it.id == testTag.id })
-        }
-    }
-
-    @Test
-    fun `OnTagRemoved removes tag from selected tags`() = runTest {
-        createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onEvent(AddEditLinkEvent.OnTagSelected(testTag))
-        viewModel.onEvent(AddEditLinkEvent.OnTagRemoved(testTag))
-
-        viewModel.state.test {
-            val state = awaitItem()
-            assertFalse(state.selectedTags.any { it.id == testTag.id })
-        }
-    }
-
-    @Test
     fun `OnSave with valid data saves link and emits LinkSaved`() = runTest {
         coEvery { saveLinkUseCase(any()) } returns Result.Success(Unit)
 
@@ -383,7 +330,6 @@ class AddEditLinkViewModelTest {
     fun `edit mode loads existing link`() = runTest {
         savedStateHandle = SavedStateHandle(mapOf("linkId" to "link-1"))
         every { getLinkByIdUseCase("link-1") } returns flowOf(testLink)
-        every { getTagsForLinkUseCase("link-1") } returns flowOf(listOf(testTag))
 
         createViewModel()
         advanceUntilIdle()
@@ -400,7 +346,6 @@ class AddEditLinkViewModelTest {
     fun `edit mode uses updateLinkUseCase on save`() = runTest {
         savedStateHandle = SavedStateHandle(mapOf("linkId" to "link-1"))
         every { getLinkByIdUseCase("link-1") } returns flowOf(testLink)
-        every { getTagsForLinkUseCase("link-1") } returns flowOf(emptyList())
         coEvery { updateLinkUseCase(any()) } returns Result.Success(Unit)
 
         createViewModel()

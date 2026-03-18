@@ -25,6 +25,7 @@ interface LinkRepository {
     suspend fun deleteLink(linkId: String): Result<Unit>
     suspend fun softDeleteLink(linkId: String): Result<Unit>
     suspend fun restoreLink(linkId: String): Result<Unit>
+    suspend fun deleteAllLinks(): Result<Unit>
 
     // Toggle operations
     suspend fun toggleFavorite(linkId: String, isFavorite: Boolean): Result<Unit>

@@ -120,6 +120,17 @@ class LinkRepositoryImpl(
         }
     }
 
+    override suspend fun deleteAllLinks(): Result<Unit> {
+        return try {
+            linkDao.deleteAll()
+            WidgetUpdater.updateWidgets(context)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete all links")
+            Result.Error(e)
+        }
+    }
+
     override suspend fun toggleFavorite(linkId: String, isFavorite: Boolean): Result<Unit> {
         return try {
             linkDao.toggleFavorite(linkId, isFavorite)

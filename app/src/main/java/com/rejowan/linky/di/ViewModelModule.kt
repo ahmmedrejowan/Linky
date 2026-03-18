@@ -11,6 +11,7 @@ import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerViewModel
 import com.rejowan.linky.presentation.feature.trash.TrashViewModel
 import com.rejowan.linky.presentation.feature.settings.duplicates.DuplicateDetectionViewModel
+import com.rejowan.linky.presentation.feature.settings.dangerzone.DangerZoneViewModel
 import com.rejowan.linky.presentation.feature.settings.healthcheck.LinkHealthCheckViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultSetupViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultUnlockViewModel
@@ -179,6 +180,15 @@ val viewModelModule = module {
             linkRepository = get(),
             deleteLinkUseCase = get(),
             linkPreviewFetcher = get()
+        )
+    }
+
+    viewModel {
+        DangerZoneViewModel(
+            linkRepository = get(),
+            collectionRepository = get(),
+            snapshotRepository = get(),
+            fileStorageManager = get()
         )
     }
 }

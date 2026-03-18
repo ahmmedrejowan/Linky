@@ -41,10 +41,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,29 +52,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rejowan.linky.util.FileStorageManager
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DangerZoneScreen(
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DangerZoneViewModel = koinViewModel()
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val fileStorageManager: FileStorageManager = koinInject()
+    val state by viewModel.state.collectAsState()
 
     var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showDeleteSnapshotsDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
-    var isClearing by remember { mutableStateOf(false) }
-    var clearResult by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -135,7 +130,7 @@ fun DangerZoneScreen(
                 title = "Delete All Snapshots",
                 subtitle = "Remove all saved webpage snapshots",
                 accentColor = Color(0xFFF57C00),
-                onClick = { /* TODO: Implement */ },
+                onClick = { showDeleteSnapshotsDialog = true },
                 animationDelay = 200
             )
 
@@ -158,17 +153,21 @@ fun DangerZoneScreen(
             )
 
             // Result message
-            clearResult?.let { message ->
+            state.resultMessage?.let { message ->
                 Spacer(modifier = Modifier.height(16.dp))
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF4CAF50).copy(alpha = 0.12f),
+                    color = if (state.isSuccess) {
+                        Color(0xFF4CAF50).copy(alpha = 0.12f)
+                    } else {
+                        Color(0xFFE53935).copy(alpha = 0.12f)
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF4CAF50),
+                        color = if (state.isSuccess) Color(0xFF4CAF50) else Color(0xFFE53935),
                         modifier = Modifier.padding(16.dp),
                         textAlign = TextAlign.Center
                     )
@@ -181,73 +180,40 @@ fun DangerZoneScreen(
 
     // Clear Cache Dialog
     if (showClearCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isClearing) showClearCacheDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.Cached,
-                    contentDescription = null,
-                    tint = Color(0xFFFF9800)
-                )
-            },
-            title = {
-                Text(
-                    text = "Clear Cache?",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                if (isClearing) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Clearing cache...")
-                    }
-                } else {
-                    Text("This will remove cached preview images and temporary files. Your links and collections will not be affected.")
-                }
-            },
-            confirmButton = {
-                if (!isClearing) {
-                    Button(
-                        onClick = {
-                            coroutineScope.launch {
-                                isClearing = true
-                                val success = fileStorageManager.clearPreviewCache()
-                                isClearing = false
-                                showClearCacheDialog = false
-                                clearResult = if (success) {
-                                    "Cache cleared successfully"
-                                } else {
-                                    "Some files could not be deleted"
-                                }
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF9800)
-                        )
-                    ) {
-                        Text("Clear")
-                    }
-                }
-            },
-            dismissButton = {
-                if (!isClearing) {
-                    OutlinedButton(onClick = { showClearCacheDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            }
+        ConfirmationDialog(
+            icon = Icons.Rounded.Cached,
+            iconColor = Color(0xFFFF9800),
+            title = "Clear Cache?",
+            message = "This will remove cached preview images and temporary files. Your links and collections will not be affected.",
+            isProcessing = state.isProcessing && state.operationType == OperationType.CLEAR_CACHE,
+            processingMessage = "Clearing cache...",
+            confirmText = "Clear",
+            confirmColor = Color(0xFFFF9800),
+            onConfirm = { viewModel.clearCache() },
+            onDismiss = { showClearCacheDialog = false }
+        )
+    }
+
+    // Delete Snapshots Dialog
+    if (showDeleteSnapshotsDialog) {
+        ConfirmationDialog(
+            icon = Icons.Rounded.DeleteSweep,
+            iconColor = Color(0xFFF57C00),
+            title = "Delete All Snapshots?",
+            message = "This will permanently delete all saved webpage snapshots. This action cannot be undone.",
+            isProcessing = state.isProcessing && state.operationType == OperationType.DELETE_SNAPSHOTS,
+            processingMessage = "Deleting snapshots...",
+            confirmText = "Delete",
+            confirmColor = Color(0xFFF57C00),
+            onConfirm = { viewModel.deleteAllSnapshots() },
+            onDismiss = { showDeleteSnapshotsDialog = false }
         )
     }
 
     // Delete All Data Dialog
     if (showDeleteAllDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteAllDialog = false },
+            onDismissRequest = { if (!state.isProcessing) showDeleteAllDialog = false },
             icon = {
                 Icon(
                     imageVector = Icons.Rounded.Warning,
@@ -262,39 +228,123 @@ fun DangerZoneScreen(
                 )
             },
             text = {
-                Column {
-                    Text(
-                        "This action cannot be undone. All your data will be permanently deleted:",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    BulletPoint("All saved links")
-                    BulletPoint("All collections")
-                    BulletPoint("All snapshots")
-                    BulletPoint("Vault data")
-                    BulletPoint("App settings")
+                if (state.isProcessing && state.operationType == OperationType.DELETE_ALL) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Deleting all data...")
+                    }
+                } else {
+                    Column {
+                        Text(
+                            "This action cannot be undone. All your data will be permanently deleted:",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        BulletPoint("All saved links")
+                        BulletPoint("All collections")
+                        BulletPoint("All snapshots")
+                        BulletPoint("Cached files")
+                    }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        // TODO: Implement delete all functionality
-                        showDeleteAllDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE53935)
-                    )
-                ) {
-                    Text("Delete Everything")
+                if (!state.isProcessing) {
+                    Button(
+                        onClick = { viewModel.deleteAllData() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE53935)
+                        )
+                    ) {
+                        Text("Delete Everything")
+                    }
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDeleteAllDialog = false }) {
-                    Text("Cancel")
+                if (!state.isProcessing) {
+                    OutlinedButton(onClick = { showDeleteAllDialog = false }) {
+                        Text("Cancel")
+                    }
                 }
             }
         )
     }
+
+    // Close dialogs on success
+    LaunchedEffect(state.resultMessage) {
+        if (state.resultMessage != null && state.isSuccess) {
+            showClearCacheDialog = false
+            showDeleteSnapshotsDialog = false
+            showDeleteAllDialog = false
+        }
+    }
+}
+
+@Composable
+private fun ConfirmationDialog(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    message: String,
+    isProcessing: Boolean,
+    processingMessage: String,
+    confirmText: String,
+    confirmColor: Color,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isProcessing) onDismiss() },
+        icon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor
+            )
+        },
+        title = {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            if (isProcessing) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(processingMessage)
+                }
+            } else {
+                Text(message)
+            }
+        },
+        confirmButton = {
+            if (!isProcessing) {
+                Button(
+                    onClick = onConfirm,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = confirmColor
+                    )
+                ) {
+                    Text(confirmText)
+                }
+            }
+        },
+        dismissButton = {
+            if (!isProcessing) {
+                OutlinedButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        }
+    )
 }
 
 @Composable

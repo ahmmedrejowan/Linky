@@ -18,4 +18,5 @@ interface SnapshotRepository {
     // Delete operations
     suspend fun deleteSnapshot(snapshotId: String): Result<Unit>
     suspend fun deleteSnapshotsForLink(linkId: String): Result<Unit>
+    suspend fun deleteAllSnapshots(): Result<Unit>
 }

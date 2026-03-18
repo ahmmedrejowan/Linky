@@ -5,6 +5,8 @@ import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
+import com.rejowan.linky.domain.usecase.backup.ExportDataUseCase
+import com.rejowan.linky.domain.usecase.backup.ImportDataUseCase
 import com.rejowan.linky.presentation.feature.settings.SettingsEvent
 import com.rejowan.linky.presentation.feature.settings.SettingsViewModel
 import com.rejowan.linky.util.FileStorageManager
@@ -34,6 +36,8 @@ class SettingsViewModelTest {
     private lateinit var snapshotRepository: SnapshotRepository
     private lateinit var themePreferences: ThemePreferences
     private lateinit var fileStorageManager: FileStorageManager
+    private lateinit var exportDataUseCase: ExportDataUseCase
+    private lateinit var importDataUseCase: ImportDataUseCase
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -46,6 +50,8 @@ class SettingsViewModelTest {
         snapshotRepository = mockk()
         themePreferences = mockk()
         fileStorageManager = mockk()
+        exportDataUseCase = mockk()
+        importDataUseCase = mockk()
 
         coEvery { linkRepository.countLinks() } returns 10
         coEvery { collectionRepository.countCollections() } returns 5
@@ -62,11 +68,13 @@ class SettingsViewModelTest {
 
     private fun createViewModel() {
         viewModel = SettingsViewModel(
-            linkRepository,
-            collectionRepository,
-            snapshotRepository,
-            themePreferences,
-            fileStorageManager
+            linkRepository = linkRepository,
+            collectionRepository = collectionRepository,
+            snapshotRepository = snapshotRepository,
+            themePreferences = themePreferences,
+            fileStorageManager = fileStorageManager,
+            exportDataUseCase = exportDataUseCase,
+            importDataUseCase = importDataUseCase
         )
     }
 

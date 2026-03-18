@@ -37,6 +37,10 @@ interface CollectionDao {
     @Delete
     suspend fun delete(collection: CollectionEntity)
 
+    // Delete all collections
+    @Query("DELETE FROM collections")
+    suspend fun deleteAll()
+
     // Get collection with link count (excludes archived and deleted)
     @Query("""
         SELECT collections.*, COUNT(links.id) as linkCount

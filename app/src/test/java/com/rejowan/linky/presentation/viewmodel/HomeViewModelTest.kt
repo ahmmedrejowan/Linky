@@ -5,7 +5,6 @@ import app.cash.turbine.test
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
-import com.rejowan.linky.domain.repository.TagRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -63,7 +62,6 @@ class HomeViewModelTest {
     private lateinit var restoreLinkUseCase: RestoreLinkUseCase
     private lateinit var linkRepository: LinkRepository
     private lateinit var collectionRepository: CollectionRepository
-    private lateinit var tagRepository: TagRepository
 
     private lateinit var viewModel: HomeViewModel
 
@@ -95,7 +93,6 @@ class HomeViewModelTest {
         restoreLinkUseCase = mockk()
         linkRepository = mockk(relaxed = true)
         collectionRepository = mockk(relaxed = true)
-        tagRepository = mockk(relaxed = true)
 
         // Default mock behavior
         every { getAllLinksUseCase() } returns flowOf(testLinks)
@@ -104,9 +101,7 @@ class HomeViewModelTest {
         every { getTrashedLinksUseCase() } returns flowOf(emptyList())
         every { linkRepository.getAllLinksCount() } returns flowOf(3)
         every { linkRepository.getFavoriteLinksCount() } returns flowOf(1)
-        every { linkRepository.getArchivedLinksCount() } returns flowOf(0)
         every { collectionRepository.getCollectionsWithLinkCount() } returns flowOf(emptyList())
-        every { tagRepository.getTagsWithLinkCount() } returns flowOf(emptyList())
         coEvery { linkRepository.getAllActiveUrls() } returns emptyList()
         coEvery { linkRepository.existsByUrl(any()) } returns false
     }
@@ -127,8 +122,7 @@ class HomeViewModelTest {
             deleteLinkUseCase = deleteLinkUseCase,
             restoreLinkUseCase = restoreLinkUseCase,
             linkRepository = linkRepository,
-            collectionRepository = collectionRepository,
-            tagRepository = tagRepository
+            collectionRepository = collectionRepository
         )
     }
 
@@ -141,7 +135,7 @@ class HomeViewModelTest {
 
         val state = viewModel.state.value
         assertEquals(FilterType.ALL, state.filterType)
-        assertEquals(SortType.DATE_ADDED_DESC, state.sortType)
+        assertEquals(SortType.DATE_DESC, state.sortType)
         assertFalse(state.isLoading)
         assertFalse(state.isSelectionMode)
         assertTrue(state.selectedLinkIds.isEmpty())
@@ -153,7 +147,6 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.state.value
-        // Favorites are sorted to top, so we expect favorites first
         assertTrue(state.links.isNotEmpty())
     }
 
@@ -183,22 +176,6 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `changing to ARCHIVED filter calls archived use case`() = runTest {
-        val archivedLinks = listOf(testLink.copy(isArchived = true))
-        every { getArchivedLinksUseCase() } returns flowOf(archivedLinks)
-
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onEvent(HomeEvent.OnFilterTypeChange(FilterType.ARCHIVED))
-        advanceUntilIdle()
-
-        val state = viewModel.state.value
-        assertEquals(1, state.links.size)
-        assertTrue(state.links[0].isArchived)
-    }
-
-    @Test
     fun `changing to TRASH filter calls trashed use case`() = runTest {
         val trashedLinks = listOf(testLink.copy(deletedAt = System.currentTimeMillis()))
         every { getTrashedLinksUseCase() } returns flowOf(trashedLinks)
@@ -221,25 +198,23 @@ class HomeViewModelTest {
         viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.onEvent(HomeEvent.OnSortTypeChange(SortType.TITLE_ASC))
+        viewModel.onEvent(HomeEvent.OnSortTypeChange(SortType.NAME_ASC))
         advanceUntilIdle()
 
-        assertEquals(SortType.TITLE_ASC, viewModel.state.value.sortType)
+        assertEquals(SortType.NAME_ASC, viewModel.state.value.sortType)
     }
 
     @Test
-    fun `sorting by title ascending orders links correctly`() = runTest {
+    fun `sorting by name ascending orders links correctly`() = runTest {
         viewModel = createViewModel()
         advanceUntilIdle()
 
-        viewModel.onEvent(HomeEvent.OnSortTypeChange(SortType.TITLE_ASC))
+        viewModel.onEvent(HomeEvent.OnSortTypeChange(SortType.NAME_ASC))
         advanceUntilIdle()
 
         val links = viewModel.state.value.links
-        // Favorites should still be at top within ALL filter, then sorted by title
-        val nonFavorites = links.filter { !it.isFavorite }
-        for (i in 0 until nonFavorites.size - 1) {
-            assertTrue(nonFavorites[i].title.lowercase() <= nonFavorites[i + 1].title.lowercase())
+        for (i in 0 until links.size - 1) {
+            assertTrue(links[i].title.lowercase() <= links[i + 1].title.lowercase())
         }
     }
 
@@ -307,38 +282,6 @@ class HomeViewModelTest {
 
             val event = awaitItem()
             assertTrue(event is HomeUiEvent.ShowError)
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    // ============ Archive Link Tests ============
-
-    @Test
-    fun `OnArchiveLink calls toggle archive use case`() = runTest {
-        coEvery { toggleArchiveUseCase(any(), any()) } returns Result.Success(Unit)
-
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onEvent(HomeEvent.OnArchiveLink("test-id-1", true))
-        advanceUntilIdle()
-
-        coVerify { toggleArchiveUseCase("test-id-1", true) }
-    }
-
-    @Test
-    fun `OnArchiveLink emits success event`() = runTest {
-        coEvery { toggleArchiveUseCase(any(), any()) } returns Result.Success(Unit)
-
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.uiEvents.test {
-            viewModel.onEvent(HomeEvent.OnArchiveLink("test-id-1", true))
-            advanceUntilIdle()
-
-            val event = awaitItem()
-            assertTrue(event is HomeUiEvent.ShowArchiveToggled)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -560,28 +503,6 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `OnBulkArchive archives selected links`() = runTest {
-        coEvery { toggleArchiveUseCase(any(), any()) } returns Result.Success(Unit)
-
-        viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onEvent(HomeEvent.OnEnterSelectionMode)
-        viewModel.onEvent(HomeEvent.OnToggleLinkSelection("test-id-1"))
-        advanceUntilIdle()
-
-        viewModel.uiEvents.test {
-            viewModel.onEvent(HomeEvent.OnBulkArchive)
-            advanceUntilIdle()
-
-            val event = awaitItem()
-            assertTrue(event is HomeUiEvent.ShowBulkOperationResult)
-            assertTrue((event as HomeUiEvent.ShowBulkOperationResult).message.contains("archived"))
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
     fun `OnBulkFavorite favorites selected links`() = runTest {
         coEvery { toggleFavoriteUseCase(any(), any()) } returns Result.Success(Unit)
 
@@ -634,7 +555,6 @@ class HomeViewModelTest {
     fun `observes link counts from repository`() = runTest {
         every { linkRepository.getAllLinksCount() } returns flowOf(10)
         every { linkRepository.getFavoriteLinksCount() } returns flowOf(5)
-        every { linkRepository.getArchivedLinksCount() } returns flowOf(2)
 
         viewModel = createViewModel()
         advanceUntilIdle()
@@ -642,6 +562,5 @@ class HomeViewModelTest {
         val state = viewModel.state.value
         assertEquals(10, state.allLinksCount)
         assertEquals(5, state.favoriteLinksCount)
-        assertEquals(2, state.archivedLinksCount)
     }
 }
