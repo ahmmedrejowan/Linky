@@ -537,19 +537,22 @@ fun LinkGridCard(
                 }
             }
 
-            // Content Area
+            // Content Area - Fixed height for uniform grid
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(80.dp)
                     .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Title
+                // Title - Fixed 2 lines with minLines
                 Text(
                     text = link.title,
                     style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = MaterialTheme.typography.titleSmall.lineHeight
                     ),
+                    minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
