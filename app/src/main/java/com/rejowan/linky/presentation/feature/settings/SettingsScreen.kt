@@ -112,26 +112,31 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp, bottom = 100.dp)
+            .padding(bottom = 100.dp)
     ) {
-        // Settings Title
+        // Settings Title - matching ToolsHeader style
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold
             ),
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(vertical = 12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         )
 
-        // App Header Card
-        SettingsHeaderCard()
+        // Content with horizontal padding
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            // App Header Card
+            SettingsHeaderCard()
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // App Settings Section
-        SectionLabel(text = "APP SETTINGS", delay = 0)
+            // App Settings Section
+            SectionLabel(text = "APP SETTINGS", delay = 0)
         Spacer(modifier = Modifier.height(8.dp))
 
         // Clipboard Checking Toggle
@@ -304,17 +309,18 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        SettingsOptionItem(
-            icon = Icons.Rounded.Code,
-            title = "Source Code",
-            subtitle = "View on GitHub",
-            accentColor = SoftAccents.Purple,
-            onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, GITHUB_URL.toUri())
-                context.startActivity(intent)
-            },
-            animationDelay = 700
-        )
+            SettingsOptionItem(
+                icon = Icons.Rounded.Code,
+                title = "Source Code",
+                subtitle = "View on GitHub",
+                accentColor = SoftAccents.Purple,
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, GITHUB_URL.toUri())
+                    context.startActivity(intent)
+                },
+                animationDelay = 700
+            )
+        }
     }
 
     // Bottom Sheets
