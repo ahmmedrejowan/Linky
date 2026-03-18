@@ -14,3 +14,4 @@ local.properties
 /work
 /.idea/studiobot.xml
 /doc/
+.kotlin/
