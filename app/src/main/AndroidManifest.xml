@@ -40,6 +40,25 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
             </intent-filter>
+
+            <!-- Handle .linky backup files -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.linky" />
+                <data android:host="*" />
+            </intent-filter>
+
+            <!-- Handle .linky files with custom MIME type -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.linky.backup" />
+            </intent-filter>
         </activity>
 
         <!-- Linky Widget -->

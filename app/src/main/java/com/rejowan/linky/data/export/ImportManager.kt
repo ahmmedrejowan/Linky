@@ -10,12 +10,11 @@ import com.rejowan.linky.data.local.database.entity.LinkEntity
 import com.rejowan.linky.data.local.database.entity.SnapshotEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.util.UUID
 
 /**
- * Handles importing app data from JSON format
+ * Handles importing app data from .linky format
  */
 class ImportManager(
     private val context: Context,
@@ -23,27 +22,23 @@ class ImportManager(
     private val collectionDao: CollectionDao,
     private val snapshotDao: SnapshotDao
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
     /**
      * Validate and preview an import file without actually importing
      */
     suspend fun previewImport(uri: Uri): Result<ImportPreview> = withContext(Dispatchers.IO) {
         try {
-            val jsonString = readFileContent(uri)
-            val exportData = json.decodeFromString<ExportData>(jsonString)
+            val backupPreview = LinkyBackupFormat.previewBackup(context, uri)
 
             val preview = ImportPreview(
-                version = exportData.version,
-                exportDate = exportData.exportDate,
-                totalLinks = exportData.data.links.size,
-                totalCollections = exportData.data.collections.size,
-                hasSnapshots = exportData.data.snapshots != null,
-                snapshotsCount = exportData.data.snapshots?.size ?: 0
+                version = backupPreview.version,
+                exportDate = backupPreview.exportDate,
+                totalLinks = backupPreview.linksCount,
+                totalCollections = backupPreview.collectionsCount,
+                hasSnapshots = false,
+                snapshotsCount = 0
             )
+
+            Timber.d("Previewing .linky backup: ${preview.totalLinks} links, ${preview.totalCollections} collections")
 
             Result.success(preview)
         } catch (e: Exception) {
@@ -53,7 +48,7 @@ class ImportManager(
     }
 
     /**
-     * Import data from a URI
+     * Import data from a .linky file
      */
     suspend fun importFromUri(
         uri: Uri,
@@ -63,11 +58,10 @@ class ImportManager(
         try {
             onProgress(5)
 
-            val jsonString = readFileContent(uri)
+            val backupResult = LinkyBackupFormat.readBackup(context, uri, onProgress)
+            val exportData = backupResult.exportData
 
-            onProgress(10)
-
-            val exportData = json.decodeFromString<ExportData>(jsonString)
+            Timber.d("Importing from .linky format (v${backupResult.manifest?.formatVersion})")
 
             // Validate version
             if (exportData.version > ExportData.CURRENT_VERSION) {
@@ -303,9 +297,4 @@ class ImportManager(
         return imported
     }
 
-    private fun readFileContent(uri: Uri): String {
-        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            inputStream.bufferedReader().readText()
-        } ?: throw IllegalStateException("Could not read file")
-    }
 }

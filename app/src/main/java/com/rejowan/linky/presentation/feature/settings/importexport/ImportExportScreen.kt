@@ -77,16 +77,16 @@ fun ImportExportScreen(
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
 
-    // File picker for export
+    // File picker for export (.linky format)
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         uri?.let {
             viewModel.onEvent(SettingsEvent.OnExportData(it, false))
         }
     }
 
-    // File picker for import
+    // File picker for import (.linky files only)
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -183,7 +183,7 @@ fun ImportExportScreen(
                 isImporting = isImporting,
                 onExportClick = {
                     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                    val fileName = "linky-backup-${dateFormat.format(Date())}.json"
+                    val fileName = "linky-backup-${dateFormat.format(Date())}.linky"
                     exportLauncher.launch(fileName)
                 }
             )
@@ -192,7 +192,10 @@ fun ImportExportScreen(
             ImportCard(
                 isExporting = isExporting,
                 isImporting = isImporting,
-                onImportClick = { importLauncher.launch(arrayOf("application/json")) }
+                onImportClick = {
+                    // Accept .linky files and legacy .json files
+                    importLauncher.launch(arrayOf("*/*"))
+                }
             )
 
             // Format Info
@@ -254,7 +257,7 @@ private fun InfoCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Export your links and collections to a JSON file. You can import this file on another device or restore after reinstalling.",
+                    text = "Export your links and collections to a .linky file. You can import this file on another device or restore after reinstalling.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -456,7 +459,7 @@ private fun FormatInfoCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Note: Vault links are not included in exports for security reasons.",
+                text = "Exports use the .linky format. Vault links are not included for security.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -6,10 +6,7 @@ import com.rejowan.linky.data.local.database.dao.CollectionDao
 import com.rejowan.linky.data.local.database.dao.LinkDao
 import com.rejowan.linky.data.local.database.dao.SnapshotDao
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 import java.io.OutputStream
 import java.text.SimpleDateFormat
@@ -17,7 +14,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Handles exporting app data to JSON format
+ * Handles exporting app data to .linky format
  */
 class ExportManager(
     private val context: Context,
@@ -25,14 +22,8 @@ class ExportManager(
     private val collectionDao: CollectionDao,
     private val snapshotDao: SnapshotDao
 ) {
-    private val json = Json {
-        prettyPrint = true
-        encodeDefaults = true
-        ignoreUnknownKeys = true
-    }
-
     /**
-     * Export all data to a URI (user-selected file location)
+     * Export all data to a URI (user-selected file location) in .linky format
      */
     suspend fun exportToUri(
         uri: Uri,
@@ -45,25 +36,16 @@ class ExportManager(
             // Gather all data
             val exportData = gatherExportData(includeSnapshots, onProgress)
 
-            onProgress(70)
-
-            // Serialize to JSON
-            val jsonString = json.encodeToString(exportData)
-
-            onProgress(80)
-
-            // Write to file
+            // Write to .linky format
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
+                LinkyBackupFormat.writeBackup(outputStream, exportData, onProgress)
             } ?: throw IllegalStateException("Could not open output stream")
-
-            onProgress(100)
 
             val summary = ExportSummary(
                 linksCount = exportData.data.links.size,
                 collectionsCount = exportData.data.collections.size,
-                snapshotsCount = exportData.data.snapshots?.size ?: 0,
-                fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
+                snapshotsCount = 0,
+                fileSize = "~", // Size is calculated after ZIP compression
                 filePath = uri.toString()
             )
 
@@ -76,7 +58,7 @@ class ExportManager(
     }
 
     /**
-     * Export to an output stream (for sharing)
+     * Export to an output stream (for sharing) in .linky format
      */
     suspend fun exportToStream(
         outputStream: OutputStream,
@@ -88,21 +70,13 @@ class ExportManager(
 
             val exportData = gatherExportData(includeSnapshots, onProgress)
 
-            onProgress(70)
-
-            val jsonString = json.encodeToString(exportData)
-
-            onProgress(80)
-
-            outputStream.write(jsonString.toByteArray(Charsets.UTF_8))
-
-            onProgress(100)
+            LinkyBackupFormat.writeBackup(outputStream, exportData, onProgress)
 
             val summary = ExportSummary(
                 linksCount = exportData.data.links.size,
                 collectionsCount = exportData.data.collections.size,
-                snapshotsCount = exportData.data.snapshots?.size ?: 0,
-                fileSize = formatFileSize(jsonString.toByteArray().size.toLong()),
+                snapshotsCount = 0,
+                fileSize = "~",
                 filePath = ""
             )
 
