@@ -260,8 +260,8 @@ fun ShimmerLinkGridCard(
 }
 
 /**
- * Shimmer version of CollectionCard - matches the exact structure
- * Row layout: 64dp icon box, name/count/previews column, favorite icon
+ * Shimmer version of CollectionCard - matches the vibrant list design
+ * Row layout: 68dp gradient icon box, name/badge/previews column, favorite button
  */
 @Composable
 fun ShimmerCollectionCard(
@@ -269,55 +269,56 @@ fun ShimmerCollectionCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Collection Icon placeholder (64dp)
+            // Gradient Icon Box placeholder (68dp)
             ShimmerBox(
-                modifier = Modifier.size(64.dp),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier.size(68.dp),
+                shape = RoundedCornerShape(16.dp)
             )
 
             // Collection Info
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Collection Name
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.6f)
+                        .fillMaxWidth(0.65f)
                         .height(18.dp)
                 )
 
-                // Link Count
+                // Link Count Badge
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.3f)
-                        .height(14.dp)
+                        .width(70.dp)
+                        .height(24.dp),
+                    shape = RoundedCornerShape(8.dp)
                 )
 
-                // Preview Thumbnails row
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    repeat(3) {
+                // Preview Thumbnails row (overlapping style)
+                Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                    repeat(4) {
                         ShimmerBox(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             shape = CircleShape
                         )
                     }
                 }
             }
 
-            // Favorite Icon placeholder
+            // Favorite Button placeholder
             ShimmerBox(
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(40.dp),
                 shape = CircleShape
             )
         }
@@ -325,8 +326,8 @@ fun ShimmerCollectionCard(
 }
 
 /**
- * Shimmer version of CollectionGridCard - matches the exact structure
- * Vertical card: 80dp color banner with icon, name/count below
+ * Shimmer version of CollectionGridCard - matches the new vibrant design
+ * Vertical card: 90dp gradient banner with icon, name/count below
  */
 @Composable
 fun ShimmerCollectionGridCard(
@@ -334,28 +335,46 @@ fun ShimmerCollectionGridCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Color banner placeholder with icon
+            // Gradient banner placeholder
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(90.dp)
             ) {
                 ShimmerBox(
                     modifier = Modifier.fillMaxSize(),
-                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                )
+
+                // Icon circle placeholder (center)
+                ShimmerBox(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .align(Alignment.Center),
+                    shape = CircleShape
+                )
+
+                // Link count badge placeholder (top-left)
+                ShimmerBox(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .width(32.dp)
+                        .height(22.dp)
+                        .align(Alignment.TopStart),
+                    shape = RoundedCornerShape(12.dp)
                 )
 
                 // Favorite button placeholder (top-right)
                 ShimmerBox(
                     modifier = Modifier
                         .padding(8.dp)
-                        .size(28.dp)
+                        .size(32.dp)
                         .align(Alignment.TopEnd),
                     shape = CircleShape
                 )
@@ -365,12 +384,12 @@ fun ShimmerCollectionGridCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(14.dp)
             ) {
                 // Collection Name
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.7f)
+                        .fillMaxWidth(0.75f)
                         .height(16.dp)
                 )
 
@@ -379,7 +398,7 @@ fun ShimmerCollectionGridCard(
                 // Link Count
                 ShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth(0.4f)
+                        .fillMaxWidth(0.35f)
                         .height(12.dp)
                 )
             }

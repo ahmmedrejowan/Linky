@@ -29,7 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,7 +46,7 @@ import java.util.Locale
 import kotlin.math.min
 
 /**
- * CollectionCard component - Displays a collection with name, color, link count, and preview thumbnails
+ * CollectionCard component - Displays a collection with vibrant design
  *
  * @param collection The collection to display
  * @param linkCount Number of links in this collection
@@ -60,81 +64,164 @@ fun CollectionCard(
     modifier: Modifier = Modifier,
     linkPreviews: List<String?> = emptyList()
 ) {
+    val baseColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primary
+    val lighterColor = baseColor.lighten(0.15f)
+    val darkerColor = baseColor.darken(0.1f)
+    val iconTint = baseColor.getContrastingColor()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .background(baseColor.copy(alpha = 0.03f))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: Collection Icon (larger, prominent)
+            // Left: Gradient Icon Box with decorative elements
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer),
+                    .size(68.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(lighterColor, baseColor, darkerColor),
+                            start = Offset(0f, 0f),
+                            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                        )
+                    )
+                    .drawBehind {
+                        // Decorative circles
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.15f),
+                            radius = 20.dp.toPx(),
+                            center = Offset(size.width * 0.8f, size.height * 0.2f)
+                        )
+                        drawCircle(
+                            color = Color.Black.copy(alpha = 0.08f),
+                            radius = 12.dp.toPx(),
+                            center = Offset(size.width * 0.2f, size.height * 0.85f)
+                        )
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = "Collection icon",
-                    modifier = Modifier.size(36.dp),
-                    tint = collection.color?.toColor()?.getContrastingColor()
-                        ?: MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                // Inner glow circle
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = "Collection icon",
+                        modifier = Modifier.size(28.dp),
+                        tint = iconTint
+                    )
+                }
             }
 
             // Middle: Collection Info
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Collection Name
                 Text(
                     text = collection.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Link Count
-                Text(
-                    text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // Link Count Badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(baseColor.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = baseColor
+                        )
+                    }
+                }
 
                 // Preview Thumbnails (only show if present)
                 if (linkPreviews.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        linkPreviews.take(4).forEach { previewPath ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy((-6).dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        linkPreviews.take(4).forEachIndexed { index, previewPath ->
                             PreviewThumbnail(
                                 previewPath = previewPath,
-                                collectionColor = collection.color?.toColor()
+                                collectionColor = baseColor,
+                                modifier = Modifier.padding(start = if (index == 0) 0.dp else 0.dp)
                             )
+                        }
+                        if (linkCount > 4) {
+                            // Show +N more indicator
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(baseColor.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "+${linkCount - 4}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = baseColor
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Right: Favorite Icon Button
-            IconButton(
-                onClick = onFavoriteClick
+            // Right: Favorite Button
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (collection.isFavorite)
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                        else
+                            baseColor.copy(alpha = 0.08f)
+                    )
+                    .clickable { onFavoriteClick() },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (collection.isFavorite) MaterialTheme.colorScheme.error else baseColor,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -143,38 +230,43 @@ fun CollectionCard(
 
 /**
  * Preview thumbnail for link preview images
- * Compact size for inline display
+ * Stacked overlapping style for visual interest
  */
 @Composable
 private fun PreviewThumbnail(
     previewPath: String?,
-    collectionColor: Color?,
+    collectionColor: Color,
     modifier: Modifier = Modifier
 ) {
-    if (previewPath != null) {
-        AsyncImage(
-            model = previewPath,
-            contentDescription = "Link preview",
-            modifier = modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Crop
-        )
-    } else {
-        // Placeholder for links without preview
-        Box(
-            modifier = modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(collectionColor?.copy(alpha = 0.3f) ?: MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
+    Box(
+        modifier = modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        collectionColor.copy(alpha = 0.2f),
+                        collectionColor.copy(alpha = 0.1f)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (previewPath != null) {
+            AsyncImage(
+                model = previewPath,
+                contentDescription = "Link preview",
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
             Icon(
                 imageVector = Icons.Default.Image,
                 contentDescription = "No preview",
-                modifier = Modifier.size(10.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                modifier = Modifier.size(12.dp),
+                tint = collectionColor.copy(alpha = 0.6f)
             )
         }
     }
@@ -182,7 +274,7 @@ private fun PreviewThumbnail(
 
 /**
  * CollectionGridCard - Grid view variant of CollectionCard
- * Displays collection with a color banner header and details below
+ * Displays collection with vibrant gradient banner and modern design
  */
 @Composable
 fun CollectionGridCard(
@@ -192,47 +284,101 @@ fun CollectionGridCard(
     onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val collectionColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primaryContainer
-    val iconTint = collection.color?.toColor()?.getContrastingColor() ?: MaterialTheme.colorScheme.onPrimaryContainer
+    val baseColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primary
+    val lighterColor = baseColor.copy(alpha = 0.7f).lighten(0.2f)
+    val darkerColor = baseColor.darken(0.15f)
+    val iconTint = baseColor.getContrastingColor()
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Color banner with folder icon and favorite button
+            // Gradient banner with decorative elements
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
-                    .background(collectionColor)
+                    .height(90.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(lighterColor, baseColor, darkerColor),
+                            start = Offset(0f, 0f),
+                            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                        )
+                    )
+                    .drawBehind {
+                        // Draw decorative circles for visual interest
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.1f),
+                            radius = 60.dp.toPx(),
+                            center = Offset(size.width * 0.9f, size.height * 0.2f)
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.08f),
+                            radius = 40.dp.toPx(),
+                            center = Offset(size.width * 0.1f, size.height * 0.8f)
+                        )
+                        drawCircle(
+                            color = Color.Black.copy(alpha = 0.05f),
+                            radius = 30.dp.toPx(),
+                            center = Offset(size.width * 0.7f, size.height * 0.9f)
+                        )
+                    }
             ) {
-                // Folder icon in center
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = null,
+                // Folder icon with glow effect
+                Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .align(Alignment.Center),
-                    tint = iconTint.copy(alpha = 0.9f)
-                )
+                        .align(Alignment.Center)
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = iconTint.copy(alpha = 0.95f)
+                    )
+                }
 
-                // Favorite button in top-right
+                // Link count badge (top-left)
+                Box(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.25f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .align(Alignment.TopStart)
+                ) {
+                    Text(
+                        text = "$linkCount",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color.White
+                    )
+                }
+
+                // Favorite button (top-right)
                 Box(
                     modifier = Modifier
                         .padding(8.dp)
-                        .size(28.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(
                             if (collection.isFavorite)
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                                MaterialTheme.colorScheme.error
                             else
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                                Color.White.copy(alpha = 0.9f)
                         )
                         .clickable { onFavoriteClick() }
                         .align(Alignment.TopEnd),
@@ -241,23 +387,24 @@ fun CollectionGridCard(
                     Icon(
                         imageVector = if (collection.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = if (collection.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (collection.isFavorite) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        tint = if (collection.isFavorite) Color.White else baseColor,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            // Content below banner
+            // Content below banner with subtle color tint
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .background(baseColor.copy(alpha = 0.04f))
+                    .padding(14.dp)
             ) {
                 // Collection Name
                 Text(
                     text = collection.name,
                     style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -266,15 +413,39 @@ fun CollectionGridCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Link Count
+                // Link count text
                 Text(
-                    text = "$linkCount ${if (linkCount == 1) "link" else "links"}",
+                    text = if (linkCount == 1) "1 link" else "$linkCount links",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = baseColor.copy(alpha = 0.8f)
                 )
             }
         }
     }
+}
+
+/**
+ * Lighten a color by a factor (0.0 to 1.0)
+ */
+private fun Color.lighten(factor: Float): Color {
+    return Color(
+        red = (red + (1f - red) * factor).coerceIn(0f, 1f),
+        green = (green + (1f - green) * factor).coerceIn(0f, 1f),
+        blue = (blue + (1f - blue) * factor).coerceIn(0f, 1f),
+        alpha = alpha
+    )
+}
+
+/**
+ * Darken a color by a factor (0.0 to 1.0)
+ */
+private fun Color.darken(factor: Float): Color {
+    return Color(
+        red = (red * (1f - factor)).coerceIn(0f, 1f),
+        green = (green * (1f - factor)).coerceIn(0f, 1f),
+        blue = (blue * (1f - factor)).coerceIn(0f, 1f),
+        alpha = alpha
+    )
 }
 
 /**
