@@ -107,6 +107,8 @@ import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.LinkCard
 import com.rejowan.linky.presentation.components.LinkGridCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
+import com.rejowan.linky.presentation.components.ShimmerLinkGrid
+import com.rejowan.linky.presentation.components.ShimmerLinkList
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.KoinApplication
@@ -844,9 +846,12 @@ private fun HomeContent(
     Column(modifier = modifier.fillMaxSize()) {
         // Content area - changes based on state
         when {
-            // Loading state (initial load only)
+            // Loading state (initial load only) - show shimmer
             state.isLoading && state.links.isEmpty() -> {
-                LoadingIndicator(message = "Loading links...")
+                when (viewMode) {
+                    ViewMode.LIST -> ShimmerLinkList()
+                    ViewMode.GRID -> ShimmerLinkGrid()
+                }
             }
 
             // Error state

@@ -72,6 +72,8 @@ import com.rejowan.linky.presentation.components.ErrorStates
 import com.rejowan.linky.presentation.components.CollectionCard
 import com.rejowan.linky.presentation.components.CollectionGridCard
 import com.rejowan.linky.presentation.components.LoadingIndicator
+import com.rejowan.linky.presentation.components.ShimmerCollectionGrid
+import com.rejowan.linky.presentation.components.ShimmerCollectionList
 import com.rejowan.linky.presentation.feature.home.ViewMode
 import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
@@ -160,9 +162,19 @@ fun CollectionsScreen(
         modifier = modifier.fillMaxSize()
     ) {
         when {
-            // Loading state
+            // Loading state - show shimmer
             state.isLoading && state.collections.isEmpty() -> {
-                LoadingIndicator(message = "Loading collections...")
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Show header even during loading
+                    CollectionsHeader(
+                        onSortClick = { showSortSheet = true }
+                    )
+                    // Shimmer based on view mode
+                    when (state.viewMode) {
+                        ViewMode.LIST -> ShimmerCollectionList()
+                        ViewMode.GRID -> ShimmerCollectionGrid()
+                    }
+                }
             }
 
             // Error state
