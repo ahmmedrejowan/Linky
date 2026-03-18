@@ -109,12 +109,9 @@ fun SettingsScreen(
     var showCreatorSheet by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 100.dp)
+        modifier = modifier.fillMaxSize()
     ) {
-        // Settings Title - matching ToolsHeader style
+        // Settings Title - Fixed, not scrollable (matching ToolsHeader)
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium.copy(
@@ -126,9 +123,13 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         )
 
-        // Content with horizontal padding
+        // Scrollable content
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 100.dp)
         ) {
             // App Header Card
             SettingsHeaderCard()
@@ -446,14 +447,18 @@ private fun SettingsHeaderCard() {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // App logo
-            Image(
-                painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                contentDescription = "App logo",
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(16.dp))
-            )
+            // App logo with background
+            Surface(
+                modifier = Modifier.size(64.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Image(
+                    painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                    contentDescription = "App logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 

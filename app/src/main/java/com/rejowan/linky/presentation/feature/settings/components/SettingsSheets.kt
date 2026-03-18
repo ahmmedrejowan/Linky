@@ -648,9 +648,9 @@ fun ThemePickerSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Theme options
+            // Theme options - "System Default" must match ThemePreferences storage value
             val themes = listOf(
-                Triple("System", "Follow device settings", Icons.Rounded.PhoneAndroid),
+                Triple("System Default", "Follow device settings", Icons.Rounded.PhoneAndroid),
                 Triple("Light", "Always light mode", Icons.Rounded.LightMode),
                 Triple("Dark", "Always dark mode", Icons.Rounded.DarkMode)
             )
