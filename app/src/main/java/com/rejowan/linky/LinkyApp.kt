@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.di.appModule
 import com.rejowan.linky.di.databaseModule
+import com.rejowan.linky.di.networkModule
 import com.rejowan.linky.di.repositoryModule
 import com.rejowan.linky.di.useCaseModule
 import com.rejowan.linky.di.vaultModule
@@ -58,6 +59,7 @@ class LinkyApp : Application() {
                 listOf(
                     appModule,
                     databaseModule,
+                    networkModule,
                     repositoryModule,
                     useCaseModule,
                     vaultModule,

@@ -3,15 +3,16 @@ package com.rejowan.linky.di
 import com.rejowan.linky.data.repository.CollectionRepositoryImpl
 import com.rejowan.linky.data.repository.LinkRepositoryImpl
 import com.rejowan.linky.data.repository.SnapshotRepositoryImpl
-import com.rejowan.linky.data.update.UpdateRepository
+import com.rejowan.linky.data.repository.UpdateRepositoryImpl
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.repository.LinkRepository
 import com.rejowan.linky.domain.repository.SnapshotRepository
+import com.rejowan.linky.domain.repository.UpdateRepository
 import org.koin.dsl.module
 
 val repositoryModule = module {
     single<LinkRepository> { LinkRepositoryImpl(linkDao = get(), context = get()) }
     single<CollectionRepository> { CollectionRepositoryImpl(get()) }
     single<SnapshotRepository> { SnapshotRepositoryImpl(get()) }
-    single { UpdateRepository(context = get()) }
+    single<UpdateRepository> { UpdateRepositoryImpl(httpClient = get(), dataStore = get()) }
 }

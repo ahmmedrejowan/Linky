@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LightMode
@@ -55,7 +54,6 @@ import androidx.core.net.toUri
 import com.rejowan.licensy.LicenseContent
 import com.rejowan.licensy.Licenses
 import com.rejowan.licensy.compose.LicensyList
-import com.rejowan.linky.data.update.GithubRelease
 import com.rejowan.linky.data.update.UpdateCheckInterval
 import com.rejowan.linky.ui.theme.SoftAccents
 
@@ -174,118 +172,6 @@ private fun IntervalOption(
                     tint = SoftAccents.Blue,
                     modifier = Modifier.size(20.dp)
                 )
-            }
-        }
-    }
-}
-
-/**
- * Update Available Sheet
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun UpdateAvailableSheet(
-    release: GithubRelease,
-    currentVersion: String,
-    onDismiss: () -> Unit,
-    onDownload: () -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Icon
-            Surface(
-                shape = CircleShape,
-                color = SoftAccents.Teal.copy(alpha = 0.12f),
-                modifier = Modifier.size(64.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(64.dp)) {
-                    Icon(
-                        imageVector = Icons.Rounded.Download,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = SoftAccents.Teal
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Update Available",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "v$currentVersion → v${release.version}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Release notes
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = "What's New",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = release.body.ifBlank { "Bug fixes and improvements" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Later")
-                }
-
-                Button(
-                    onClick = onDownload,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Download")
-                }
             }
         }
     }

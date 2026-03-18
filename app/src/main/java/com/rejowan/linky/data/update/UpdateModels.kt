@@ -30,7 +30,27 @@ data class GithubAsset(
     @SerialName("browser_download_url") val downloadUrl: String,
     @SerialName("size") val size: Long,
     @SerialName("content_type") val contentType: String
-)
+) {
+    /**
+     * Returns a human-readable file size string.
+     */
+    val formattedSize: String
+        get() {
+            val kb = size / 1024.0
+            val mb = kb / 1024.0
+            return when {
+                mb >= 1.0 -> String.format("%.1f MB", mb)
+                kb >= 1.0 -> String.format("%.1f KB", kb)
+                else -> "$size bytes"
+            }
+        }
+
+    /**
+     * Checks if this asset is an APK file.
+     */
+    val isApk: Boolean
+        get() = name.endsWith(".apk", ignoreCase = true)
+}
 
 /**
  * Update check state

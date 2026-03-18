@@ -64,14 +64,16 @@ import com.rejowan.linky.BuildConfig
 import com.rejowan.linky.R
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.data.update.UpdateState
+import com.rejowan.linky.presentation.components.update.DownloadProgressSheet
+import com.rejowan.linky.presentation.components.update.UpdateAvailableSheet
 import com.rejowan.linky.presentation.feature.settings.components.ChangelogSheet
 import com.rejowan.linky.presentation.feature.settings.components.CreatorSheet
 import com.rejowan.linky.presentation.feature.settings.components.LicenseSheet
 import com.rejowan.linky.presentation.feature.settings.components.OpenSourceLicensesSheet
 import com.rejowan.linky.presentation.feature.settings.components.PrivacyPolicySheet
 import com.rejowan.linky.presentation.feature.settings.components.ThemePickerSheet
-import com.rejowan.linky.presentation.feature.settings.components.UpdateAvailableSheet
 import com.rejowan.linky.presentation.feature.settings.components.UpdateIntervalSheet
+import com.rejowan.linky.util.ApkDownloadManager
 import com.rejowan.linky.ui.theme.SoftAccents
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -92,7 +94,12 @@ fun SettingsScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val downloadState by viewModel.downloadState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
+    // Track if download sheet should be shown
+    var showDownloadSheet by remember { mutableStateOf(false) }
+    var currentDownloadRelease by remember { mutableStateOf<com.rejowan.linky.data.update.GithubRelease?>(null) }
 
     // Theme preferences
     val themePreferences = remember { ThemePreferences(context) }
@@ -373,10 +380,44 @@ fun SettingsScreen(
         UpdateAvailableSheet(
             release = availableState.release,
             currentVersion = availableState.currentVersion,
+            downloadUrl = viewModel.getApkDownloadUrl(availableState.release),
             onDismiss = { viewModel.dismissUpdateDialog() },
+            onSkipVersion = {
+                viewModel.skipVersion(availableState.release.version)
+            },
             onDownload = {
-                // TODO: Implement download
+                currentDownloadRelease = availableState.release
+                showDownloadSheet = true
+                viewModel.startDownload(availableState.release)
                 viewModel.dismissUpdateDialog()
+            }
+        )
+    }
+
+    // Download progress sheet
+    if (showDownloadSheet) {
+        DownloadProgressSheet(
+            downloadState = downloadState,
+            versionName = currentDownloadRelease?.version ?: "",
+            canInstall = viewModel.canInstallApks(),
+            onDismiss = {
+                showDownloadSheet = false
+                // Keep download running in background if in progress
+                if (downloadState !is ApkDownloadManager.DownloadState.Downloading &&
+                    downloadState !is ApkDownloadManager.DownloadState.Starting) {
+                    viewModel.resetDownloadState()
+                }
+            },
+            onCancel = {
+                viewModel.cancelDownload()
+            },
+            onInstall = {
+                viewModel.installDownloadedApk()
+            },
+            onRequestPermission = {
+                viewModel.openInstallPermissionSettings()?.let { intent ->
+                    context.startActivity(intent)
+                }
             }
         )
     }
