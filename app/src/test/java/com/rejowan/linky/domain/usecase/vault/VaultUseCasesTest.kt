@@ -72,6 +72,7 @@ class VaultUseCasesTest {
     fun `setupVaultPin succeeds with valid pin`() = runTest {
         val pin = "1234"
         coEvery { vaultRepository.setupPin(pin) } returns Result.success(Unit)
+        coEvery { vaultRepository.unlock(pin) } returns true
 
         val result = setupVaultPinUseCase(pin)
 
@@ -93,6 +94,7 @@ class VaultUseCasesTest {
     fun `setupVaultPin with 6 digit pin`() = runTest {
         val pin = "123456"
         coEvery { vaultRepository.setupPin(pin) } returns Result.success(Unit)
+        coEvery { vaultRepository.unlock(pin) } returns true
 
         val result = setupVaultPinUseCase(pin)
 
