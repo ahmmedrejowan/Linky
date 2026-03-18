@@ -76,6 +76,7 @@ class SettingsViewModel(
         observeTheme()
         observeTrashedLinksCount()
         loadLastCheckTime()
+        checkForUpdatesIfNeeded()
         checkPendingApk()
     }
 
@@ -93,6 +94,34 @@ class SettingsViewModel(
     private fun loadLastCheckTime() {
         viewModelScope.launch {
             _lastCheckTime.value = updateRepository.getLastCheckTime()
+        }
+    }
+
+    /**
+     * Automatically checks for updates if the configured interval has passed.
+     * Called on ViewModel initialization.
+     */
+    private fun checkForUpdatesIfNeeded() {
+        viewModelScope.launch {
+            val lastCheck = updateRepository.getLastCheckTime()
+            val interval = _state.value.updateCheckInterval
+
+            // Skip if auto-check is disabled
+            if (interval == UpdateCheckInterval.NEVER) {
+                Timber.d("Auto update check disabled")
+                return@launch
+            }
+
+            val intervalMillis = interval.days * 24 * 60 * 60 * 1000L
+            val timeSinceLastCheck = System.currentTimeMillis() - lastCheck
+
+            if (timeSinceLastCheck >= intervalMillis) {
+                Timber.d("Auto-checking for updates (last check: ${timeSinceLastCheck / 1000 / 60 / 60}h ago)")
+                checkForUpdates()
+            } else {
+                val hoursUntilNextCheck = (intervalMillis - timeSinceLastCheck) / 1000 / 60 / 60
+                Timber.d("Next auto-check in ${hoursUntilNextCheck}h")
+            }
         }
     }
 
