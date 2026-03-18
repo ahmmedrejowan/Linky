@@ -204,26 +204,12 @@ fun CollectionDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Collection color indicator
-                        state.collection?.color?.let { colorHex ->
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(android.graphics.Color.parseColor(colorHex)))
-                            )
-                        }
-
-                        // Collection name
-                        Text(
-                            text = state.collection?.name ?: "Collection",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
+                    Text(
+                        text = state.collection?.name ?: "Collection",
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -234,25 +220,7 @@ fun CollectionDetailScreen(
                     }
                 },
                 actions = {
-                    // Sort button
-                    IconButton(onClick = { showSortSheet = true }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = "Sort"
-                        )
-                    }
-
-                    // Add link button
-                    IconButton(onClick = {
-                        state.collection?.id?.let { onAddLinkClick(it) }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add link to collection"
-                        )
-                    }
-
-                    // Three-dot menu
+                    // Three-dot menu only
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
@@ -339,14 +307,15 @@ fun CollectionDetailScreen(
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // View Mode Toggle Row
+                        // View Mode Toggle Row with Sort
                         ViewModeRow(
                             count = state.links.size,
                             isGridView = state.viewMode == ViewMode.GRID,
                             onViewModeToggle = {
                                 val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
                                 viewModel.onEvent(CollectionDetailEvent.OnViewModeChange(newMode))
-                            }
+                            },
+                            onSortClick = { showSortSheet = true }
                         )
 
                         // Links list/grid or empty state
@@ -363,6 +332,9 @@ fun CollectionDetailScreen(
                                 onLinkClick = onLinkClick,
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
+                                },
+                                onAddLinkClick = {
+                                    state.collection?.id?.let { onAddLinkClick(it) }
                                 }
                             )
                         }
@@ -407,13 +379,14 @@ fun CollectionDetailScreen(
 }
 
 /**
- * View mode toggle row with count
+ * View mode toggle row with count and sort
  */
 @Composable
 private fun ViewModeRow(
     count: Int,
     isGridView: Boolean,
     onViewModeToggle: () -> Unit,
+    onSortClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -432,11 +405,24 @@ private fun ViewModeRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // View Mode Toggle
+        // Sort and View Mode Toggle
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Sort button
+            ViewModeIcon(
+                isSelected = false,
+                onClick = onSortClick
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.Sort,
+                    contentDescription = "Sort",
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            // View mode toggles
             ViewModeIcon(
                 isSelected = !isGridView,
                 onClick = { if (isGridView) onViewModeToggle() }
@@ -501,7 +487,7 @@ private fun ViewModeIcon(
 }
 
 /**
- * Links content - supports both list and grid view
+ * Links content - supports both list and grid view with Add Link button at end
  */
 @Composable
 private fun LinksContent(
@@ -509,6 +495,7 @@ private fun LinksContent(
     viewMode: ViewMode,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onAddLinkClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (viewMode) {
@@ -527,6 +514,13 @@ private fun LinksContent(
                         onClick = { onLinkClick(link.id) },
                         onFavoriteClick = { onFavoriteClick(link.id) },
                         onMoreClick = { onLinkClick(link.id) },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+                // Add Link button at the end
+                item(key = "add_link") {
+                    AddLinkCard(
+                        onClick = onAddLinkClick,
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -552,6 +546,115 @@ private fun LinksContent(
                         modifier = Modifier.animateItem()
                     )
                 }
+                // Add Link button at the end (spans full width or single cell)
+                item(key = "add_link") {
+                    AddLinkGridCard(
+                        onClick = onAddLinkClick,
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Add Link card for list view
+ */
+@Composable
+private fun AddLinkCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        ),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Add Link",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/**
+ * Add Link card for grid view
+ */
+@Composable
+private fun AddLinkGridCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(210.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        ),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Text(
+                    text = "Add Link",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
