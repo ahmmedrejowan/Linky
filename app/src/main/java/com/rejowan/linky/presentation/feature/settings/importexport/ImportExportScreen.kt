@@ -38,7 +38,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,8 +74,6 @@ fun ImportExportScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showExportOptionsDialog by remember { mutableStateOf(false) }
-    var includeSnapshots by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
 
@@ -85,7 +82,7 @@ fun ImportExportScreen(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let {
-            viewModel.onEvent(SettingsEvent.OnExportData(it, includeSnapshots))
+            viewModel.onEvent(SettingsEvent.OnExportData(it, false))
         }
     }
 
@@ -184,7 +181,11 @@ fun ImportExportScreen(
             ExportCard(
                 isExporting = isExporting,
                 isImporting = isImporting,
-                onExportClick = { showExportOptionsDialog = true }
+                onExportClick = {
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    val fileName = "linky-backup-${dateFormat.format(Date())}.json"
+                    exportLauncher.launch(fileName)
+                }
             )
 
             // Import Section
@@ -199,28 +200,12 @@ fun ImportExportScreen(
         }
     }
 
-    // Export Options Dialog
-    if (showExportOptionsDialog) {
-        ExportOptionsDialog(
-            includeSnapshots = includeSnapshots,
-            onIncludeSnapshotsChange = { includeSnapshots = it },
-            onConfirm = {
-                showExportOptionsDialog = false
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                val fileName = "linky-backup-${dateFormat.format(Date())}.json"
-                exportLauncher.launch(fileName)
-            },
-            onDismiss = { showExportOptionsDialog = false }
-        )
-    }
-
     // Import Confirm Dialog
     if (showImportConfirmDialog && state.importState is ImportUiState.Preview) {
         val preview = (state.importState as ImportUiState.Preview).preview
         ImportConfirmDialog(
             linksCount = preview.totalLinks,
             collectionsCount = preview.totalCollections,
-            hasSnapshots = preview.hasSnapshots,
             onConfirm = { strategy ->
                 showImportConfirmDialog = false
                 pendingImportUri?.let { uri ->
@@ -269,7 +254,7 @@ private fun InfoCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Export your links, collections, and tags to a JSON file. You can import this file on another device or restore after reinstalling.",
+                    text = "Export your links and collections to a JSON file. You can import this file on another device or restore after reinstalling.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -466,9 +451,7 @@ private fun FormatInfoCard(
 
             IncludedItem(text = "All saved links with metadata")
             IncludedItem(text = "Collections and organization")
-            IncludedItem(text = "Tags and categories")
             IncludedItem(text = "Favorites and archived items")
-            IncludedItem(text = "Snapshots (optional)")
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -506,79 +489,9 @@ private fun IncludedItem(
 }
 
 @Composable
-private fun ExportOptionsDialog(
-    includeSnapshots: Boolean,
-    onIncludeSnapshotsChange: (Boolean) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Export Options",
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Your links, collections, and tags will be exported as a JSON file.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = includeSnapshots,
-                        onCheckedChange = onIncludeSnapshotsChange
-                    )
-                    Column {
-                        Text(
-                            text = "Include snapshots",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "May significantly increase file size",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Export")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Cancel")
-            }
-        },
-        shape = RoundedCornerShape(20.dp),
-        modifier = modifier
-    )
-}
-
-@Composable
 private fun ImportConfirmDialog(
     linksCount: Int,
     collectionsCount: Int,
-    hasSnapshots: Boolean,
     onConfirm: (ImportConflictStrategy) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -608,9 +521,6 @@ private fun ImportConfirmDialog(
                 ) {
                     Text("• $linksCount links", style = MaterialTheme.typography.bodyMedium)
                     Text("• $collectionsCount collections", style = MaterialTheme.typography.bodyMedium)
-                    if (hasSnapshots) {
-                        Text("• Snapshots included", style = MaterialTheme.typography.bodyMedium)
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
