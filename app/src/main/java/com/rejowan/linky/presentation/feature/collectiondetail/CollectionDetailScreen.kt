@@ -497,15 +497,21 @@ private fun ViewModeRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Sort button
-            ViewModeIcon(
-                isSelected = false,
-                onClick = onSortClick
+            // Sort button with rounded background (matches ViewModeIcon height)
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onSortClick),
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Sort,
+                    imageVector = Icons.AutoMirrored.Filled.Sort,
                     contentDescription = "Sort",
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
