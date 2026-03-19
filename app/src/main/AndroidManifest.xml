@@ -73,6 +73,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Error Activity for crash handling -->
+        <activity
+            android:name=".presentation.ErrorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Linky" />
+
         <!-- Linky Widget -->
         <receiver
             android:name=".widget.LinkyWidgetReceiver"

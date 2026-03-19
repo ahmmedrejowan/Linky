@@ -17,6 +17,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.rejowan.linky.util.DataPreloader
+import com.rejowan.linky.util.GlobalErrorHandler
+import android.os.Handler
+import android.os.Looper
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -75,5 +78,11 @@ class LinkyApp : Application() {
         // Preload data to warm up cache for faster screen loads
         val dataPreloader: DataPreloader by inject()
         dataPreloader.preload()
+
+        // Setup global error handler (deferred to not block startup)
+        Handler(Looper.getMainLooper()).post {
+            GlobalErrorHandler.setup(this)
+            Timber.d("Application initialized successfully")
+        }
     }
 }
