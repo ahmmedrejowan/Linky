@@ -92,6 +92,16 @@ import com.rejowan.linky.presentation.feature.home.SortType
 import com.rejowan.linky.presentation.feature.home.ViewMode
 import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material3.HorizontalDivider
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -132,6 +142,11 @@ fun CollectionDetailScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showMenu by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Link info bottom sheet state
+    var selectedLinkForInfo by remember { mutableStateOf<String?>(null) }
+    val selectedLink = selectedLinkForInfo?.let { id -> state.links.find { it.id == id } }
 
     // Show error in Snackbar
     LaunchedEffect(state.error) {
@@ -333,6 +348,9 @@ fun CollectionDetailScreen(
                                 onFavoriteClick = { linkId ->
                                     viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(linkId))
                                 },
+                                onMoreClick = { linkId ->
+                                    selectedLinkForInfo = linkId
+                                },
                                 onAddLinkClick = {
                                     state.collection?.id?.let { onAddLinkClick(it) }
                                 }
@@ -374,6 +392,31 @@ fun CollectionDetailScreen(
             currentSort = state.sortType,
             onSortSelected = { viewModel.onEvent(CollectionDetailEvent.OnSortTypeChange(it)) },
             onDismiss = { showSortSheet = false }
+        )
+    }
+
+    // Link Info Bottom Sheet
+    if (selectedLink != null) {
+        LinkInfoBottomSheet(
+            link = selectedLink,
+            onOpenClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(selectedLink.url))
+                context.startActivity(intent)
+            },
+            onEditClick = {
+                selectedLinkForInfo = null
+                onLinkClick(selectedLink.id)
+            },
+            onFavoriteClick = {
+                viewModel.onEvent(CollectionDetailEvent.OnToggleLinkFavorite(selectedLink.id))
+            },
+            onDeleteClick = {
+                viewModel.onEvent(CollectionDetailEvent.OnTrashLink(selectedLink.id))
+                selectedLinkForInfo = null
+            },
+            onDismiss = {
+                selectedLinkForInfo = null
+            }
         )
     }
 }
@@ -495,6 +538,7 @@ private fun LinksContent(
     viewMode: ViewMode,
     onLinkClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onMoreClick: (String) -> Unit,
     onAddLinkClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -513,7 +557,7 @@ private fun LinksContent(
                         link = link,
                         onClick = { onLinkClick(link.id) },
                         onFavoriteClick = { onFavoriteClick(link.id) },
-                        onMoreClick = { onLinkClick(link.id) },
+                        onMoreClick = { onMoreClick(link.id) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -542,7 +586,7 @@ private fun LinksContent(
                         link = link,
                         onClick = { onLinkClick(link.id) },
                         onFavoriteClick = { onFavoriteClick(link.id) },
-                        onMoreClick = { onLinkClick(link.id) },
+                        onMoreClick = { onMoreClick(link.id) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -1255,5 +1299,196 @@ private fun ColorBlock(
                 modifier = Modifier.size(24.dp)
             )
         }
+    }
+}
+
+/**
+ * Link Info Bottom Sheet - Shows link details with quick actions
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LinkInfoBottomSheet(
+    link: Link,
+    onOpenClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            // Preview Image
+            if (link.previewImagePath != null || link.previewUrl != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    AsyncImage(
+                        model = link.previewImagePath ?: link.previewUrl,
+                        contentDescription = "Link preview",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Title
+            Text(
+                text = link.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // URL
+            Text(
+                text = link.url,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // Description
+            if (!link.description.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = link.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Note
+            if (!link.note.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = link.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Created date
+            Text(
+                text = "Added ${dateFormatter.format(Date(link.createdAt))}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Open in browser
+                LinkInfoActionButton(
+                    icon = Icons.Filled.OpenInBrowser,
+                    label = "Open",
+                    onClick = {
+                        onOpenClick()
+                        onDismiss()
+                    }
+                )
+
+                // Edit
+                LinkInfoActionButton(
+                    icon = Icons.Filled.Edit,
+                    label = "Edit",
+                    onClick = {
+                        onEditClick()
+                    }
+                )
+
+                // Favorite toggle
+                LinkInfoActionButton(
+                    icon = if (link.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    label = if (link.isFavorite) "Unfavorite" else "Favorite",
+                    tint = if (link.isFavorite) SoftAccents.Pink else MaterialTheme.colorScheme.onSurfaceVariant,
+                    onClick = {
+                        onFavoriteClick()
+                    }
+                )
+
+                // Delete
+                LinkInfoActionButton(
+                    icon = Icons.Filled.Delete,
+                    label = "Delete",
+                    tint = MaterialTheme.colorScheme.error,
+                    onClick = {
+                        onDeleteClick()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkInfoActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = tint
+        )
     }
 }
