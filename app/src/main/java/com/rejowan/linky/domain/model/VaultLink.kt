@@ -13,6 +13,9 @@ data class VaultLink(
     val title: String,
     val description: String? = null,
     val notes: String? = null,
+    val previewUrl: String? = null,
+    val previewImagePath: String? = null,
+    val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -25,5 +28,8 @@ data class VaultLinkData(
     val url: String,
     val title: String,
     val description: String?,
-    val notes: String?
+    val notes: String?,
+    val previewUrl: String? = null,
+    val previewImagePath: String? = null,
+    val isFavorite: Boolean = false
 )

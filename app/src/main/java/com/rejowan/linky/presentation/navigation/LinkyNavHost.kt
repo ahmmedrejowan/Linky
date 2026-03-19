@@ -24,7 +24,9 @@ import com.rejowan.linky.presentation.feature.settings.importexport.ImportExport
 import com.rejowan.linky.presentation.feature.settings.privacy.PrivacySecurityScreen
 import com.rejowan.linky.presentation.feature.snapshotviewer.SnapshotViewerScreen
 import com.rejowan.linky.presentation.feature.trash.TrashScreen
+import com.rejowan.linky.presentation.feature.vault.VaultAddEditLinkScreen
 import com.rejowan.linky.presentation.feature.vault.VaultIntroScreen
+import com.rejowan.linky.presentation.feature.vault.VaultLinkDetailScreen
 import com.rejowan.linky.presentation.feature.vault.VaultScreen
 import com.rejowan.linky.presentation.feature.vault.VaultSetupCompleteScreen
 import com.rejowan.linky.presentation.feature.vault.VaultSetupScreen
@@ -324,12 +326,38 @@ fun LinkyNavHost(
             VaultScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToSettings = { navController.navigate(Route.VaultSettings) },
+                onNavigateToLinkDetail = { linkId ->
+                    navController.navigate(Route.VaultLinkDetail(linkId))
+                },
+                onNavigateToAddLink = {
+                    navController.navigate(Route.VaultAddEditLink())
+                },
+                onNavigateToEditLink = { linkId ->
+                    navController.navigate(Route.VaultAddEditLink(linkId = linkId))
+                },
                 onLocked = {
                     // When vault is locked, go back to unlock screen
                     navController.navigate(Route.VaultUnlock) {
                         popUpTo<Route.Vault> { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable<Route.VaultLinkDetail> { backStackEntry ->
+            val vaultLinkDetail = backStackEntry.toRoute<Route.VaultLinkDetail>()
+            VaultLinkDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditClick = { linkId ->
+                    navController.navigate(Route.VaultAddEditLink(linkId = linkId))
+                }
+            )
+        }
+
+        composable<Route.VaultAddEditLink> { backStackEntry ->
+            val vaultAddEditLink = backStackEntry.toRoute<Route.VaultAddEditLink>()
+            VaultAddEditLinkScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 

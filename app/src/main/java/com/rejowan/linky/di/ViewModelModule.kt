@@ -17,6 +17,8 @@ import com.rejowan.linky.presentation.feature.vault.VaultSetupViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultUnlockViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultViewModel
 import com.rejowan.linky.presentation.feature.vault.VaultSettingsViewModel
+import com.rejowan.linky.presentation.feature.vault.VaultAddEditLinkViewModel
+import com.rejowan.linky.presentation.feature.vault.VaultLinkDetailViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -159,8 +161,10 @@ val viewModelModule = module {
             getAllVaultLinksUseCase = get(),
             addVaultLinkUseCase = get(),
             deleteVaultLinkUseCase = get(),
+            updateVaultLinkUseCase = get(),
             lockVaultUseCase = get(),
-            vaultRepository = get()
+            vaultRepository = get(),
+            themePreferences = get()
         )
     }
 
@@ -169,6 +173,25 @@ val viewModelModule = module {
             vaultRepository = get(),
             changeVaultPinUseCase = get(),
             clearVaultUseCase = get()
+        )
+    }
+
+    viewModel {
+        VaultAddEditLinkViewModel(
+            savedStateHandle = get(),
+            addVaultLinkUseCase = get(),
+            updateVaultLinkUseCase = get(),
+            getVaultLinkByIdUseCase = get(),
+            linkPreviewFetcher = get()
+        )
+    }
+
+    viewModel {
+        VaultLinkDetailViewModel(
+            savedStateHandle = get(),
+            getVaultLinkByIdUseCase = get(),
+            updateVaultLinkUseCase = get(),
+            deleteVaultLinkUseCase = get()
         )
     }
 

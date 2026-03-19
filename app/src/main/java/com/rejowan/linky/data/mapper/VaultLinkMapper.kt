@@ -27,7 +27,10 @@ object VaultLinkMapper {
             url = vaultLink.url,
             title = vaultLink.title,
             description = vaultLink.description,
-            notes = vaultLink.notes
+            notes = vaultLink.notes,
+            previewUrl = vaultLink.previewUrl,
+            previewImagePath = vaultLink.previewImagePath,
+            isFavorite = vaultLink.isFavorite
         )
 
         val jsonString = json.encodeToString(data)
@@ -64,6 +67,9 @@ object VaultLinkMapper {
                 title = data.title,
                 description = data.description,
                 notes = data.notes,
+                previewUrl = data.previewUrl,
+                previewImagePath = data.previewImagePath,
+                isFavorite = data.isFavorite,
                 createdAt = entity.createdAt,
                 updatedAt = entity.updatedAt
             )
@@ -81,6 +87,9 @@ object VaultLinkMapper {
             title = link.title,
             description = link.description,
             notes = link.note,
+            previewUrl = link.previewUrl,
+            previewImagePath = link.previewImagePath,
+            isFavorite = link.isFavorite,
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis()
         )

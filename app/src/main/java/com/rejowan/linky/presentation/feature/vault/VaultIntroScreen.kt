@@ -17,7 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -120,14 +119,6 @@ fun VaultIntroScreen(
                 icon = Icons.Default.VisibilityOff,
                 title = "Hidden from View",
                 description = "Vault links don't appear in your regular link list or search"
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FeatureCard(
-                icon = Icons.Default.Visibility,
-                title = "Auto-Lock",
-                description = "Vault automatically locks when you leave the app"
             )
 
             Spacer(modifier = Modifier.weight(1f))

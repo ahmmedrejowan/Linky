@@ -222,6 +222,26 @@ sealed class Route {
     @Serializable
     data object VaultSetupComplete : Route()
 
+    /**
+     * Vault Link Detail screen
+     * Shows details of a vault link
+     * @param linkId The ID of the vault link to display
+     */
+    @Serializable
+    data class VaultLinkDetail(val linkId: String) : Route()
+
+    /**
+     * Vault Add/Edit Link screen
+     * Add or edit a vault link
+     * @param linkId Optional link ID for edit mode. Null for add mode
+     * @param url Optional URL to prefill when adding from clipboard
+     */
+    @Serializable
+    data class VaultAddEditLink(
+        val linkId: String? = null,
+        val url: String? = null
+    ) : Route()
+
     // ============ ONBOARDING ============
 
     /**
