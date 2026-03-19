@@ -18,5 +18,11 @@ data class CollectionDetailState(
     val editColor: String? = null,
     // Delete dialog state
     val showDeleteDialog: Boolean = false,
-    val deleteWithLinks: Boolean = false
-)
+    val deleteWithLinks: Boolean = false,
+    // Bulk selection state
+    val isSelectionMode: Boolean = false,
+    val selectedLinkIds: Set<String> = emptySet()
+) {
+    val selectedCount: Int get() = selectedLinkIds.size
+    val allSelected: Boolean get() = links.isNotEmpty() && selectedLinkIds.size == links.size
+}

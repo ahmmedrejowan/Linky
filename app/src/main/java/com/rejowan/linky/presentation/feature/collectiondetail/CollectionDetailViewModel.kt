@@ -131,6 +131,32 @@ class CollectionDetailViewModel(
             is CollectionDetailEvent.OnDeleteConfirm -> {
                 deleteCollection()
             }
+            // Bulk selection events
+            CollectionDetailEvent.OnEnterSelectionMode -> {
+                _state.update { it.copy(isSelectionMode = true, selectedLinkIds = emptySet()) }
+            }
+            CollectionDetailEvent.OnExitSelectionMode -> {
+                _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            }
+            is CollectionDetailEvent.OnToggleLinkSelection -> {
+                val currentSelection = _state.value.selectedLinkIds
+                val newSelection = if (currentSelection.contains(event.linkId)) {
+                    currentSelection - event.linkId
+                } else {
+                    currentSelection + event.linkId
+                }
+                _state.update { it.copy(selectedLinkIds = newSelection) }
+            }
+            CollectionDetailEvent.OnSelectAll -> {
+                val allLinkIds = _state.value.links.map { it.id }.toSet()
+                _state.update { it.copy(selectedLinkIds = allLinkIds) }
+            }
+            CollectionDetailEvent.OnDeselectAll -> {
+                _state.update { it.copy(selectedLinkIds = emptySet()) }
+            }
+            CollectionDetailEvent.OnBulkDelete -> bulkDelete()
+            CollectionDetailEvent.OnBulkFavorite -> bulkFavorite(true)
+            CollectionDetailEvent.OnBulkUnfavorite -> bulkFavorite(false)
         }
     }
 
@@ -429,6 +455,45 @@ class CollectionDetailViewModel(
         val nonFavorites = sorted.filter { !it.isFavorite }
         return favorites + nonFavorites
     }
+
+    private fun bulkDelete() {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                when (deleteLinkUseCase(linkId, softDelete = true)) {
+                    is Result.Success -> successCount++
+                    else -> { /* Continue with others */ }
+                }
+            }
+            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            _uiEvents.emit(CollectionDetailUiEvent.ShowBulkOperationResult("$successCount links moved to trash"))
+        }
+    }
+
+    private fun bulkFavorite(favorite: Boolean) {
+        val selectedIds = _state.value.selectedLinkIds.toList()
+        if (selectedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            var successCount = 0
+            selectedIds.forEach { linkId ->
+                val link = _state.value.links.find { it.id == linkId }
+                if (link != null) {
+                    val updatedLink = link.copy(isFavorite = favorite)
+                    when (updateLinkUseCase(updatedLink)) {
+                        is Result.Success -> successCount++
+                        else -> { /* Continue with others */ }
+                    }
+                }
+            }
+            _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
+            val action = if (favorite) "added to favorites" else "removed from favorites"
+            _uiEvents.emit(CollectionDetailUiEvent.ShowBulkOperationResult("$successCount links $action"))
+        }
+    }
 }
 
 sealed class CollectionDetailEvent {
@@ -448,6 +513,15 @@ sealed class CollectionDetailEvent {
     data class OnDeleteWithLinksChange(val deleteWithLinks: Boolean) : CollectionDetailEvent()
     data object OnDeleteDismiss : CollectionDetailEvent()
     data object OnDeleteConfirm : CollectionDetailEvent()
+    // Bulk selection events
+    data object OnEnterSelectionMode : CollectionDetailEvent()
+    data object OnExitSelectionMode : CollectionDetailEvent()
+    data class OnToggleLinkSelection(val linkId: String) : CollectionDetailEvent()
+    data object OnSelectAll : CollectionDetailEvent()
+    data object OnDeselectAll : CollectionDetailEvent()
+    data object OnBulkDelete : CollectionDetailEvent()
+    data object OnBulkFavorite : CollectionDetailEvent()
+    data object OnBulkUnfavorite : CollectionDetailEvent()
 }
 
 sealed class CollectionDetailUiEvent {
@@ -456,4 +530,5 @@ sealed class CollectionDetailUiEvent {
     data class ShowArchiveToggled(val linkId: String, val isArchived: Boolean) : CollectionDetailUiEvent()
     data class ShowLinkTrashed(val linkId: String) : CollectionDetailUiEvent()
     data object NavigateBack : CollectionDetailUiEvent()
+    data class ShowBulkOperationResult(val message: String) : CollectionDetailUiEvent()
 }

@@ -102,6 +102,9 @@ import androidx.compose.material3.HorizontalDivider
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.BackHandler
+import com.rejowan.linky.presentation.feature.home.AnimatedBulkActionsBar
+import com.rejowan.linky.presentation.feature.home.FilterType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -147,6 +150,11 @@ fun CollectionDetailScreen(
     // Link info bottom sheet state
     var selectedLinkForInfo by remember { mutableStateOf<String?>(null) }
     val selectedLink = selectedLinkForInfo?.let { id -> state.links.find { it.id == id } }
+
+    // Handle back press - exit selection mode first
+    BackHandler(enabled = state.isSelectionMode) {
+        viewModel.onEvent(CollectionDetailEvent.OnExitSelectionMode)
+    }
 
     // Show error in Snackbar
     LaunchedEffect(state.error) {
@@ -210,6 +218,12 @@ fun CollectionDetailScreen(
                 }
                 is CollectionDetailUiEvent.NavigateBack -> {
                     onNavigateBack()
+                }
+                is CollectionDetailUiEvent.ShowBulkOperationResult -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Short
+                    )
                 }
             }
         }
@@ -282,13 +296,16 @@ fun CollectionDetailScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = state.isLoading && state.links.isNotEmpty(),
-            onRefresh = { viewModel.onEvent(CollectionDetailEvent.OnRefresh) },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            PullToRefreshBox(
+                isRefreshing = state.isLoading && state.links.isNotEmpty(),
+                onRefresh = { viewModel.onEvent(CollectionDetailEvent.OnRefresh) },
+                modifier = Modifier.fillMaxSize()
+            ) {
             when {
                 // Loading state
                 state.isLoading && state.links.isEmpty() -> {
@@ -353,12 +370,39 @@ fun CollectionDetailScreen(
                                 },
                                 onAddLinkClick = {
                                     state.collection?.id?.let { onAddLinkClick(it) }
+                                },
+                                isSelectionMode = state.isSelectionMode,
+                                selectedLinkIds = state.selectedLinkIds,
+                                onLongPress = { linkId ->
+                                    viewModel.onEvent(CollectionDetailEvent.OnEnterSelectionMode)
+                                    viewModel.onEvent(CollectionDetailEvent.OnToggleLinkSelection(linkId))
+                                },
+                                onToggleSelection = { linkId ->
+                                    viewModel.onEvent(CollectionDetailEvent.OnToggleLinkSelection(linkId))
                                 }
                             )
                         }
                     }
                 }
             }
+        }
+
+            // Bulk Actions Bar at bottom
+            AnimatedBulkActionsBar(
+                visible = state.isSelectionMode,
+                selectedCount = state.selectedCount,
+                allSelected = state.allSelected,
+                filterType = FilterType.ALL,
+                onClose = { viewModel.onEvent(CollectionDetailEvent.OnExitSelectionMode) },
+                onSelectAll = { viewModel.onEvent(CollectionDetailEvent.OnSelectAll) },
+                onDeselectAll = { viewModel.onEvent(CollectionDetailEvent.OnDeselectAll) },
+                onDelete = { viewModel.onEvent(CollectionDetailEvent.OnBulkDelete) },
+                onFavorite = { viewModel.onEvent(CollectionDetailEvent.OnBulkFavorite) },
+                onUnfavorite = { viewModel.onEvent(CollectionDetailEvent.OnBulkUnfavorite) },
+                onMove = { /* Not applicable in collection detail */ },
+                totalCount = state.links.size,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 
@@ -540,6 +584,10 @@ private fun LinksContent(
     onFavoriteClick: (String) -> Unit,
     onMoreClick: (String) -> Unit,
     onAddLinkClick: () -> Unit,
+    isSelectionMode: Boolean,
+    selectedLinkIds: Set<String>,
+    onLongPress: (String) -> Unit,
+    onToggleSelection: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (viewMode) {
@@ -558,6 +606,10 @@ private fun LinksContent(
                         onClick = { onLinkClick(link.id) },
                         onFavoriteClick = { onFavoriteClick(link.id) },
                         onMoreClick = { onMoreClick(link.id) },
+                        isSelectionMode = isSelectionMode,
+                        isSelected = selectedLinkIds.contains(link.id),
+                        onLongPress = { onLongPress(link.id) },
+                        onToggleSelection = { onToggleSelection(link.id) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -587,6 +639,10 @@ private fun LinksContent(
                         onClick = { onLinkClick(link.id) },
                         onFavoriteClick = { onFavoriteClick(link.id) },
                         onMoreClick = { onMoreClick(link.id) },
+                        isSelectionMode = isSelectionMode,
+                        isSelected = selectedLinkIds.contains(link.id),
+                        onLongPress = { onLongPress(link.id) },
+                        onToggleSelection = { onToggleSelection(link.id) },
                         modifier = Modifier.animateItem()
                     )
                 }
