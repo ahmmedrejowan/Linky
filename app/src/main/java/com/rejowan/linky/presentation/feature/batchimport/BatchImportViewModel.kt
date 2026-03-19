@@ -377,7 +377,7 @@ class BatchImportViewModel(
 
     /**
      * Start preview fetching for selected URLs
-     * Fetches in parallel batches of 10 URLs at a time
+     * Fetches URLs one by one with real-time progress updates
      */
     private fun startPreviewFetching() {
         viewModelScope.launch {
@@ -401,46 +401,60 @@ class BatchImportViewModel(
                     it.copy(
                         showPreviewScreen = true,
                         isFetching = true,
-                        previewResults = emptyList()
+                        previewResults = emptyList(),
+                        currentFetchingUrl = null,
+                        fetchProgress = FetchProgress(
+                            current = 0,
+                            total = selectedUrls.size,
+                            successCount = 0,
+                            errorCount = 0,
+                            timeoutCount = 0
+                        )
                     )
                 }
 
-                // Process URLs in chunks of 10
-                val chunkSize = 10
-                val chunks = selectedUrls.chunked(chunkSize)
+                // Process URLs one by one for real-time progress
                 val allResults = mutableListOf<LinkPreviewResult>()
+                var successCount = 0
+                var errorCount = 0
+                var timeoutCount = 0
 
-                chunks.forEachIndexed { chunkIndex, chunk ->
-                    // Update progress
+                selectedUrls.forEachIndexed { index, url ->
+                    // Update current fetching URL
                     _state.update {
                         it.copy(
+                            currentFetchingUrl = url,
                             fetchProgress = FetchProgress(
-                                current = chunkIndex * chunkSize,
+                                current = index,
                                 total = selectedUrls.size,
-                                currentChunk = chunkIndex + 1,
-                                totalChunks = chunks.size
+                                successCount = successCount,
+                                errorCount = errorCount,
+                                timeoutCount = timeoutCount
                             )
                         )
                     }
 
-                    // Fetch all URLs in this chunk in parallel
-                    val chunkResults = chunk.map { url ->
-                        async {
-                            fetchSinglePreview(url)
-                        }
-                    }.awaitAll()
+                    // Fetch preview for this URL
+                    val result = fetchSinglePreview(url)
+                    allResults.add(result)
 
-                    allResults.addAll(chunkResults)
+                    // Update counts based on result type
+                    when (result) {
+                        is LinkPreviewResult.Success -> successCount++
+                        is LinkPreviewResult.Error -> errorCount++
+                        is LinkPreviewResult.Timeout -> timeoutCount++
+                    }
 
-                    // Update state with accumulated results
+                    // Update state with new result immediately
                     _state.update {
                         it.copy(
                             previewResults = allResults.toList(),
                             fetchProgress = FetchProgress(
-                                current = ((chunkIndex + 1) * chunkSize).coerceAtMost(selectedUrls.size),
+                                current = index + 1,
                                 total = selectedUrls.size,
-                                currentChunk = chunkIndex + 1,
-                                totalChunks = chunks.size
+                                successCount = successCount,
+                                errorCount = errorCount,
+                                timeoutCount = timeoutCount
                             )
                         )
                     }
@@ -450,7 +464,8 @@ class BatchImportViewModel(
                 _state.update {
                     it.copy(
                         isFetching = false,
-                        fetchProgress = null
+                        fetchProgress = null,
+                        currentFetchingUrl = null
                     )
                 }
             } catch (e: Exception) {
@@ -458,6 +473,7 @@ class BatchImportViewModel(
                     it.copy(
                         isFetching = false,
                         fetchProgress = null,
+                        currentFetchingUrl = null,
                         error = BatchImportError.FetchFailed(
                             e.message ?: "Failed to fetch previews"
                         )

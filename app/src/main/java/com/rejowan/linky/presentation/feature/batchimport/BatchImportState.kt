@@ -29,6 +29,7 @@ data class BatchImportState(
     // Step 5: Preview Fetching
     val isFetching: Boolean = false,
     val fetchProgress: FetchProgress? = null,
+    val currentFetchingUrl: String? = null,
     val previewResults: List<LinkPreviewResult> = emptyList(),
 
     // Step 4: Import
@@ -65,8 +66,9 @@ data class UrlStatus(
 data class FetchProgress(
     val current: Int,
     val total: Int,
-    val currentChunk: Int,
-    val totalChunks: Int
+    val successCount: Int = 0,
+    val errorCount: Int = 0,
+    val timeoutCount: Int = 0
 )
 
 /**

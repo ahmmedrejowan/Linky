@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
@@ -337,51 +339,71 @@ fun BatchImportScreen(
                 singleLine = false
             )
 
-            // Statistics Card
+            // Modern Statistics Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Character count
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Character count card
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SoftAccents.Blue.copy(alpha = 0.12f))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "$characterCount",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "characters",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "$characterCount",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = SoftAccents.Blue
+                            )
+                            Text(
+                                text = "characters",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
-                    // Line count
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Line count card
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SoftAccents.Teal.copy(alpha = 0.12f))
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "$lineCount",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "lines",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "$lineCount",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = SoftAccents.Teal
+                            )
+                            Text(
+                                text = "lines",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -998,7 +1020,7 @@ private fun ScanResultDialog(
  * Link Selection & Review Screen - Step 4
  *
  * Features:
- * - Statistics card showing total URLs, duplicates, new links, and selected count
+ * - Modern statistics dashboard with visual indicators
  * - Action buttons to remove all or remove duplicates
  * - List of URLs with domain, full URL, duplicate badge, and remove button
  * - Bottom action buttons (Next and Back)
@@ -1026,52 +1048,13 @@ private fun LinkSelectionScreen(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header Statistics Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = SoftAccents.Purple.copy(alpha = 0.12f)
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = SoftAccents.Purple,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "URL Statistics",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    StatisticItem("Total URLs", state.totalUrls.toString())
-                    StatisticItem("Duplicates", state.duplicateCount.toString(), align = Alignment.End)
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    StatisticItem("New Links", (state.totalUrls - state.duplicateCount).toString())
-                    StatisticItem("Selected", state.selectedCount.toString(), align = Alignment.End)
-                }
-            }
-        }
+        // Modern Statistics Dashboard
+        StatisticsDashboard(
+            totalUrls = state.totalUrls,
+            duplicateCount = state.duplicateCount,
+            newLinks = state.totalUrls - state.duplicateCount,
+            selectedCount = state.selectedCount
+        )
 
         // Action Buttons
         Row(
@@ -1199,7 +1182,8 @@ private fun LinkSelectionScreen(
             } else {
                 androidx.compose.foundation.lazy.LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     items(
                         count = state.urlStatuses.size,
@@ -1211,12 +1195,6 @@ private fun LinkSelectionScreen(
                             onToggleSelection = { onEvent(BatchImportEvent.OnToggleUrlSelection(urlStatus.url)) },
                             onRemove = { onEvent(BatchImportEvent.OnRemoveUrl(urlStatus.url)) }
                         )
-                        if (index < state.urlStatuses.size - 1) {
-                            androidx.compose.material3.HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            )
-                        }
                     }
                 }
             }
@@ -1320,26 +1298,134 @@ private fun LinkSelectionScreen(
 }
 
 /**
- * Statistic Item for the statistics card
+ * Modern Statistics Dashboard with visual indicators
  */
 @Composable
-private fun StatisticItem(
-    label: String,
+private fun StatisticsDashboard(
+    totalUrls: Int,
+    duplicateCount: Int,
+    newLinks: Int,
+    selectedCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Text(
+                text = "Review Links",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Stats Grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Total
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = totalUrls.toString(),
+                    label = "Total",
+                    color = SoftAccents.Blue
+                )
+                // New
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = newLinks.toString(),
+                    label = "New",
+                    color = SoftAccents.Teal
+                )
+                // Duplicates
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = duplicateCount.toString(),
+                    label = "Duplicates",
+                    color = if (duplicateCount > 0) SoftAccents.Amber else MaterialTheme.colorScheme.outline
+                )
+                // Selected
+                StatCard(
+                    modifier = Modifier.weight(1f),
+                    value = selectedCount.toString(),
+                    label = "Selected",
+                    color = SoftAccents.Purple
+                )
+            }
+
+            // Selection Progress Bar
+            if (totalUrls > 0) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Selection Progress",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "${(selectedCount * 100 / totalUrls)}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SoftAccents.Purple
+                        )
+                    }
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { selectedCount.toFloat() / totalUrls.toFloat() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = SoftAccents.Purple,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual Stat Card for the dashboard
+ */
+@Composable
+private fun StatCard(
     value: String,
-    align: Alignment.Horizontal = Alignment.Start
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        horizontalAlignment = align
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 8.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            color = color
         )
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -1353,48 +1439,83 @@ private fun LinkListItem(
     onToggleSelection: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val accentColor = if (urlStatus.isDuplicate) SoftAccents.Amber else SoftAccents.Blue
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .clickable { onToggleSelection() }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Checkbox
-        androidx.compose.material3.Checkbox(
-            checked = urlStatus.isSelected,
-            onCheckedChange = { onToggleSelection() }
-        )
+        // Selection Checkbox with custom styling
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    if (urlStatus.isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceVariant
+                )
+                .clickable { onToggleSelection() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (urlStatus.isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Domain Icon/Preview placeholder
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    accentColor.copy(alpha = 0.12f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Show first letter of domain or link icon
+            Text(
+                text = urlStatus.domain.firstOrNull()?.uppercase() ?: "",
+                style = MaterialTheme.typography.titleMedium,
+                color = accentColor
+            )
+        }
 
         // URL Info
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+            // Domain name with duplicate indicator
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Domain name (bold)
                 Text(
                     text = urlStatus.domain,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
-                // Duplicate badge
+                // Smart duplicate indicator - small dot instead of badge
                 if (urlStatus.isDuplicate) {
-                    androidx.compose.material3.Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.errorContainer
-                    ) {
-                        Text(
-                            text = "Duplicate",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(SoftAccents.Amber)
+                    )
                 }
             }
 
@@ -1402,20 +1523,35 @@ private fun LinkListItem(
             Text(
                 text = urlStatus.url,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis
             )
+
+            // Duplicate label if applicable
+            if (urlStatus.isDuplicate) {
+                Text(
+                    text = "Already saved",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SoftAccents.Amber
+                )
+            }
         }
 
-        // Remove button
-        IconButton(
-            onClick = onRemove
+        // Remove button - more subtle
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                .clickable { onRemove() },
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Remove",
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(16.dp)
             )
         }
     }
@@ -1449,39 +1585,67 @@ private fun PreviewFetchingScreen(
     ) {
         // Progress Section
         if (state.isFetching) {
-            FetchingProgressCard(state.fetchProgress)
+            FetchingProgressCard(
+                progress = state.fetchProgress,
+                currentFetchingUrl = state.currentFetchingUrl
+            )
         } else {
-            // Completion Summary
+            // Completion Summary - Modern design
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = SoftAccents.Teal.copy(alpha = 0.12f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = SoftAccents.Teal,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column {
+                    // Success icon with background
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SoftAccents.Teal.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = SoftAccents.Teal,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
                             text = "Previews Ready",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "${state.previewResults.size} links ready to import",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // Count badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SoftAccents.Teal)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "${state.previewResults.size}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White
                         )
                     }
                 }
@@ -1496,37 +1660,83 @@ private fun PreviewFetchingScreen(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            if (state.previewResults.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CircularProgressIndicator()
+                    Text(
+                        text = "Link Previews",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (state.previewResults.isNotEmpty()) {
                         Text(
-                            text = "Starting preview fetch...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "${state.previewResults.size} loaded",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = SoftAccents.Teal
                         )
                     }
                 }
-            } else {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
-                ) {
-                    items(
-                        count = state.previewResults.size,
-                        key = { index -> state.previewResults[index].url }
-                    ) { index ->
-                        PreviewCard(state.previewResults[index])
+
+                androidx.compose.material3.HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                if (state.previewResults.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SoftAccents.Blue.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    strokeWidth = 3.dp,
+                                    color = SoftAccents.Blue
+                                )
+                            }
+                            Text(
+                                text = "Starting preview fetch...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        items(
+                            count = state.previewResults.size,
+                            key = { index -> state.previewResults[index].url }
+                        ) { index ->
+                            PreviewCard(state.previewResults[index])
+                        }
                     }
                 }
             }
@@ -1580,70 +1790,171 @@ private fun PreviewFetchingScreen(
 }
 
 /**
- * Fetching Progress Card
+ * Fetching Progress Card - Modern design with real-time progress
  */
 @Composable
-private fun FetchingProgressCard(progress: FetchProgress?) {
+private fun FetchingProgressCard(
+    progress: FetchProgress?,
+    currentFetchingUrl: String?
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = SoftAccents.Blue.copy(alpha = 0.12f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Header with animation
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Pulsing indicator
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SoftAccents.Blue.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 3.dp,
+                            color = SoftAccents.Blue
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Fetching Previews",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (progress != null) {
+                            Text(
+                                text = "${progress.current} of ${progress.total} links processed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                // Percentage badge
+                if (progress != null && progress.total > 0) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(SoftAccents.Blue)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "${(progress.current * 100 / progress.total)}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Current URL being fetched
+            if (currentFetchingUrl != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Small loading indicator
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
                         color = SoftAccents.Blue
                     )
                     Text(
-                        text = "Fetching Previews...",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                if (progress != null) {
-                    Text(
-                        text = "Chunk ${progress.currentChunk} of ${progress.totalChunks}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = currentFetchingUrl,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
+            // Progress section
             if (progress != null) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    progress = { progress.current.toFloat() / progress.total.toFloat() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = SoftAccents.Blue
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Progress bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        val progressFraction = if (progress.total > 0) {
+                            progress.current.toFloat() / progress.total.toFloat()
+                        } else 0f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progressFraction)
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(SoftAccents.Blue)
+                        )
+                    }
 
-                Text(
-                    text = "${progress.current} of ${progress.total} links",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    // Real-time stats row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Success count
+                        FetchStatChip(
+                            count = progress.successCount,
+                            label = "Success",
+                            color = SoftAccents.Teal,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Error count
+                        FetchStatChip(
+                            count = progress.errorCount,
+                            label = "Error",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Timeout count
+                        FetchStatChip(
+                            count = progress.timeoutCount,
+                            label = "Timeout",
+                            color = SoftAccents.Amber,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             } else {
+                // Indeterminate progress
                 androidx.compose.material3.LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = SoftAccents.Blue
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = SoftAccents.Blue,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }
@@ -1651,109 +1962,190 @@ private fun FetchingProgressCard(progress: FetchProgress?) {
 }
 
 /**
+ * Small stat chip for fetch progress
+ */
+@Composable
+private fun FetchStatChip(
+    count: Int,
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$count",
+            style = MaterialTheme.typography.labelLarge,
+            color = color,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color.copy(alpha = 0.8f),
+            maxLines = 1
+        )
+    }
+}
+
+/**
  * Preview Card for individual link
- * Styled to match LinkCard component
+ * Modern design with preview image support
  */
 @Composable
 private fun PreviewCard(result: LinkPreviewResult) {
+    val accentColor = when (result) {
+        is LinkPreviewResult.Success -> SoftAccents.Teal
+        is LinkPreviewResult.Error -> MaterialTheme.colorScheme.error
+        is LinkPreviewResult.Timeout -> SoftAccents.Amber
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            when (result) {
-                is LinkPreviewResult.Success -> {
-                    // Title
-                    Text(
-                        text = result.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    // Description
-                    if (result.description != null) {
-                        Text(
-                            text = result.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    // Domain
-                    Text(
-                        text = result.domain,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                is LinkPreviewResult.Error -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = result.domain,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
+            // Preview Image / Placeholder
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                when (result) {
+                    is LinkPreviewResult.Success -> {
+                        if (result.imageUrl != null) {
+                            coil.compose.AsyncImage(
+                                model = result.imageUrl,
+                                contentDescription = "Preview",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(10.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
                             )
+                        } else {
+                            // Domain initial as fallback
                             Text(
-                                text = "Preview failed - will use domain as title",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                text = result.domain.firstOrNull()?.uppercase() ?: "",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = accentColor
                             )
                         }
                     }
-                }
-
-                is LinkPreviewResult.Timeout -> {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
+                    is LinkPreviewResult.Error -> {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = SoftAccents.Amber,
-                            modifier = Modifier.size(20.dp)
+                            tint = accentColor,
+                            modifier = Modifier.size(28.dp)
                         )
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                    }
+                    is LinkPreviewResult.Timeout -> {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                when (result) {
+                    is LinkPreviewResult.Success -> {
+                        // Title
+                        Text(
+                            text = result.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        // Description
+                        if (result.description != null) {
+                            Text(
+                                text = result.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        // Domain Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = result.domain,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Request timeout - will use domain as title",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
+
+                    is LinkPreviewResult.Error -> {
+                        Text(
+                            text = result.domain,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Preview failed - will use domain as title",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor.copy(alpha = 0.8f)
+                        )
+                    }
+
+                    is LinkPreviewResult.Timeout -> {
+                        Text(
+                            text = result.domain,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Request timeout - will use domain as title",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
+
+            // Status indicator
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+            )
         }
     }
 }
@@ -1808,6 +2200,7 @@ private fun ImportingDialog(
 
 /**
  * Import Result Screen - Shows success/failure summary
+ * Modern design with visual indicators
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1825,44 +2218,51 @@ private fun ImportResultScreen(
         onEvent(BatchImportEvent.OnDone)
     }
 
+    val resultAccentColor = when {
+        result.isCompleteSuccess -> SoftAccents.Teal
+        result.isCompleteFailure -> MaterialTheme.colorScheme.error
+        else -> SoftAccents.Amber
+    }
+
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Result Card
-        val resultAccentColor = when {
-            result.isCompleteSuccess -> SoftAccents.Teal
-            result.isCompleteFailure -> MaterialTheme.colorScheme.error
-            else -> SoftAccents.Amber
-        }
-
+        // Result Card - Modern design
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = resultAccentColor.copy(alpha = 0.12f)
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Icon
-                Icon(
-                    imageVector = if (result.isCompleteSuccess) {
-                        Icons.Default.Check
-                    } else {
-                        Icons.Default.Info
-                    },
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = resultAccentColor
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
+                // Icon with background
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(resultAccentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (result.isCompleteSuccess) {
+                            Icons.Default.Check
+                        } else {
+                            Icons.Default.Info
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = resultAccentColor
+                    )
+                }
 
                 // Title
                 Text(
@@ -1875,35 +2275,76 @@ private fun ImportResultScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Summary
-                if (result.isCompleteSuccess) {
-                    Text(
-                        text = "Successfully imported ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else if (result.isCompleteFailure) {
-                    Text(
-                        text = "Failed to import all ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                // Stats Row - Visual indicators
+                if (!result.isCompleteSuccess || !result.isCompleteFailure) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "Success: ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Failed: ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // Success stat
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SoftAccents.Teal.copy(alpha = 0.12f))
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${result.totalSuccess}",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = SoftAccents.Teal
+                                )
+                                Text(
+                                    text = "Imported",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Failed stat (if any)
+                        if (result.hasFailures) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "${result.totalFailed}",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Text(
+                                        text = "Failed",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
+                } else {
+                    // Simple summary for single-state results
+                    Text(
+                        text = if (result.isCompleteSuccess) {
+                            "Successfully imported ${result.totalSuccess} link${if (result.totalSuccess == 1) "" else "s"}"
+                        } else {
+                            "Failed to import all ${result.totalFailed} link${if (result.totalFailed == 1) "" else "s"}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
@@ -1917,54 +2358,47 @@ private fun ImportResultScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(
-                        text = "Failed Links",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Failed Links",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${result.totalFailed} failed",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    androidx.compose.material3.HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
                     androidx.compose.foundation.lazy.LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         items(result.failed.size) { index ->
                             val failedImport = result.failed[index]
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = failedImport.url,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (failedImport.error != null) {
-                                        Text(
-                                            text = failedImport.error,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                }
-                            }
+                            FailedLinkItem(
+                                url = failedImport.url,
+                                error = failedImport.error
+                            )
                         }
                     }
                 }
@@ -2017,6 +2451,71 @@ private fun ImportResultScreen(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text("Done")
+            }
+        }
+    }
+}
+
+/**
+ * Failed Link Item for the result screen
+ */
+@Composable
+private fun FailedLinkItem(
+    url: String,
+    error: String?,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Error indicator
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (error != null) {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
