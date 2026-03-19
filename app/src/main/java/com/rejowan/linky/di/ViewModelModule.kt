@@ -172,7 +172,8 @@ val viewModelModule = module {
         VaultSettingsViewModel(
             vaultRepository = get(),
             changeVaultPinUseCase = get(),
-            clearVaultUseCase = get()
+            clearVaultUseCase = get(),
+            getAllVaultLinksUseCase = get()
         )
     }
 

@@ -6,6 +6,7 @@ import com.rejowan.linky.data.security.AutoLockTimeout
 import com.rejowan.linky.domain.repository.VaultRepository
 import com.rejowan.linky.domain.usecase.vault.ChangeVaultPinUseCase
 import com.rejowan.linky.domain.usecase.vault.ClearVaultUseCase
+import com.rejowan.linky.domain.usecase.vault.GetAllVaultLinksUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,8 @@ data class VaultSettingsState(
     val autoLockTimeout: AutoLockTimeout = AutoLockTimeout.FIVE_MINUTES,
     val showChangePinDialog: Boolean = false,
     val showClearVaultDialog: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val vaultLinkCount: Int = 0
 )
 
 sealed class VaultSettingsEvent {
@@ -39,7 +41,8 @@ sealed class VaultSettingsUiEvent {
 class VaultSettingsViewModel(
     private val vaultRepository: VaultRepository,
     private val changeVaultPinUseCase: ChangeVaultPinUseCase,
-    private val clearVaultUseCase: ClearVaultUseCase
+    private val clearVaultUseCase: ClearVaultUseCase,
+    private val getAllVaultLinksUseCase: GetAllVaultLinksUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VaultSettingsState())
@@ -50,11 +53,20 @@ class VaultSettingsViewModel(
 
     init {
         loadSettings()
+        loadVaultLinkCount()
     }
 
     private fun loadSettings() {
         _state.update {
             it.copy(autoLockTimeout = vaultRepository.getAutoLockTimeout())
+        }
+    }
+
+    private fun loadVaultLinkCount() {
+        viewModelScope.launch {
+            getAllVaultLinksUseCase().collect { links ->
+                _state.update { it.copy(vaultLinkCount = links.size) }
+            }
         }
     }
 

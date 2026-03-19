@@ -1,7 +1,11 @@
 package com.rejowan.linky.presentation.feature.vault
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,16 +13,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -27,14 +38,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,11 +56,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rejowan.linky.data.security.AutoLockTimeout
+import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +80,11 @@ fun VaultSettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Bottom sheet states
+    var showAutoLockSheet by remember { mutableStateOf(false) }
+    var showChangePinSheet by remember { mutableStateOf(false) }
+    var showClearVaultSheet by remember { mutableStateOf(false) }
+
     // Handle UI events
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
@@ -71,6 +95,14 @@ fun VaultSettingsScreen(
                 VaultSettingsUiEvent.VaultCleared -> onVaultCleared()
             }
         }
+    }
+
+    // Sync dialog states
+    LaunchedEffect(state.showChangePinDialog) {
+        showChangePinSheet = state.showChangePinDialog
+    }
+    LaunchedEffect(state.showClearVaultDialog) {
+        showClearVaultSheet = state.showClearVaultDialog
     }
 
     Scaffold(
@@ -95,103 +127,79 @@ fun VaultSettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Auto-lock timeout
+            // Security Section
             SettingsSection(title = "Security") {
-                AutoLockTimeoutCard(
-                    currentTimeout = state.autoLockTimeout,
-                    onTimeoutSelected = { timeout ->
-                        viewModel.onEvent(VaultSettingsEvent.OnAutoLockTimeoutChanged(timeout))
-                    }
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Auto-lock timeout
+                    SettingsCard(
+                        icon = Icons.Default.Timer,
+                        iconColor = SoftAccents.Blue,
+                        title = "Auto-lock Timeout",
+                        description = state.autoLockTimeout.displayName,
+                        onClick = { showAutoLockSheet = true }
+                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Change PIN
-                SettingsCard(
-                    icon = Icons.Default.Key,
-                    title = "Change PIN",
-                    description = "Update your vault PIN",
-                    onClick = { viewModel.onEvent(VaultSettingsEvent.OnShowChangePinDialog) }
-                )
+                    // Change PIN
+                    SettingsCard(
+                        icon = Icons.Default.Key,
+                        iconColor = SoftAccents.Purple,
+                        title = "Change PIN",
+                        description = "Update your vault security PIN",
+                        onClick = { viewModel.onEvent(VaultSettingsEvent.OnShowChangePinDialog) }
+                    )
+                }
             }
 
-            // Danger Zone
+            // Danger Zone Section
             SettingsSection(title = "Danger Zone") {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.onEvent(VaultSettingsEvent.OnShowClearVaultDialog) }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteForever,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Clear Vault",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Text(
-                                text = "Delete all vault data and reset PIN",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                DangerZoneCard(
+                    linkCount = state.vaultLinkCount,
+                    onClick = { viewModel.onEvent(VaultSettingsEvent.OnShowClearVaultDialog) }
+                )
             }
         }
     }
 
-    // Change PIN Dialog
-    if (state.showChangePinDialog) {
-        ChangePinDialog(
+    // Auto-lock Timeout Sheet
+    if (showAutoLockSheet) {
+        AutoLockTimeoutSheet(
+            currentTimeout = state.autoLockTimeout,
+            onTimeoutSelected = { timeout ->
+                viewModel.onEvent(VaultSettingsEvent.OnAutoLockTimeoutChanged(timeout))
+                showAutoLockSheet = false
+            },
+            onDismiss = { showAutoLockSheet = false }
+        )
+    }
+
+    // Change PIN Sheet
+    if (showChangePinSheet) {
+        ChangePinSheet(
             onConfirm = { oldPin, newPin ->
                 viewModel.onEvent(VaultSettingsEvent.OnChangePinConfirm(oldPin, newPin))
             },
-            onDismiss = { viewModel.onEvent(VaultSettingsEvent.OnDismissChangePinDialog) },
+            onDismiss = {
+                showChangePinSheet = false
+                viewModel.onEvent(VaultSettingsEvent.OnDismissChangePinDialog)
+            },
             isLoading = state.isLoading
         )
     }
 
-    // Clear Vault Confirmation Dialog
-    if (state.showClearVaultDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onEvent(VaultSettingsEvent.OnDismissClearVaultDialog) },
-            title = { Text("Clear Vault?") },
-            text = {
-                Text("This will permanently delete all vault links and reset your PIN. This action cannot be undone.")
+    // Clear Vault Sheet
+    if (showClearVaultSheet) {
+        ClearVaultSheet(
+            linkCount = state.vaultLinkCount,
+            onConfirm = { viewModel.onEvent(VaultSettingsEvent.OnClearVaultConfirm) },
+            onDismiss = {
+                showClearVaultSheet = false
+                viewModel.onEvent(VaultSettingsEvent.OnDismissClearVaultDialog)
             },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.onEvent(VaultSettingsEvent.OnClearVaultConfirm) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Clear Vault")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onEvent(VaultSettingsEvent.OnDismissClearVaultDialog) }) {
-                    Text("Cancel")
-                }
-            }
+            isLoading = state.isLoading
         )
     }
 }
@@ -206,6 +214,7 @@ private fun SettingsSection(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
         )
         content()
@@ -214,7 +223,8 @@ private fun SettingsSection(
 
 @Composable
 private fun SettingsCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
+    iconColor: Color,
     title: String,
     description: String,
     onClick: () -> Unit
@@ -223,7 +233,11 @@ private fun SettingsCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -231,18 +245,30 @@ private fun SettingsCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+            // Icon with background
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(iconColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
@@ -254,31 +280,88 @@ private fun SettingsCard(
 }
 
 @Composable
-private fun AutoLockTimeoutCard(
-    currentTimeout: AutoLockTimeout,
-    onTimeoutSelected: (AutoLockTimeout) -> Unit
+private fun DangerZoneCard(
+    linkCount: Int,
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.DeleteForever,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Clear Vault",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = if (linkCount > 0) "$linkCount link${if (linkCount != 1) "s" else ""} will be deleted"
+                else "Delete all data and reset PIN",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AutoLockTimeoutSheet(
+    currentTimeout: AutoLockTimeout,
+    onTimeoutSelected: (AutoLockTimeout) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
         ) {
+            // Header
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Timer,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SoftAccents.Blue.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = SoftAccents.Blue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Auto-lock timeout",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
+                        text = "Auto-lock Timeout",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "Lock vault after inactivity",
@@ -288,75 +371,174 @@ private fun AutoLockTimeoutCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // Options
             AutoLockTimeout.entries.forEach { timeout ->
+                val isSelected = currentTimeout == timeout
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (isSelected) SoftAccents.Blue.copy(alpha = 0.12f)
+                    else Color.Transparent,
+                    label = "bg"
+                )
+                val borderColor by animateColorAsState(
+                    targetValue = if (isSelected) SoftAccents.Blue
+                    else MaterialTheme.colorScheme.outlineVariant,
+                    label = "border"
+                )
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(backgroundColor)
+                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
                         .clickable { onTimeoutSelected(timeout) }
-                        .padding(vertical = 8.dp),
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(
-                        selected = currentTimeout == timeout,
-                        onClick = { onTimeoutSelected(timeout) }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = timeout.displayName,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (isSelected) SoftAccents.Blue
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
                     )
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(SoftAccents.Blue),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChangePinDialog(
+private fun ChangePinSheet(
     onConfirm: (oldPin: String, newPin: String) -> Unit,
     onDismiss: () -> Unit,
     isLoading: Boolean
 ) {
-    var oldPin by remember { mutableStateOf("") }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var currentPin by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
+    var showCurrentPin by remember { mutableStateOf(false) }
+    var showNewPin by remember { mutableStateOf(false) }
+    var showConfirmPin by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Change PIN") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = oldPin,
-                    onValueChange = { if (it.length <= 6) oldPin = it.filter { c -> c.isDigit() } },
-                    label = { Text("Current PIN") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = newPin,
-                    onValueChange = { if (it.length <= 6) newPin = it.filter { c -> c.isDigit() } },
-                    label = { Text("New PIN (4-6 digits)") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = confirmPin,
-                    onValueChange = { if (it.length <= 6) confirmPin = it.filter { c -> c.isDigit() } },
-                    label = { Text("Confirm New PIN") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SoftAccents.Purple.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = SoftAccents.Purple,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Change PIN",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Enter 4-6 digit PIN",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
-                if (error != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Current PIN
+            PinTextField(
+                value = currentPin,
+                onValueChange = { if (it.length <= 6) currentPin = it.filter { c -> c.isDigit() } },
+                label = "Current PIN",
+                showPin = showCurrentPin,
+                onToggleVisibility = { showCurrentPin = !showCurrentPin }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // New PIN
+            PinTextField(
+                value = newPin,
+                onValueChange = { if (it.length <= 6) newPin = it.filter { c -> c.isDigit() } },
+                label = "New PIN",
+                showPin = showNewPin,
+                onToggleVisibility = { showNewPin = !showNewPin }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Confirm PIN
+            PinTextField(
+                value = confirmPin,
+                onValueChange = { if (it.length <= 6) confirmPin = it.filter { c -> c.isDigit() } },
+                label = "Confirm New PIN",
+                showPin = showConfirmPin,
+                onToggleVisibility = { showConfirmPin = !showConfirmPin }
+            )
+
+            // Error message
+            if (error != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = error!!,
                         style = MaterialTheme.typography.bodySmall,
@@ -364,29 +546,151 @@ private fun ChangePinDialog(
                     )
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    when {
-                        oldPin.length < 4 -> error = "Current PIN must be at least 4 digits"
-                        newPin.length < 4 -> error = "New PIN must be at least 4 digits"
-                        newPin != confirmPin -> error = "New PINs don't match"
-                        else -> {
-                            error = null
-                            onConfirm(oldPin, newPin)
-                        }
-                    }
-                },
-                enabled = !isLoading
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(if (isLoading) "Changing..." else "Change")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    enabled = !isLoading
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = {
+                        when {
+                            currentPin.length < 4 -> error = "Current PIN must be at least 4 digits"
+                            newPin.length < 4 -> error = "New PIN must be at least 4 digits"
+                            newPin != confirmPin -> error = "New PINs don't match"
+                            else -> {
+                                error = null
+                                onConfirm(currentPin, newPin)
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    enabled = !isLoading && currentPin.length >= 4 && newPin.length >= 4 && confirmPin.length >= 4
+                ) {
+                    Text(if (isLoading) "Changing..." else "Change PIN")
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun PinTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    showPin: Boolean,
+    onToggleVisibility: () -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = if (showPin) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        trailingIcon = {
+            IconButton(onClick = onToggleVisibility) {
+                Icon(
+                    imageVector = if (showPin) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = if (showPin) "Hide PIN" else "Show PIN"
+                )
+            }
+        },
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = SoftAccents.Purple,
+            focusedLabelColor = SoftAccents.Purple
+        ),
+        modifier = Modifier.fillMaxWidth()
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ClearVaultSheet(
+    linkCount: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    isLoading: Boolean
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Clear Vault?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = if (linkCount > 0)
+                    "This will permanently delete $linkCount link${if (linkCount != 1) "s" else ""} and reset your PIN."
+                else
+                    "This will reset your vault PIN. This cannot be undone.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    enabled = !isLoading
+                ) {
+                    Text(if (isLoading) "Clearing..." else "Clear Vault")
+                }
+            }
+        }
+    }
 }
