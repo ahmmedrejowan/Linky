@@ -75,6 +75,7 @@ class SettingsViewModel(
         loadSettings()
         observeTheme()
         observeTrashedLinksCount()
+        observeUpdateCheckInterval()
         loadLastCheckTime()
         checkForUpdatesIfNeeded()
         checkPendingApk()
@@ -300,7 +301,27 @@ class SettingsViewModel(
      */
     fun setUpdateCheckInterval(interval: UpdateCheckInterval) {
         _state.update { it.copy(updateCheckInterval = interval) }
-        // TODO: Persist to preferences
+        viewModelScope.launch {
+            themePreferences.setUpdateCheckInterval(interval.name)
+            Timber.d("Update check interval changed to: ${interval.displayName}")
+        }
+    }
+
+    private fun observeUpdateCheckInterval() {
+        viewModelScope.launch {
+            themePreferences.getUpdateCheckInterval()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe update check interval")
+                }
+                .collect { intervalName ->
+                    val interval = try {
+                        UpdateCheckInterval.valueOf(intervalName)
+                    } catch (e: IllegalArgumentException) {
+                        UpdateCheckInterval.WEEKLY
+                    }
+                    _state.update { it.copy(updateCheckInterval = interval) }
+                }
+        }
     }
 
     fun onEvent(event: SettingsEvent) {

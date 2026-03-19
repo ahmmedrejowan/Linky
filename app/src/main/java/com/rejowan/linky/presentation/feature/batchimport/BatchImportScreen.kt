@@ -47,6 +47,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -104,9 +106,13 @@ fun BatchImportScreen(
     val themePreferences = remember { ThemePreferences(context) }
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // ViewModel state
     val state by viewModel.state.collectAsState()
+
+    // Confirmation dialog state triggered by ViewModel
+    var viewModelConfirmationType by remember { mutableStateOf<ConfirmationType?>(null) }
 
     // Collect UI events
     LaunchedEffect(Unit) {
@@ -122,10 +128,10 @@ fun BatchImportScreen(
                     onNavigateToCollectionDetail(event.collectionId)
                 }
                 is BatchImportUiEvent.ShowError -> {
-                    // TODO: Show error message
+                    snackbarHostState.showSnackbar(event.message)
                 }
                 is BatchImportUiEvent.ShowConfirmation -> {
-                    // TODO: Show confirmation dialog
+                    viewModelConfirmationType = event.type
                 }
             }
         }
@@ -145,13 +151,8 @@ fun BatchImportScreen(
     val characterCount = pastedText.length
     val lineCount = if (pastedText.isEmpty()) 0 else pastedText.lines().size
 
-    // Handle scanning completion
-    LaunchedEffect(state.extractedUrls) {
-        if (state.extractedUrls.isNotEmpty() && !state.isScanning) {
-            // TODO: Navigate to next step (summary or selection)
-            // For now, just show a message
-        }
-    }
+    // Note: Scanning completion is handled by ScanResultDialog which shows when
+    // state.extractedUrls.isNotEmpty() && !state.isScanning && state.error == null
 
     // Handle back press with confirmation
     val handleBackPress = {
@@ -191,7 +192,8 @@ fun BatchImportScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         // Show different screens based on state
         when {
@@ -458,6 +460,60 @@ fun BatchImportScreen(
                 showClearConfirmationDialog = false
             }
         )
+    }
+
+    // ViewModel-triggered confirmation dialogs
+    viewModelConfirmationType?.let { type ->
+        when (type) {
+            ConfirmationType.DISCARD_PASTE -> {
+                ConfirmationDialog(
+                    title = "Discard Pasted Text?",
+                    message = "You have pasted text that hasn't been processed. Do you want to discard it?",
+                    confirmText = "Discard",
+                    onConfirm = {
+                        viewModelConfirmationType = null
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    onDismiss = { viewModelConfirmationType = null }
+                )
+            }
+            ConfirmationType.DISCARD_SELECTION -> {
+                ConfirmationDialog(
+                    title = "Discard Selection?",
+                    message = "Your link selection will be lost. Do you want to continue?",
+                    confirmText = "Discard",
+                    onConfirm = {
+                        viewModelConfirmationType = null
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    onDismiss = { viewModelConfirmationType = null }
+                )
+            }
+            ConfirmationType.CANCEL_IMPORT -> {
+                ConfirmationDialog(
+                    title = "Cancel Import?",
+                    message = "The import is in progress. Are you sure you want to cancel?",
+                    confirmText = "Cancel Import",
+                    onConfirm = {
+                        viewModelConfirmationType = null
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    onDismiss = { viewModelConfirmationType = null }
+                )
+            }
+            ConfirmationType.CANCEL_AFTER_FETCH_FAILURE -> {
+                ConfirmationDialog(
+                    title = "Continue Without Previews?",
+                    message = "Some previews failed to load. Do you want to cancel or continue with available data?",
+                    confirmText = "Cancel",
+                    onConfirm = {
+                        viewModelConfirmationType = null
+                        viewModel.onEvent(BatchImportEvent.OnBackToEdit)
+                    },
+                    onDismiss = { viewModelConfirmationType = null }
+                )
+            }
+        }
     }
 
     // How It Works Dialog

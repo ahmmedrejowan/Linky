@@ -265,13 +265,6 @@ fun LinkyNavHost(
             )
         }
 
-        composable<Route.AdvancedSettings> {
-            // TODO: Implement AdvancedSettingsScreen in Phase 3/4
-            // AdvancedSettingsScreen(
-            //     onNavigateBack = { navController.popBackStack() }
-            // )
-        }
-
         // ============ VAULT SCREENS ============
 
         composable<Route.VaultIntro> {
