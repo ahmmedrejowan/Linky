@@ -32,6 +32,14 @@ enum class VaultSortType(val displayName: String) {
     FAVORITES_FIRST("Favorites First")
 }
 
+/**
+ * Filter types for vault links
+ */
+enum class VaultFilterType {
+    ALL,
+    FAVORITES
+}
+
 data class VaultState(
     val vaultLinks: List<VaultLink> = emptyList(),
     val isLoading: Boolean = true,
@@ -39,11 +47,16 @@ data class VaultState(
     val showDeleteConfirmDialog: Boolean = false,
     val linkToDelete: VaultLink? = null,
     val error: String? = null,
+    // Filter type
+    val filterType: VaultFilterType = VaultFilterType.ALL,
     // Sorting and view mode
     val sortType: VaultSortType = VaultSortType.DATE_DESC,
     val viewMode: ViewMode = ViewMode.LIST,
     // Selected link for info bottom sheet
-    val selectedLinkForInfo: VaultLink? = null
+    val selectedLinkForInfo: VaultLink? = null,
+    // Total counts for display
+    val totalLinkCount: Int = 0,
+    val favoriteLinkCount: Int = 0
 )
 
 sealed class VaultEvent {
@@ -54,6 +67,8 @@ sealed class VaultEvent {
     data class OnShowDeleteConfirm(val link: VaultLink) : VaultEvent()
     data object OnDismissDeleteConfirm : VaultEvent()
     data object OnConfirmDelete : VaultEvent()
+    // Filter type
+    data class OnFilterTypeChange(val filterType: VaultFilterType) : VaultEvent()
     // Sorting and view mode
     data class OnSortTypeChange(val sortType: VaultSortType) : VaultEvent()
     data class OnViewModeChange(val viewMode: ViewMode) : VaultEvent()
@@ -98,9 +113,28 @@ class VaultViewModel(
         viewModelScope.launch {
             getAllVaultLinksUseCase().collect { links ->
                 allLinks = links
-                val sortedLinks = sortLinks(links, _state.value.sortType)
-                _state.update { it.copy(vaultLinks = sortedLinks, isLoading = false) }
+                applyFilterAndSort()
             }
+        }
+    }
+
+    private fun applyFilterAndSort() {
+        val filteredLinks = filterLinks(allLinks, _state.value.filterType)
+        val sortedLinks = sortLinks(filteredLinks, _state.value.sortType)
+        _state.update {
+            it.copy(
+                vaultLinks = sortedLinks,
+                isLoading = false,
+                totalLinkCount = allLinks.size,
+                favoriteLinkCount = allLinks.count { link -> link.isFavorite }
+            )
+        }
+    }
+
+    private fun filterLinks(links: List<VaultLink>, filterType: VaultFilterType): List<VaultLink> {
+        return when (filterType) {
+            VaultFilterType.ALL -> links
+            VaultFilterType.FAVORITES -> links.filter { it.isFavorite }
         }
     }
 
@@ -144,9 +178,13 @@ class VaultViewModel(
                 it.copy(showDeleteConfirmDialog = false, linkToDelete = null)
             }
             VaultEvent.OnConfirmDelete -> deleteLink()
+            is VaultEvent.OnFilterTypeChange -> {
+                _state.update { it.copy(filterType = event.filterType) }
+                applyFilterAndSort()
+            }
             is VaultEvent.OnSortTypeChange -> {
                 _state.update { it.copy(sortType = event.sortType) }
-                applySorting()
+                applyFilterAndSort()
             }
             is VaultEvent.OnViewModeChange -> {
                 _state.update { it.copy(viewMode = event.viewMode) }
@@ -222,8 +260,7 @@ class VaultViewModel(
     }
 
     private fun applySorting() {
-        val sortedLinks = sortLinks(allLinks, _state.value.sortType)
-        _state.update { it.copy(vaultLinks = sortedLinks) }
+        applyFilterAndSort()
         Timber.d("Vault links sorted by ${_state.value.sortType.displayName}")
     }
 

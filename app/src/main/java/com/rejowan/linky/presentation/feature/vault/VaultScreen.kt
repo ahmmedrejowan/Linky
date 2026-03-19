@@ -151,11 +151,7 @@ fun VaultScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddLink
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add link")
-            }
+            VaultFab(onClick = onNavigateToAddLink)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
@@ -164,16 +160,18 @@ fun VaultScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Sort and View Mode Row
-            if (state.vaultLinks.isNotEmpty()) {
-                SortAndViewModeRow(
-                    sortType = state.sortType,
-                    viewMode = state.viewMode,
-                    onSortClick = { showSortSheet = true },
+            // Filter Row with All/Favorites tabs (show when there are links)
+            if (state.totalLinkCount > 0) {
+                VaultFilterRow(
+                    selectedFilter = state.filterType,
+                    onFilterSelected = { viewModel.onEvent(VaultEvent.OnFilterTypeChange(it)) },
+                    isGridView = state.viewMode == ViewMode.GRID,
                     onViewModeToggle = {
                         val newMode = if (state.viewMode == ViewMode.LIST) ViewMode.GRID else ViewMode.LIST
                         viewModel.onEvent(VaultEvent.OnViewModeChange(newMode))
-                    }
+                    },
+                    sortType = state.sortType,
+                    onSortClick = { showSortSheet = true }
                 )
             }
 
@@ -182,10 +180,16 @@ fun VaultScreen(
                     LoadingIndicator(message = "Loading vault...")
                 }
 
-                state.vaultLinks.isEmpty() -> {
+                state.totalLinkCount == 0 -> {
+                    // No links at all in the vault
                     EmptyVaultState(
                         onAddClick = onNavigateToAddLink
                     )
+                }
+
+                state.vaultLinks.isEmpty() && state.filterType == VaultFilterType.FAVORITES -> {
+                    // Has links but no favorites
+                    EmptyVaultFavoritesState()
                 }
 
                 else -> {
@@ -319,73 +323,36 @@ fun VaultScreen(
     }
 }
 
+/**
+ * Custom FAB for Vault with secure/premium styling
+ */
 @Composable
-private fun SortAndViewModeRow(
-    sortType: VaultSortType,
-    viewMode: ViewMode,
-    onSortClick: () -> Unit,
-    onViewModeToggle: () -> Unit,
+private fun VaultFab(
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = SoftAccents.Purple,
+        contentColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
     ) {
-        // Sort button
-        Surface(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onSortClick),
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                    contentDescription = "Sort",
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = sortType.displayName,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // View Mode Toggle
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ViewModeIcon(
-                isSelected = viewMode == ViewMode.LIST,
-                onClick = { if (viewMode != ViewMode.LIST) onViewModeToggle() }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ViewList,
-                    contentDescription = "List view",
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            ViewModeIcon(
-                isSelected = viewMode == ViewMode.GRID,
-                onClick = { if (viewMode != ViewMode.GRID) onViewModeToggle() }
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.GridView,
-                    contentDescription = "Grid view",
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = "Add Link",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -633,25 +600,39 @@ private fun EmptyVaultState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        // Icon with background
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(SoftAccents.Purple.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = SoftAccents.Purple
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = "Your vault is empty",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Add sensitive links to keep them secure",
+            text = "Add sensitive links to keep them secure.\nYour vault is protected with PIN encryption.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onAddClick) {
+        Button(
+            onClick = onAddClick,
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
@@ -660,6 +641,187 @@ private fun EmptyVaultState(
             Spacer(modifier = Modifier.width(8.dp))
             Text("Add Link")
         }
+    }
+}
+
+@Composable
+private fun EmptyVaultFavoritesState(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Icon with background
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(SoftAccents.Pink.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = SoftAccents.Pink
+            )
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "No favorites yet",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Tap the heart icon on any link\nto add it to your favorites.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+/**
+ * Filter Row with All/Favorites tabs and view mode toggle
+ */
+@Composable
+private fun VaultFilterRow(
+    selectedFilter: VaultFilterType,
+    onFilterSelected: (VaultFilterType) -> Unit,
+    isGridView: Boolean,
+    onViewModeToggle: () -> Unit,
+    sortType: VaultSortType,
+    onSortClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Filter chips - Left aligned
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VaultFilterChip(
+                title = "All",
+                isSelected = selectedFilter == VaultFilterType.ALL,
+                onClick = { onFilterSelected(VaultFilterType.ALL) }
+            )
+            VaultFilterChip(
+                title = "Favorites",
+                isSelected = selectedFilter == VaultFilterType.FAVORITES,
+                onClick = { onFilterSelected(VaultFilterType.FAVORITES) }
+            )
+        }
+
+        // Sort and View Mode Toggle - Right aligned
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Sort button
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onSortClick),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // View Mode Toggle
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ViewModeIcon(
+                    isSelected = !isGridView,
+                    onClick = { if (isGridView) onViewModeToggle() }
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ViewList,
+                        contentDescription = "List view",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                ViewModeIcon(
+                    isSelected = isGridView,
+                    onClick = { if (!isGridView) onViewModeToggle() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.GridView,
+                        contentDescription = "Grid view",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VaultFilterChip(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accentColor = MaterialTheme.colorScheme.primary
+
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor else Color.Transparent,
+        animationSpec = tween(durationMillis = 200),
+        label = "filter chip background"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 200),
+        label = "filter chip content"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) accentColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+        animationSpec = tween(durationMillis = 200),
+        label = "filter chip border"
+    )
+
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = backgroundColor
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
     }
 }
 
