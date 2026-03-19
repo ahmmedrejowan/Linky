@@ -76,6 +76,10 @@ fun BottomNavHost(
                     // Navigate using parent controller to CollectionDetail
                     parentNavController.navigate(Route.CollectionDetail(collectionId))
                 },
+                onAddLinkClick = { collectionId ->
+                    // Navigate to AddEditLink with pre-selected collection
+                    parentNavController.navigate(Route.AddEditLink(collectionId = collectionId))
+                },
                 onNavigateToHome = {
                     // Navigate within bottom nav using local controller
                     navController.navigate(Route.Home)

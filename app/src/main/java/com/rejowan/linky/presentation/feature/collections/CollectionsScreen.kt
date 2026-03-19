@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.AddLink
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -105,6 +106,7 @@ fun CollectionsScreen(
     snackbarHostState: SnackbarHostState,
     onCreateCollectionClick: (() -> Unit) -> Unit,
     onCollectionClick: (String) -> Unit,
+    onAddLinkClick: (String) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -239,6 +241,10 @@ fun CollectionsScreen(
             onOpenClick = {
                 selectedCollectionForInfo = null
                 onCollectionClick(collection.collection.id)
+            },
+            onAddLinkClick = {
+                selectedCollectionForInfo = null
+                onAddLinkClick(collection.collection.id)
             },
             onEditClick = {
                 selectedCollectionForInfo = null
@@ -996,6 +1002,7 @@ private fun CollectionInfoBottomSheet(
     collection: CollectionWithLinkCount,
     onDismiss: () -> Unit,
     onOpenClick: () -> Unit,
+    onAddLinkClick: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -1063,6 +1070,15 @@ private fun CollectionInfoBottomSheet(
                 label = "Open Collection",
                 color = SoftAccents.Blue,
                 onClick = onOpenClick
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            CollectionSheetAction(
+                icon = Icons.Outlined.AddLink,
+                label = "Add Link to Collection",
+                color = SoftAccents.Teal,
+                onClick = onAddLinkClick
             )
 
             Spacer(modifier = Modifier.height(8.dp))
