@@ -23,7 +23,9 @@ data class HomeState(
     // Bulk selection
     val isSelectionMode: Boolean = false,
     val selectedLinkIds: Set<String> = emptySet(),
-    val showBulkMoveSheet: Boolean = false
+    val showBulkMoveSheet: Boolean = false,
+    // Vault
+    val isVaultSetup: Boolean = false
 ) {
     val selectedCount: Int get() = selectedLinkIds.size
     val allSelected: Boolean get() = links.isNotEmpty() && selectedLinkIds.size == links.size

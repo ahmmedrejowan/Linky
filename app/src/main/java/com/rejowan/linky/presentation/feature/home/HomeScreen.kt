@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.layout.ContentScale
@@ -218,6 +219,12 @@ fun HomeScreen(
                         duration = SnackbarDuration.Short
                     )
                 }
+                HomeUiEvent.ShowLinkMovedToVault -> {
+                    snackbarHostState.showSnackbar(
+                        message = "Link moved to Vault",
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         }
     }
@@ -297,6 +304,9 @@ fun HomeScreen(
     // Link info bottom sheet state
     var selectedLinkForInfo by remember { mutableStateOf<String?>(null) }
     val selectedLink = selectedLinkForInfo?.let { id -> state.links.find { it.id == id } }
+
+    // Send to vault confirmation
+    var linkToSendToVault by remember { mutableStateOf<Link?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -429,6 +439,7 @@ fun HomeScreen(
     if (selectedLink != null) {
         LinkInfoBottomSheet(
             link = selectedLink,
+            isVaultSetup = state.isVaultSetup,
             onOpenClick = {
                 // Open link in browser
                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(selectedLink.url))
@@ -445,9 +456,25 @@ fun HomeScreen(
                 viewModel.onEvent(HomeEvent.OnDeleteLink(selectedLink.id))
                 selectedLinkForInfo = null
             },
+            onSendToVaultClick = {
+                linkToSendToVault = selectedLink
+                selectedLinkForInfo = null
+            },
             onDismiss = {
                 selectedLinkForInfo = null
             }
+        )
+    }
+
+    // Send to Vault Confirmation Dialog
+    if (linkToSendToVault != null) {
+        SendToVaultConfirmationSheet(
+            link = linkToSendToVault!!,
+            onConfirm = {
+                viewModel.onEvent(HomeEvent.OnSendToVault(linkToSendToVault!!))
+                linkToSendToVault = null
+            },
+            onDismiss = { linkToSendToVault = null }
         )
     }
 }
@@ -1496,10 +1523,12 @@ private fun CompactFilterChip(
 @Composable
 private fun LinkInfoBottomSheet(
     link: Link,
+    isVaultSetup: Boolean,
     onOpenClick: () -> Unit,
     onEditClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onSendToVaultClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1636,6 +1665,18 @@ private fun LinkInfoBottomSheet(
                     }
                 )
 
+                // Send to Vault (only if vault is set up)
+                if (isVaultSetup) {
+                    LinkInfoActionButton(
+                        icon = Icons.Filled.Lock,
+                        label = "Vault",
+                        tint = SoftAccents.Purple,
+                        onClick = {
+                            onSendToVaultClick()
+                        }
+                    )
+                }
+
                 // Delete
                 LinkInfoActionButton(
                     icon = Icons.Filled.Delete,
@@ -1677,5 +1718,72 @@ private fun LinkInfoActionButton(
             style = MaterialTheme.typography.labelSmall,
             color = tint
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SendToVaultConfirmationSheet(
+    link: Link,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Send to Vault?",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "\"${link.title}\" will be moved to Vault and won't appear in your regular links anymore.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SoftAccents.Purple
+                    )
+                ) {
+                    Text("Send to Vault")
+                }
+            }
+        }
     }
 }

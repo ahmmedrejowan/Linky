@@ -6,6 +6,7 @@ import android.net.Uri
 import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.CollectionRepository
+import com.rejowan.linky.domain.repository.VaultRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
 import com.rejowan.linky.domain.usecase.link.GetAllLinksUseCase
 import com.rejowan.linky.domain.usecase.link.GetArchivedLinksUseCase
@@ -42,7 +43,8 @@ class HomeViewModel(
     private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository,
     private val collectionRepository: CollectionRepository,
-    private val themePreferences: ThemePreferences
+    private val themePreferences: ThemePreferences,
+    private val vaultRepository: VaultRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -59,6 +61,11 @@ class HomeViewModel(
         observeCounts()
         loadFilterOptions()
         observeLinkViewMode()
+        checkVaultSetup()
+    }
+
+    private fun checkVaultSetup() {
+        _state.update { it.copy(isVaultSetup = vaultRepository.isPinSetup()) }
     }
 
     fun onEvent(event: HomeEvent) {
@@ -142,6 +149,7 @@ class HomeViewModel(
                 _state.update { it.copy(showBulkMoveSheet = false) }
             }
             is HomeEvent.OnBulkMoveToCollection -> bulkMoveToCollection(event.collectionId)
+            is HomeEvent.OnSendToVault -> sendToVault(event.link)
         }
     }
 
@@ -479,6 +487,21 @@ class HomeViewModel(
         }
     }
 
+    private fun sendToVault(link: Link) {
+        viewModelScope.launch {
+            vaultRepository.moveToVault(link).fold(
+                onSuccess = {
+                    Timber.d("Link moved to vault: ${link.id}")
+                    _uiEvents.emit(HomeUiEvent.ShowLinkMovedToVault)
+                },
+                onFailure = { error ->
+                    Timber.e(error, "Failed to move link to vault")
+                    _uiEvents.emit(HomeUiEvent.ShowError(error.message ?: "Failed to move link to vault"))
+                }
+            )
+        }
+    }
+
     // ============ BULK OPERATIONS ============
 
     private fun bulkDelete() {
@@ -550,6 +573,7 @@ sealed class HomeUiEvent {
     data class ShowFavoriteToggled(val linkId: String, val isFavorite: Boolean) : HomeUiEvent()
     data class ShowLinkTrashed(val linkId: String) : HomeUiEvent()
     data class ShowBulkOperationResult(val message: String) : HomeUiEvent()
+    data object ShowLinkMovedToVault : HomeUiEvent()
 }
 
 sealed class HomeEvent {
@@ -579,4 +603,6 @@ sealed class HomeEvent {
     data object OnShowBulkMoveSheet : HomeEvent()
     data object OnDismissBulkMoveSheet : HomeEvent()
     data class OnBulkMoveToCollection(val collectionId: String?) : HomeEvent()
+    // Vault
+    data class OnSendToVault(val link: Link) : HomeEvent()
 }

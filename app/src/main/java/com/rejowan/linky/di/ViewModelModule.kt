@@ -35,7 +35,8 @@ val viewModelModule = module {
             restoreLinkUseCase = get(),
             linkRepository = get(),
             collectionRepository = get(),
-            themePreferences = get()
+            themePreferences = get(),
+            vaultRepository = get()
         )
     }
 
