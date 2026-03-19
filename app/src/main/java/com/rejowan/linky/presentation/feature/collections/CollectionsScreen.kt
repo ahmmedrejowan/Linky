@@ -36,6 +36,9 @@ import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -109,6 +112,7 @@ fun CollectionsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showSortSheet by remember { mutableStateOf(false) }
+    var selectedCollectionForInfo by remember { mutableStateOf<CollectionWithLinkCount?>(null) }
 
     // Register create collection action for MainActivity FAB
     LaunchedEffect(Unit) {
@@ -195,7 +199,10 @@ fun CollectionsScreen(
                         CollectionsContent(
                             collections = state.collections,
                             viewMode = state.viewMode,
-                            onCollectionClick = onCollectionClick
+                            onCollectionClick = onCollectionClick,
+                            onCollectionLongPress = { collection ->
+                                selectedCollectionForInfo = collection
+                            }
                         )
                     }
                 }
@@ -221,6 +228,48 @@ fun CollectionsScreen(
             currentSort = state.sortType,
             onSortSelected = { viewModel.onEvent(CollectionsEvent.OnSortTypeChange(it)) },
             onDismiss = { showSortSheet = false }
+        )
+    }
+
+    // Collection Info Bottom Sheet
+    selectedCollectionForInfo?.let { collection ->
+        CollectionInfoBottomSheet(
+            collection = collection,
+            onDismiss = { selectedCollectionForInfo = null },
+            onOpenClick = {
+                selectedCollectionForInfo = null
+                onCollectionClick(collection.collection.id)
+            },
+            onEditClick = {
+                selectedCollectionForInfo = null
+                viewModel.onEvent(CollectionsEvent.OnEditCollection(collection))
+            },
+            onDeleteClick = {
+                selectedCollectionForInfo = null
+                viewModel.onEvent(CollectionsEvent.OnShowDeleteDialog(collection))
+            }
+        )
+    }
+
+    // Edit Collection Dialog
+    if (state.showEditDialog) {
+        EditCollectionDialog(
+            collectionName = state.editCollectionName,
+            selectedColor = state.editCollectionColor,
+            onCollectionNameChange = { viewModel.onEvent(CollectionsEvent.OnEditCollectionNameChange(it)) },
+            onColorChange = { viewModel.onEvent(CollectionsEvent.OnEditCollectionColorChange(it)) },
+            onSave = { viewModel.onEvent(CollectionsEvent.OnSaveEditedCollection) },
+            onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissEditDialog) }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    if (state.showDeleteDialog) {
+        DeleteCollectionDialog(
+            collectionName = state.deletingCollection?.collection?.name ?: "",
+            linkCount = state.deletingCollection?.linkCount ?: 0,
+            onConfirm = { viewModel.onEvent(CollectionsEvent.OnConfirmDelete) },
+            onDismiss = { viewModel.onEvent(CollectionsEvent.OnDismissDeleteDialog) }
         )
     }
 }
@@ -369,6 +418,7 @@ private fun CollectionsContent(
     collections: List<CollectionWithLinkCount>,
     viewMode: ViewMode,
     onCollectionClick: (String) -> Unit,
+    onCollectionLongPress: (CollectionWithLinkCount) -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (viewMode) {
@@ -386,6 +436,7 @@ private fun CollectionsContent(
                         collection = collectionWithCount.collection,
                         linkCount = collectionWithCount.linkCount,
                         onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                        onLongPress = { onCollectionLongPress(collectionWithCount) },
                         linkPreviews = collectionWithCount.linkPreviews,
                         modifier = Modifier.animateItem()
                     )
@@ -408,6 +459,7 @@ private fun CollectionsContent(
                         collection = collectionWithCount.collection,
                         linkCount = collectionWithCount.linkCount,
                         onClick = { onCollectionClick(collectionWithCount.collection.id) },
+                        onLongPress = { onCollectionLongPress(collectionWithCount) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -932,5 +984,272 @@ private fun ColorBlock(
             )
         }
     }
+}
+
+/**
+ * Collection Info Bottom Sheet
+ * Shows options for a collection: Open, Edit, Delete
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CollectionInfoBottomSheet(
+    collection: CollectionWithLinkCount,
+    onDismiss: () -> Unit,
+    onOpenClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    val collectionColor = collection.collection.color?.let {
+        try { Color(it.toColorInt()) } catch (e: Exception) { null }
+    } ?: MaterialTheme.colorScheme.primary
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            // Header with collection info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = collectionColor.copy(alpha = 0.15f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(24.dp),
+                        tint = collectionColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = collection.collection.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = if (collection.linkCount == 1) "1 link" else "${collection.linkCount} links",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Action buttons
+            CollectionSheetAction(
+                icon = Icons.Outlined.FolderOpen,
+                label = "Open Collection",
+                color = SoftAccents.Blue,
+                onClick = onOpenClick
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            CollectionSheetAction(
+                icon = Icons.Outlined.Edit,
+                label = "Edit Collection",
+                color = SoftAccents.Purple,
+                onClick = onEditClick
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            CollectionSheetAction(
+                icon = Icons.Outlined.Delete,
+                label = "Delete Collection",
+                color = SoftAccents.Pink,
+                onClick = onDeleteClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun CollectionSheetAction(
+    icon: ImageVector,
+    label: String,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.08f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = color.copy(alpha = 0.15f)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(18.dp),
+                    tint = color
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+/**
+ * Edit Collection Dialog
+ */
+@Composable
+private fun EditCollectionDialog(
+    collectionName: String,
+    selectedColor: String?,
+    onCollectionNameChange: (String) -> Unit,
+    onColorChange: (String?) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Edit Collection",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = collectionName,
+                    onValueChange = onCollectionNameChange,
+                    label = { Text("Collection Name") },
+                    placeholder = { Text("Enter collection name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Text(
+                    text = "Color (Optional)",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                ColorBlockPicker(
+                    selectedColor = selectedColor,
+                    onColorSelected = onColorChange
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSave,
+                enabled = collectionName.isNotBlank()
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        modifier = modifier
+    )
+}
+
+/**
+ * Delete Collection Confirmation Dialog
+ */
+@Composable
+private fun DeleteCollectionDialog(
+    collectionName: String,
+    linkCount: Int,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Delete Collection?",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Are you sure you want to delete \"$collectionName\"?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (linkCount > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "The $linkCount ${if (linkCount == 1) "link" else "links"} in this collection will be moved to uncategorized.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        modifier = modifier
+    )
 }
 

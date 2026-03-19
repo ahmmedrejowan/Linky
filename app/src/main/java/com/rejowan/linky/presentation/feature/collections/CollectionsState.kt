@@ -11,7 +11,15 @@ data class CollectionsState(
     val viewMode: ViewMode = ViewMode.LIST,
     val showCreateDialog: Boolean = false,
     val newCollectionName: String = "",
-    val selectedCollectionColor: String? = null
+    val selectedCollectionColor: String? = null,
+    // Edit dialog state
+    val showEditDialog: Boolean = false,
+    val editingCollection: CollectionWithLinkCount? = null,
+    val editCollectionName: String = "",
+    val editCollectionColor: String? = null,
+    // Delete dialog state
+    val showDeleteDialog: Boolean = false,
+    val deletingCollection: CollectionWithLinkCount? = null
 )
 
 /**

@@ -1,7 +1,8 @@
 package com.rejowan.linky.presentation.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,14 +50,17 @@ import kotlin.math.min
  * @param linkCount Number of links in this collection
  * @param linkPreviews List of preview image paths (up to 3)
  * @param onClick Callback when card is clicked
+ * @param onLongPress Callback when card is long pressed
  * @param modifier Modifier for styling
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CollectionCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: () -> Unit = {},
     linkPreviews: List<String?> = emptyList()
 ) {
     val baseColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primary
@@ -67,7 +71,10 @@ fun CollectionCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -244,12 +251,14 @@ private fun PreviewThumbnail(
  * CollectionGridCard - Grid view variant of CollectionCard
  * Displays collection with vibrant gradient banner and modern design
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CollectionGridCard(
     collection: Collection,
     linkCount: Int,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongPress: () -> Unit = {}
 ) {
     val baseColor = collection.color?.toColor() ?: MaterialTheme.colorScheme.primary
     val lighterColor = baseColor.copy(alpha = 0.7f).lighten(0.2f)
@@ -259,7 +268,10 @@ fun CollectionGridCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(

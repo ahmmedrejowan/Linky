@@ -75,6 +75,62 @@ class CollectionsViewModel(
             is CollectionsEvent.OnViewModeChange -> {
                 _state.update { it.copy(viewMode = event.viewMode) }
             }
+            is CollectionsEvent.OnEditCollection -> {
+                _state.update {
+                    it.copy(
+                        showEditDialog = true,
+                        editingCollection = event.collection,
+                        editCollectionName = event.collection.collection.name,
+                        editCollectionColor = event.collection.collection.color
+                    )
+                }
+            }
+            is CollectionsEvent.OnDismissEditDialog -> {
+                _state.update {
+                    it.copy(
+                        showEditDialog = false,
+                        editingCollection = null,
+                        editCollectionName = "",
+                        editCollectionColor = null
+                    )
+                }
+            }
+            is CollectionsEvent.OnEditCollectionNameChange -> {
+                _state.update { it.copy(editCollectionName = event.name) }
+            }
+            is CollectionsEvent.OnEditCollectionColorChange -> {
+                _state.update { it.copy(editCollectionColor = event.color) }
+            }
+            is CollectionsEvent.OnSaveEditedCollection -> {
+                saveEditedCollection()
+            }
+            is CollectionsEvent.OnShowDeleteDialog -> {
+                _state.update {
+                    it.copy(
+                        showDeleteDialog = true,
+                        deletingCollection = event.collection
+                    )
+                }
+            }
+            is CollectionsEvent.OnDismissDeleteDialog -> {
+                _state.update {
+                    it.copy(
+                        showDeleteDialog = false,
+                        deletingCollection = null
+                    )
+                }
+            }
+            is CollectionsEvent.OnConfirmDelete -> {
+                _state.value.deletingCollection?.let { collection ->
+                    deleteCollection(collection.collection.id)
+                    _state.update {
+                        it.copy(
+                            showDeleteDialog = false,
+                            deletingCollection = null
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -184,6 +240,55 @@ class CollectionsViewModel(
         }
     }
 
+    private fun saveEditedCollection() {
+        val currentState = _state.value
+        val editingCollection = currentState.editingCollection ?: return
+
+        // Validate collection name
+        val nameValidation = Validator.validateCollectionName(currentState.editCollectionName.trim())
+        if (nameValidation is ValidationResult.Error) {
+            _state.update { it.copy(error = nameValidation.message) }
+            return
+        }
+
+        // Validate color if provided
+        if (currentState.editCollectionColor != null) {
+            val colorValidation = Validator.validateColor(currentState.editCollectionColor)
+            if (colorValidation is ValidationResult.Error) {
+                _state.update { it.copy(error = colorValidation.message) }
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            val updatedCollection = editingCollection.collection.copy(
+                name = currentState.editCollectionName.trim(),
+                color = currentState.editCollectionColor,
+                updatedAt = System.currentTimeMillis()
+            )
+
+            when (val result = updateCollectionUseCase(updatedCollection)) {
+                is Result.Success -> {
+                    Timber.d("Collection updated successfully")
+                    _state.update {
+                        it.copy(
+                            showEditDialog = false,
+                            editingCollection = null,
+                            editCollectionName = "",
+                            editCollectionColor = null,
+                            error = null
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    val errorMessage = ErrorHandler.getCollectionErrorMessage(result.exception, CollectionOperation.UPDATE)
+                    _state.update { it.copy(error = errorMessage) }
+                }
+                is Result.Loading -> { /* No-op */ }
+            }
+        }
+    }
+
 }
 
 sealed class CollectionsEvent {
@@ -196,6 +301,16 @@ sealed class CollectionsEvent {
     data object OnRefresh : CollectionsEvent()
     data class OnSortTypeChange(val sortType: CollectionSortType) : CollectionsEvent()
     data class OnViewModeChange(val viewMode: com.rejowan.linky.presentation.feature.home.ViewMode) : CollectionsEvent()
+    // Edit events
+    data class OnEditCollection(val collection: com.rejowan.linky.domain.model.CollectionWithLinkCount) : CollectionsEvent()
+    data object OnDismissEditDialog : CollectionsEvent()
+    data class OnEditCollectionNameChange(val name: String) : CollectionsEvent()
+    data class OnEditCollectionColorChange(val color: String?) : CollectionsEvent()
+    data object OnSaveEditedCollection : CollectionsEvent()
+    // Delete confirmation events
+    data class OnShowDeleteDialog(val collection: com.rejowan.linky.domain.model.CollectionWithLinkCount) : CollectionsEvent()
+    data object OnDismissDeleteDialog : CollectionsEvent()
+    data object OnConfirmDelete : CollectionsEvent()
 }
 
 sealed class CollectionsUiEvent {
