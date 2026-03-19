@@ -19,6 +19,8 @@ class ThemePreferences(private val context: Context) {
     private val showBatchImportHowItWorksKey = stringPreferencesKey("show_batch_import_how_it_works")
     private val clipboardCheckingEnabledKey = stringPreferencesKey("clipboard_checking_enabled")
     private val updateCheckIntervalKey = stringPreferencesKey("update_check_interval")
+    private val linkViewModeKey = stringPreferencesKey("link_view_mode")
+    private val collectionViewModeKey = stringPreferencesKey("collection_view_mode")
 
     suspend fun saveTheme(theme: String) {
         context.dataStore.edit { preferences ->
@@ -87,6 +89,32 @@ class ThemePreferences(private val context: Context) {
     fun getUpdateCheckInterval(): Flow<String> {
         return context.dataStore.data.map { preferences ->
             preferences[updateCheckIntervalKey] ?: "WEEKLY" // Default: weekly
+        }
+    }
+
+    // View Mode preferences (separate for links and collections)
+
+    suspend fun setLinkViewMode(viewMode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[linkViewModeKey] = viewMode
+        }
+    }
+
+    fun getLinkViewMode(): Flow<String> {
+        return context.dataStore.data.map { preferences ->
+            preferences[linkViewModeKey] ?: "LIST" // Default: list
+        }
+    }
+
+    suspend fun setCollectionViewMode(viewMode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[collectionViewModeKey] = viewMode
+        }
+    }
+
+    fun getCollectionViewMode(): Flow<String> {
+        return context.dataStore.data.map { preferences ->
+            preferences[collectionViewModeKey] ?: "LIST" // Default: list
         }
     }
 

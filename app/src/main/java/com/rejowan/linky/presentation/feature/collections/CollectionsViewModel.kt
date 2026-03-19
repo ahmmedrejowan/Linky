@@ -2,6 +2,7 @@ package com.rejowan.linky.presentation.feature.collections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.usecase.collection.DeleteCollectionUseCase
 import com.rejowan.linky.domain.usecase.collection.GetCollectionsWithLinkCountUseCase
@@ -26,7 +27,8 @@ class CollectionsViewModel(
     private val getCollectionsWithLinkCountUseCase: GetCollectionsWithLinkCountUseCase,
     private val saveCollectionUseCase: SaveCollectionUseCase,
     private val updateCollectionUseCase: com.rejowan.linky.domain.usecase.collection.UpdateCollectionUseCase,
-    private val deleteCollectionUseCase: DeleteCollectionUseCase
+    private val deleteCollectionUseCase: DeleteCollectionUseCase,
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CollectionsState())
@@ -37,6 +39,7 @@ class CollectionsViewModel(
 
     init {
         loadCollections()
+        observeCollectionViewMode()
     }
 
     fun onEvent(event: CollectionsEvent) {
@@ -74,6 +77,9 @@ class CollectionsViewModel(
             }
             is CollectionsEvent.OnViewModeChange -> {
                 _state.update { it.copy(viewMode = event.viewMode) }
+                viewModelScope.launch {
+                    themePreferences.setCollectionViewMode(event.viewMode.name)
+                }
             }
             is CollectionsEvent.OnEditCollection -> {
                 _state.update {
@@ -286,6 +292,23 @@ class CollectionsViewModel(
                 }
                 is Result.Loading -> { /* No-op */ }
             }
+        }
+    }
+
+    private fun observeCollectionViewMode() {
+        viewModelScope.launch {
+            themePreferences.getCollectionViewMode()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe collection view mode")
+                }
+                .collect { viewModeName ->
+                    val viewMode = try {
+                        com.rejowan.linky.presentation.feature.home.ViewMode.valueOf(viewModeName)
+                    } catch (e: IllegalArgumentException) {
+                        com.rejowan.linky.presentation.feature.home.ViewMode.LIST
+                    }
+                    _state.update { it.copy(viewMode = viewMode) }
+                }
         }
     }
 

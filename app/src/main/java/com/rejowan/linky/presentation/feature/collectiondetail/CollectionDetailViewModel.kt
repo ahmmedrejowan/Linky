@@ -3,6 +3,7 @@ package com.rejowan.linky.presentation.feature.collectiondetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.domain.usecase.collection.DeleteCollectionUseCase
 import com.rejowan.linky.domain.usecase.collection.GetCollectionByIdUseCase
@@ -36,7 +37,8 @@ class CollectionDetailViewModel(
     private val updateLinkUseCase: UpdateLinkUseCase,
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val toggleArchiveUseCase: com.rejowan.linky.domain.usecase.link.ToggleArchiveUseCase,
-    private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase
+    private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CollectionDetailState())
@@ -55,6 +57,8 @@ class CollectionDetailViewModel(
             Timber.e("CollectionDetailViewModel: collectionId is null")
             _state.update { it.copy(error = "Collection not found") }
         }
+
+        observeLinkViewMode()
     }
 
     fun onEvent(event: CollectionDetailEvent) {
@@ -89,6 +93,9 @@ class CollectionDetailViewModel(
             is CollectionDetailEvent.OnViewModeChange -> {
                 Timber.d("onEvent: Changing view mode to ${event.viewMode}")
                 _state.update { it.copy(viewMode = event.viewMode) }
+                viewModelScope.launch {
+                    themePreferences.setLinkViewMode(event.viewMode.name)
+                }
             }
             is CollectionDetailEvent.OnEditClick -> {
                 _state.value.collection?.let { collection ->
@@ -492,6 +499,23 @@ class CollectionDetailViewModel(
             _state.update { it.copy(isSelectionMode = false, selectedLinkIds = emptySet()) }
             val action = if (favorite) "added to favorites" else "removed from favorites"
             _uiEvents.emit(CollectionDetailUiEvent.ShowBulkOperationResult("$successCount links $action"))
+        }
+    }
+
+    private fun observeLinkViewMode() {
+        viewModelScope.launch {
+            themePreferences.getLinkViewMode()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe link view mode")
+                }
+                .collect { viewModeName ->
+                    val viewMode = try {
+                        com.rejowan.linky.presentation.feature.home.ViewMode.valueOf(viewModeName)
+                    } catch (e: IllegalArgumentException) {
+                        com.rejowan.linky.presentation.feature.home.ViewMode.LIST
+                    }
+                    _state.update { it.copy(viewMode = viewMode) }
+                }
         }
     }
 }

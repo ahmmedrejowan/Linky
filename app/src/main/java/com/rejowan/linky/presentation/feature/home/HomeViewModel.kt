@@ -3,6 +3,7 @@ package com.rejowan.linky.presentation.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.net.Uri
+import com.rejowan.linky.data.local.preferences.ThemePreferences
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.repository.CollectionRepository
 import com.rejowan.linky.domain.usecase.link.DeleteLinkUseCase
@@ -40,7 +41,8 @@ class HomeViewModel(
     private val deleteLinkUseCase: DeleteLinkUseCase,
     private val restoreLinkUseCase: com.rejowan.linky.domain.usecase.link.RestoreLinkUseCase,
     private val linkRepository: com.rejowan.linky.domain.repository.LinkRepository,
-    private val collectionRepository: CollectionRepository
+    private val collectionRepository: CollectionRepository,
+    private val themePreferences: ThemePreferences
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -56,6 +58,7 @@ class HomeViewModel(
         observeFilteredLinks()
         observeCounts()
         loadFilterOptions()
+        observeLinkViewMode()
     }
 
     fun onEvent(event: HomeEvent) {
@@ -71,6 +74,9 @@ class HomeViewModel(
             }
             is HomeEvent.OnViewModeChange -> {
                 _state.update { it.copy(viewMode = event.viewMode) }
+                viewModelScope.launch {
+                    themePreferences.setLinkViewMode(event.viewMode.name)
+                }
             }
             is HomeEvent.OnToggleFavorite -> toggleFavorite(event.linkId, event.isFavorite, event.silent)
             is HomeEvent.OnDeleteLink -> deleteLink(event.linkId)
@@ -398,6 +404,23 @@ class HomeViewModel(
                 }
                 .collect { count ->
                     _state.update { it.copy(favoriteLinksCount = count) }
+                }
+        }
+    }
+
+    private fun observeLinkViewMode() {
+        viewModelScope.launch {
+            themePreferences.getLinkViewMode()
+                .catch { e ->
+                    Timber.e(e, "Failed to observe link view mode")
+                }
+                .collect { viewModeName ->
+                    val viewMode = try {
+                        ViewMode.valueOf(viewModeName)
+                    } catch (e: IllegalArgumentException) {
+                        ViewMode.LIST
+                    }
+                    _state.update { it.copy(viewMode = viewMode) }
                 }
         }
     }

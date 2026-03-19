@@ -32,7 +32,8 @@ val viewModelModule = module {
             deleteLinkUseCase = get(),
             restoreLinkUseCase = get(),
             linkRepository = get(),
-            collectionRepository = get()
+            collectionRepository = get(),
+            themePreferences = get()
         )
     }
 
@@ -70,7 +71,8 @@ val viewModelModule = module {
             getCollectionsWithLinkCountUseCase = get(),
             saveCollectionUseCase = get(),
             updateCollectionUseCase = get(),
-            deleteCollectionUseCase = get()
+            deleteCollectionUseCase = get(),
+            themePreferences = get()
         )
     }
 
@@ -84,7 +86,8 @@ val viewModelModule = module {
             updateLinkUseCase = get(),
             deleteLinkUseCase = get(),
             toggleArchiveUseCase = get(),
-            restoreLinkUseCase = get()
+            restoreLinkUseCase = get(),
+            themePreferences = get()
         )
     }
 
