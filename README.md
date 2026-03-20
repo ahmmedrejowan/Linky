@@ -221,15 +221,31 @@ GNU General Public License for more details.
 
 ### v1.0.0 (2026-03-20) - Initial Release
 
-- Link management with automatic preview fetching
-- Collections for organizing links
-- PIN-protected vault with AES-256-GCM encryption
-- Reader mode with offline snapshots
-- Batch import and export functionality
-- Home screen widgets
-- Clean Architecture with MVVM
-- 100% Kotlin, Material 3 design
+**Link Management**
+- Save links with automatic preview fetching (title, description, image)
+- Favorite, archive, and soft-delete links with 30-day trash retention
 
-See [CHANGELOG.md](CHANGELOG.md) for full version history.
+**Collections**
+- Create custom collections with icons and colors for organized browsing
+
+**Vault**
+- PIN-protected encrypted storage (AES-256-GCM) with auto-lock and queue-based import
+
+**Reader Mode & Snapshots**
+- Capture webpage content as offline-readable snapshots with adjustable typography
+
+**Batch Import / Export**
+- Paste multiple URLs for bulk import; export and restore data in `.linky` format
+
+**Utilities**
+- Link health checker, duplicate detection, advanced filtering, and bulk operations
+
+**Widgets & UI**
+- Home screen widget, Material 3 design, dark/light/system themes, grid and list views
+
+**Technical**
+- Clean Architecture + MVVM, Jetpack Compose, Room, Koin, Coroutines, WorkManager
+
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 ---
