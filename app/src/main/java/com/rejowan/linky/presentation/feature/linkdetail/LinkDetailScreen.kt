@@ -213,13 +213,14 @@ fun LinkDetailScreen(
                 }
 
                 state.link != null -> {
+                    val link = requireNotNull(state.link)
                     LinkDetailContent(
-                        link = state.link!!,
+                        link = link,
                         collection = state.collection,
                         snapshots = state.snapshots,
                         isCapturingSnapshot = state.isCapturingSnapshot,
                         onNavigateBack = onNavigateBack,
-                        onEditClick = { onEditClick(state.link!!.id) },
+                        onEditClick = { onEditClick(link.id) },
                         onOpenSnapshot = onOpenSnapshot,
                         onNavigateToCollection = onNavigateToCollection,
                         onToggleFavorite = { viewModel.onEvent(LinkDetailEvent.OnToggleFavorite()) },
