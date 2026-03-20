@@ -101,6 +101,7 @@ private fun RenderMarkdownNode(
             }
 
             // Render text content
+            @Suppress("DEPRECATION")
             ClickableText(
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyLarge.copy(

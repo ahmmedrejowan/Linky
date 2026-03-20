@@ -22,7 +22,7 @@ object HtmlToMarkdownConverter {
         val markdown = StringBuilder()
 
         // Process the body content
-        doc.body()?.let { body ->
+        doc.body().let { body ->
             processNode(body, markdown, 0)
         }
 

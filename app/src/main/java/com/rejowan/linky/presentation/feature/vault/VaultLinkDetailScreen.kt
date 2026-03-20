@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Note
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -92,6 +93,7 @@ fun VaultLinkDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    @Suppress("DEPRECATION")
     val clipboardManager = LocalClipboardManager.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -387,7 +389,7 @@ private fun VaultLinkDetailContent(
             // Notes Card (if present)
             if (!link.notes.isNullOrBlank()) {
                 DetailCard(
-                    icon = Icons.Outlined.Note,
+                    icon = Icons.AutoMirrored.Outlined.Note,
                     title = "Notes",
                     content = link.notes
                 )

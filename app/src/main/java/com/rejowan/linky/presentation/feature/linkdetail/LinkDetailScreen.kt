@@ -1,7 +1,6 @@
 package com.rejowan.linky.presentation.feature.linkdetail
 
 import android.widget.Toast
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -27,36 +26,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Note
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Note
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -64,11 +58,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -92,17 +82,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.rejowan.linky.domain.model.Link
 import com.rejowan.linky.domain.model.Snapshot
 import com.rejowan.linky.presentation.components.LoadingIndicator
-import kotlinx.coroutines.launch
+import com.rejowan.linky.ui.theme.SoftAccents
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.rejowan.linky.ui.theme.SoftAccents
 
 /**
  * Link Detail Screen - Modern redesigned version
@@ -122,7 +113,6 @@ fun LinkDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showMoreMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var showPermanentDeleteDialog by remember { mutableStateOf(false) }
@@ -140,16 +130,16 @@ fun LinkDetailScreen(
             when (event) {
                 is LinkDetailUiEvent.ShowSuccess -> {
                     snackbarHostState.showSnackbar(
-                        message = event.message,
-                        duration = SnackbarDuration.Short
+                        message = event.message, duration = SnackbarDuration.Short
                     )
                 }
+
                 is LinkDetailUiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
-                        message = event.message,
-                        duration = SnackbarDuration.Long
+                        message = event.message, duration = SnackbarDuration.Long
                     )
                 }
+
                 is LinkDetailUiEvent.ShowFavoriteToggled -> {
                     if (event.isFavorite) {
                         val result = snackbarHostState.showSnackbar(
@@ -164,10 +154,15 @@ fun LinkDetailScreen(
                         Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show()
                     }
                 }
+
                 is LinkDetailUiEvent.ShowArchiveToggled -> {
                     val message = if (event.isArchived) "Link archived" else "Link unarchived"
-                    snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = SnackbarDuration.Short
+                    )
                 }
+
                 is LinkDetailUiEvent.ShowLinkTrashed -> {
                     val result = snackbarHostState.showSnackbar(
                         message = "Link moved to trash",
@@ -178,18 +173,19 @@ fun LinkDetailScreen(
                         viewModel.onEvent(LinkDetailEvent.OnRestoreLink(silent = true))
                     }
                 }
+
                 is LinkDetailUiEvent.ShowLinkRestored -> {
                     snackbarHostState.showSnackbar(
-                        message = "Link restored",
-                        duration = SnackbarDuration.Short
+                        message = "Link restored", duration = SnackbarDuration.Short
                     )
                 }
+
                 is LinkDetailUiEvent.ShowLinkDeleted -> {
                     snackbarHostState.showSnackbar(
-                        message = "Link permanently deleted",
-                        duration = SnackbarDuration.Short
+                        message = "Link permanently deleted", duration = SnackbarDuration.Short
                     )
                 }
+
                 is LinkDetailUiEvent.NavigateToSnapshot -> {
                     onOpenSnapshot(event.snapshotId)
                 }
@@ -250,8 +246,7 @@ fun LinkDetailScreen(
                 viewModel.onEvent(LinkDetailEvent.OnDeleteLink())
                 showDeleteDialog = false
             },
-            onDismiss = { showDeleteDialog = false }
-        )
+            onDismiss = { showDeleteDialog = false })
     }
 
     // Restore confirmation bottom sheet
@@ -267,8 +262,7 @@ fun LinkDetailScreen(
                 viewModel.onEvent(LinkDetailEvent.OnRestoreLink())
                 showRestoreDialog = false
             },
-            onDismiss = { showRestoreDialog = false }
-        )
+            onDismiss = { showRestoreDialog = false })
     }
 
     // Permanent delete bottom sheet
@@ -284,8 +278,7 @@ fun LinkDetailScreen(
                 viewModel.onEvent(LinkDetailEvent.OnPermanentlyDeleteLink())
                 showPermanentDeleteDialog = false
             },
-            onDismiss = { showPermanentDeleteDialog = false }
-        )
+            onDismiss = { showPermanentDeleteDialog = false })
     }
 }
 
@@ -310,9 +303,10 @@ private fun LinkDetailContent(
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
+
+    @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    rememberCoroutineScope()
     val scrollState = rememberScrollState()
     var showFullScreenImage by remember { mutableStateOf(false) }
     val hasImage = link.previewImagePath != null || link.previewUrl != null
@@ -328,8 +322,7 @@ private fun LinkDetailContent(
             onNavigateBack = onNavigateBack,
             onEditClick = onEditClick,
             onToggleFavorite = onToggleFavorite,
-            onImageClick = { if (hasImage) showFullScreenImage = true }
-        )
+            onImageClick = { if (hasImage) showFullScreenImage = true })
 
         // Content Section
         Column(
@@ -372,35 +365,34 @@ private fun LinkDetailContent(
             // Quick Actions Row
             if (!link.isDeleted) {
                 QuickActionsRow(
-                    onOpenInBrowser = { uriHandler.openUri(link.url) },
-                    onShare = {
-                        val shareIntent = android.content.Intent().apply {
-                            action = android.content.Intent.ACTION_SEND
-                            putExtra(android.content.Intent.EXTRA_TEXT, link.url)
-                            type = "text/plain"
-                        }
-                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
-                    },
-                    onCopy = {
-                        clipboardManager.setText(AnnotatedString(link.url))
-                        Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
-                    },
-                    onDelete = onDeleteLink
+                    onOpenInBrowser = { uriHandler.openUri(link.url) }, onShare = {
+                    val shareIntent = android.content.Intent().apply {
+                        action = android.content.Intent.ACTION_SEND
+                        putExtra(android.content.Intent.EXTRA_TEXT, link.url)
+                        type = "text/plain"
+                    }
+                    context.startActivity(
+                        android.content.Intent.createChooser(
+                            shareIntent,
+                            "Share"
+                        )
+                    )
+                }, onCopy = {
+                    clipboardManager.setText(AnnotatedString(link.url))
+                    Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                }, onDelete = onDeleteLink
                 )
 
                 // Reader Mode Button
                 ReaderModeButton(
-                    isLoading = isCapturingSnapshot,
-                    onClick = onOpenReaderMode
+                    isLoading = isCapturingSnapshot, onClick = onOpenReaderMode
                 )
             }
 
             // Collection Card
             collection?.let {
                 CollectionCard(
-                    collection = it,
-                    onClick = { onNavigateToCollection(it.id) }
-                )
+                    collection = it, onClick = { onNavigateToCollection(it.id) })
             }
 
             // Description Section
@@ -416,7 +408,7 @@ private fun LinkDetailContent(
             // Note Section
             if (!link.note.isNullOrBlank()) {
                 InfoSection(
-                    icon = Icons.Outlined.Note,
+                    icon = Icons.AutoMirrored.Outlined.Note,
                     title = "Note",
                     content = link.note,
                     accentColor = SoftAccents.Teal
@@ -425,8 +417,7 @@ private fun LinkDetailContent(
 
             // Timestamps Card
             TimestampsCard(
-                createdAt = link.createdAt,
-                updatedAt = link.updatedAt
+                createdAt = link.createdAt, updatedAt = link.updatedAt
             )
 
             // Snapshots Section
@@ -447,8 +438,7 @@ private fun LinkDetailContent(
     if (showFullScreenImage && hasImage) {
         FullScreenImageViewer(
             imageUrl = link.previewImagePath ?: link.previewUrl ?: "",
-            onDismiss = { showFullScreenImage = false }
-        )
+            onDismiss = { showFullScreenImage = false })
     }
 }
 
@@ -491,8 +481,7 @@ private fun HeroSection(
                                 SoftAccents.Blue.copy(alpha = 0.3f)
                             )
                         )
-                    ),
-                contentAlignment = Alignment.Center
+                    ), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Image,
@@ -514,9 +503,7 @@ private fun HeroSection(
                             Color.Black.copy(alpha = 0.1f),
                             Color.Black.copy(alpha = 0.4f),
                             Color.Black.copy(alpha = 0.85f)
-                        ),
-                        startY = 0f,
-                        endY = Float.POSITIVE_INFINITY
+                        ), startY = 0f, endY = Float.POSITIVE_INFINITY
                     )
                 )
         )
@@ -532,12 +519,10 @@ private fun HeroSection(
         ) {
             // Back Button
             IconButton(
-                onClick = onNavigateBack,
-                modifier = Modifier
+                onClick = onNavigateBack, modifier = Modifier
                     .size(40.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.3f),
-                        shape = CircleShape
+                        color = Color.Black.copy(alpha = 0.3f), shape = CircleShape
                     )
             ) {
                 Icon(
@@ -552,12 +537,10 @@ private fun HeroSection(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Edit Button
                     IconButton(
-                        onClick = onEditClick,
-                        modifier = Modifier
+                        onClick = onEditClick, modifier = Modifier
                             .size(40.dp)
                             .background(
-                                color = Color.Black.copy(alpha = 0.3f),
-                                shape = CircleShape
+                                color = Color.Black.copy(alpha = 0.3f), shape = CircleShape
                             )
                     ) {
                         Icon(
@@ -569,8 +552,7 @@ private fun HeroSection(
 
                     // Favorite Button
                     FavoriteButton(
-                        isFavorite = link.isFavorite,
-                        onClick = onToggleFavorite
+                        isFavorite = link.isFavorite, onClick = onToggleFavorite
                     )
                 }
             }
@@ -597,27 +579,22 @@ private fun HeroSection(
 
 @Composable
 private fun FavoriteButton(
-    isFavorite: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    isFavorite: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isFavorite) 1.1f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "favorite scale"
+        targetValue = if (isFavorite) 1.1f else 1f, animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow
+        ), label = "favorite scale"
     )
 
     IconButton(
-        onClick = onClick,
-        modifier = modifier
+        onClick = onClick, modifier = modifier
             .size(40.dp)
             .scale(scale)
             .background(
-                color = if (isFavorite) SoftAccents.Pink.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.3f),
-                shape = CircleShape
+                color = if (isFavorite) SoftAccents.Pink.copy(alpha = 0.9f) else Color.Black.copy(
+                    alpha = 0.3f
+                ), shape = CircleShape
             )
     ) {
         Icon(
@@ -637,8 +614,7 @@ private fun QuickActionsRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         QuickActionButton(
             icon = Icons.Filled.OpenInBrowser,
@@ -647,10 +623,7 @@ private fun QuickActionsRow(
             onClick = onOpenInBrowser
         )
         QuickActionButton(
-            icon = Icons.Filled.Share,
-            label = "Share",
-            color = SoftAccents.Teal,
-            onClick = onShare
+            icon = Icons.Filled.Share, label = "Share", color = SoftAccents.Teal, onClick = onShare
         )
         QuickActionButton(
             icon = Icons.Filled.ContentCopy,
@@ -679,17 +652,14 @@ private fun QuickActionButton(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
                 .size(48.dp)
                 .background(
-                    color = color.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(14.dp)
-                ),
-            contentAlignment = Alignment.Center
+                    color = color.copy(alpha = 0.12f), shape = RoundedCornerShape(14.dp)
+                ), contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
@@ -709,9 +679,7 @@ private fun QuickActionButton(
 
 @Composable
 private fun ReaderModeButton(
-    isLoading: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    isLoading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
@@ -729,9 +697,7 @@ private fun ReaderModeButton(
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = SoftAccents.Teal
+                    modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = SoftAccents.Teal
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
@@ -774,8 +740,7 @@ private fun TrashStatusBanner(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -887,8 +852,7 @@ private fun CollectionCard(
                     .background(
                         color = collectionColor.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(12.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    ), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Folder,
@@ -930,8 +894,7 @@ private fun InfoSection(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -957,8 +920,7 @@ private fun InfoSection(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = if (isExpanded) Int.MAX_VALUE else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable { isExpanded = !isExpanded }
-            )
+                modifier = Modifier.clickable { isExpanded = !isExpanded })
 
             if (content.length > 200) {
                 Text(
@@ -966,8 +928,7 @@ private fun InfoSection(
                     style = MaterialTheme.typography.labelMedium,
                     color = accentColor,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { isExpanded = !isExpanded }
-                )
+                    modifier = Modifier.clickable { isExpanded = !isExpanded })
             }
         }
     }
@@ -975,9 +936,7 @@ private fun InfoSection(
 
 @Composable
 private fun TimestampsCard(
-    createdAt: Long,
-    updatedAt: Long,
-    modifier: Modifier = Modifier
+    createdAt: Long, updatedAt: Long, modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -985,20 +944,15 @@ private fun TimestampsCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             TimestampRow(
-                icon = Icons.Outlined.CalendarToday,
-                label = "Created",
-                timestamp = createdAt
+                icon = Icons.Outlined.CalendarToday, label = "Created", timestamp = createdAt
             )
             if (updatedAt != createdAt) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 TimestampRow(
-                    icon = Icons.Outlined.AccessTime,
-                    label = "Updated",
-                    timestamp = updatedAt
+                    icon = Icons.Outlined.AccessTime, label = "Updated", timestamp = updatedAt
                 )
             }
         }
@@ -1007,10 +961,7 @@ private fun TimestampsCard(
 
 @Composable
 private fun TimestampRow(
-    icon: ImageVector,
-    label: String,
-    timestamp: Long,
-    modifier: Modifier = Modifier
+    icon: ImageVector, label: String, timestamp: Long, modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -1053,8 +1004,7 @@ private fun SnapshotsSection(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Header
         Row(
@@ -1126,8 +1076,7 @@ private fun SnapshotsSection(
                 SnapshotCard(
                     snapshot = snapshot,
                     onClick = { onOpenSnapshot(snapshot.id) },
-                    onDeleteClick = { onDeleteSnapshot(snapshot.id) }
-                )
+                    onDeleteClick = { onDeleteSnapshot(snapshot.id) })
             }
         }
     }
@@ -1149,8 +1098,7 @@ private fun SnapshotCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1197,8 +1145,7 @@ private fun SnapshotCard(
             }
 
             IconButton(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.size(36.dp)
+                onClick = { showDeleteDialog = true }, modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Delete,
@@ -1222,8 +1169,7 @@ private fun SnapshotCard(
                 onDeleteClick()
                 showDeleteDialog = false
             },
-            onDismiss = { showDeleteDialog = false }
-        )
+            onDismiss = { showDeleteDialog = false })
     }
 }
 
@@ -1258,10 +1204,8 @@ private fun ConfirmationBottomSheet(
                 modifier = Modifier
                     .size(72.dp)
                     .background(
-                        color = iconColor.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(20.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                        color = iconColor.copy(alpha = 0.12f), shape = RoundedCornerShape(20.dp)
+                    ), contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
@@ -1339,23 +1283,18 @@ private fun ConfirmationBottomSheet(
 
 @Composable
 private fun FullScreenImageViewer(
-    imageUrl: String,
-    onDismiss: () -> Unit
+    imageUrl: String, onDismiss: () -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true,
-            usePlatformDefaultWidth = false
+        onDismissRequest = onDismiss, properties = DialogProperties(
+            dismissOnBackPress = true, dismissOnClickOutside = true, usePlatformDefaultWidth = false
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .clickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center
+                .clickable(onClick = onDismiss), contentAlignment = Alignment.Center
         ) {
             // Image
             AsyncImage(
@@ -1367,19 +1306,15 @@ private fun FullScreenImageViewer(
 
             // Close button
             IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
+                onClick = onDismiss, modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(
-                        top = WindowInsets.statusBars
-                            .asPaddingValues()
-                            .calculateTopPadding() + 8.dp,
-                        end = 8.dp
+                        top = WindowInsets.statusBars.asPaddingValues()
+                            .calculateTopPadding() + 8.dp, end = 8.dp
                     )
                     .size(44.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        shape = CircleShape
+                        color = Color.Black.copy(alpha = 0.5f), shape = CircleShape
                     )
             ) {
                 Icon(
