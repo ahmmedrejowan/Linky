@@ -489,13 +489,25 @@ class HomeViewModel(
 
     private fun sendToVault(link: Link) {
         viewModelScope.launch {
-            vaultRepository.moveToVault(link).fold(
+            // Queue the link for vault (will be encrypted on next unlock)
+            vaultRepository.queueForVault(link).fold(
                 onSuccess = {
-                    Timber.d("Link moved to vault: ${link.id}")
-                    _uiEvents.emit(HomeUiEvent.ShowLinkMovedToVault)
+                    Timber.d("Link queued for vault: ${link.id}")
+                    // Delete the original link (hard delete)
+                    when (val deleteResult = deleteLinkUseCase(link.id, softDelete = false)) {
+                        is Result.Success -> {
+                            Timber.d("Original link deleted: ${link.id}")
+                            _uiEvents.emit(HomeUiEvent.ShowLinkMovedToVault)
+                        }
+                        is Result.Error -> {
+                            Timber.e(deleteResult.exception, "Failed to delete original link after vault queue")
+                            _uiEvents.emit(HomeUiEvent.ShowError("Queued for vault but failed to remove original"))
+                        }
+                        is Result.Loading -> { /* No-op */ }
+                    }
                 },
                 onFailure = { error ->
-                    Timber.e(error, "Failed to move link to vault")
+                    Timber.e(error, "Failed to queue link for vault: ${error.message}")
                     _uiEvents.emit(HomeUiEvent.ShowError(error.message ?: "Failed to move link to vault"))
                 }
             )

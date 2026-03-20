@@ -15,4 +15,5 @@ val databaseModule = module {
     single { get<AppDatabase>().snapshotDao() }
     single { get<AppDatabase>().configDao() }
     single { get<AppDatabase>().vaultLinkDao() }
+    single { get<AppDatabase>().pendingVaultLinkDao() }
 }

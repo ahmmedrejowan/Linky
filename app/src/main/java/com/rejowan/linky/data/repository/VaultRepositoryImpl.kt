@@ -1,7 +1,9 @@
 package com.rejowan.linky.data.repository
 
 import android.content.Context
+import com.rejowan.linky.data.local.database.dao.PendingVaultLinkDao
 import com.rejowan.linky.data.local.database.dao.VaultLinkDao
+import com.rejowan.linky.data.local.database.entity.PendingVaultLinkEntity
 import com.rejowan.linky.data.mapper.VaultLinkMapper
 import com.rejowan.linky.data.security.AutoLockTimeout
 import com.rejowan.linky.data.security.VaultCryptoManager
@@ -25,6 +27,7 @@ import timber.log.Timber
 class VaultRepositoryImpl(
     private val context: Context,
     private val vaultLinkDao: VaultLinkDao,
+    private val pendingVaultLinkDao: PendingVaultLinkDao,
     private val cryptoManager: VaultCryptoManager,
     private val sessionManager: VaultSessionManager
 ) : VaultRepository {
@@ -50,10 +53,12 @@ class VaultRepositoryImpl(
 
     private suspend fun cleanupOrphanedVaultLinks() {
         if (!cryptoManager.isPinSetup()) {
-            val count = vaultLinkDao.getVaultLinkCountSync()
-            if (count > 0) {
-                Timber.w("Clearing $count orphaned vault links after key reset")
+            val vaultCount = vaultLinkDao.getVaultLinkCountSync()
+            val pendingCount = pendingVaultLinkDao.getPendingLinkCount()
+            if (vaultCount > 0 || pendingCount > 0) {
+                Timber.w("Clearing $vaultCount orphaned vault links and $pendingCount pending links after key reset")
                 vaultLinkDao.deleteAllVaultLinks()
+                pendingVaultLinkDao.deleteAllPendingLinks()
             }
         }
     }
@@ -186,11 +191,79 @@ class VaultRepositoryImpl(
         return vaultLinkDao.getVaultLinkCount()
     }
 
+    // ============ Queue Operations ============
+
+    override suspend fun queueForVault(link: Link): Result<Unit> {
+        return try {
+            val pendingEntity = PendingVaultLinkEntity(
+                id = link.id,
+                url = link.url,
+                title = link.title,
+                description = link.description,
+                notes = link.note,
+                createdAt = link.createdAt
+            )
+            pendingVaultLinkDao.insertPendingLink(pendingEntity)
+            Timber.d("Link queued for vault: ${link.id}")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to queue link for vault")
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun processPendingVaultLinks(): Int {
+        if (!sessionManager.isUnlocked.value) {
+            Timber.w("Cannot process pending vault links - vault is locked")
+            return 0
+        }
+
+        val pendingLinks = pendingVaultLinkDao.getAllPendingLinks()
+        if (pendingLinks.isEmpty()) {
+            return 0
+        }
+
+        Timber.d("Processing ${pendingLinks.size} pending vault links")
+        var processedCount = 0
+
+        pendingLinks.forEach { pending ->
+            try {
+                // Create VaultLink from pending data
+                val vaultLink = VaultLink(
+                    id = pending.id,
+                    url = pending.url,
+                    title = pending.title,
+                    description = pending.description,
+                    notes = pending.notes,
+                    createdAt = pending.createdAt,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                // Encrypt and insert
+                val entity = VaultLinkMapper.toEntity(vaultLink, sessionManager)
+                if (entity != null) {
+                    vaultLinkDao.insertVaultLink(entity)
+                    pendingVaultLinkDao.deletePendingLink(pending.id)
+                    processedCount++
+                    Timber.d("Processed pending vault link: ${pending.id}")
+                } else {
+                    Timber.e("Failed to encrypt pending vault link: ${pending.id}")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error processing pending vault link: ${pending.id}")
+            }
+        }
+
+        Timber.d("Processed $processedCount/${pendingLinks.size} pending vault links")
+        return processedCount
+    }
+
     // ============ Vault Management ============
 
     override suspend fun clearVault(): Result<Unit> {
         return try {
             vaultLinkDao.deleteAllVaultLinks()
+            pendingVaultLinkDao.deleteAllPendingLinks()
             cryptoManager.clearVault()
             sessionManager.lock()
             Result.success(Unit)

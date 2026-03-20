@@ -74,10 +74,33 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 }
 
 /**
+ * Migration 3 to 4: Add pending_vault_links table
+ * Date: March 2026
+ * Description: Adds staging table for links queued to be moved to vault.
+ *              Links are stored unencrypted here until vault is unlocked.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS pending_vault_links (
+                id TEXT NOT NULL PRIMARY KEY,
+                url TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                notes TEXT,
+                createdAt INTEGER NOT NULL,
+                queuedAt INTEGER NOT NULL
+            )
+        """.trimIndent())
+    }
+}
+
+/**
  * List of all migrations to be applied
  * Add new migrations to this list as they are created
  */
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_1_2,
-    MIGRATION_2_3
+    MIGRATION_2_3,
+    MIGRATION_3_4
 )

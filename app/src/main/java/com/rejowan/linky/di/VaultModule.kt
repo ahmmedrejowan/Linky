@@ -27,6 +27,7 @@ val vaultModule = module {
         VaultRepositoryImpl(
             context = androidContext(),
             vaultLinkDao = get(),
+            pendingVaultLinkDao = get(),
             cryptoManager = get(),
             sessionManager = get()
         )

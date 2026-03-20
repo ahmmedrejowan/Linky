@@ -220,10 +220,7 @@ fun HomeScreen(
                     )
                 }
                 HomeUiEvent.ShowLinkMovedToVault -> {
-                    snackbarHostState.showSnackbar(
-                        message = "Link moved to Vault",
-                        duration = SnackbarDuration.Short
-                    )
+                    Toast.makeText(context, "Link moved to Vault", Toast.LENGTH_SHORT).show()
                 }
             }
         }

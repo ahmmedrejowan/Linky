@@ -103,11 +103,27 @@ interface VaultRepository {
     suspend fun addVaultLink(vaultLink: VaultLink): Result<Unit>
 
     /**
-     * Move an existing link to the vault
+     * Move an existing link to the vault (requires vault to be unlocked)
      * @param link The regular link to move
      * @return Result containing the new VaultLink or error
      */
     suspend fun moveToVault(link: Link): Result<VaultLink>
+
+    /**
+     * Queue a link to be moved to vault when vault is next unlocked.
+     * The link is stored unencrypted in a staging table and will be
+     * encrypted and moved to vault on next unlock.
+     * @param link The link to queue for vault
+     * @return Result indicating success or failure
+     */
+    suspend fun queueForVault(link: Link): Result<Unit>
+
+    /**
+     * Process any pending vault links (called after unlock)
+     * Encrypts and moves all queued links to the vault
+     * @return Number of links processed
+     */
+    suspend fun processPendingVaultLinks(): Int
 
     /**
      * Update a vault link
