@@ -68,7 +68,8 @@ class SearchViewModelTest {
         searchCollectionsUseCase = mockk()
         toggleFavoriteUseCase = mockk()
 
-        // Default empty results for collections
+        // Default empty results to prevent uncaught exceptions between tests
+        every { searchLinksUseCase(any()) } returns flowOf(emptyList())
         every { searchCollectionsUseCase(any()) } returns flowOf(emptyList())
     }
 
