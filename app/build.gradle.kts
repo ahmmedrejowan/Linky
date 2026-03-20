@@ -1,9 +1,19 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.kotlin.serialization)
     jacoco
+}
+
+// Load signing config from keystore.properties or environment variables
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -20,13 +30,44 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // Try keystore.properties first, then environment variables
+            storeFile = file(
+                keystoreProperties.getProperty("storeFile")
+                    ?: System.getenv("KEYSTORE_FILE")
+                    ?: "release.keystore"
+            )
+            storePassword = keystoreProperties.getProperty("storePassword")
+                ?: System.getenv("KEYSTORE_PASSWORD")
+                ?: ""
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+                ?: System.getenv("KEY_ALIAS")
+                ?: ""
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+                ?: System.getenv("KEY_PASSWORD")
+                ?: ""
+        }
+    }
+
     buildTypes {
+        debug {
+            // Debug builds enable logging
+            buildConfigField("boolean", "ENABLE_LOGGING", "true")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Disable logging in release
+            buildConfigField("boolean", "ENABLE_LOGGING", "false")
+            // Use release signing if configured
+            if (keystorePropertiesFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
