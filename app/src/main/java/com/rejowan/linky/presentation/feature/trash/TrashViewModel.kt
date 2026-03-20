@@ -42,6 +42,7 @@ class TrashViewModel(
             is TrashEvent.OnPermanentlyDeleteLink -> permanentlyDeleteLink(event.linkId, event.silent)
             is TrashEvent.OnUndoDelete -> undoDelete(event.linkId)
             is TrashEvent.OnEmptyTrash -> emptyTrash()
+            is TrashEvent.OnRestoreAll -> restoreAll()
         }
     }
 
@@ -140,6 +141,38 @@ class TrashViewModel(
             }
         }
     }
+
+    private fun restoreAll() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+
+            val trashedLinks = _state.value.trashedLinks
+            var successCount = 0
+            var hasError = false
+
+            trashedLinks.forEach { link ->
+                when (val result = restoreLinkUseCase(link.id)) {
+                    is Result.Success -> {
+                        successCount++
+                        Timber.d("Restored link: ${link.id}")
+                    }
+                    is Result.Error -> {
+                        hasError = true
+                        Timber.e(result.exception, "Failed to restore link: ${link.id}")
+                    }
+                    is Result.Loading -> { /* No-op */ }
+                }
+            }
+
+            _state.update { it.copy(isLoading = false) }
+
+            if (hasError) {
+                _uiEvents.emit(TrashUiEvent.ShowError("Some items could not be restored"))
+            } else {
+                _uiEvents.emit(TrashUiEvent.ShowAllRestored(successCount))
+            }
+        }
+    }
 }
 
 sealed class TrashEvent {
@@ -148,10 +181,12 @@ sealed class TrashEvent {
     data class OnPermanentlyDeleteLink(val linkId: String, val silent: Boolean = false) : TrashEvent()
     data class OnUndoDelete(val linkId: String) : TrashEvent()
     data object OnEmptyTrash : TrashEvent()
+    data object OnRestoreAll : TrashEvent()
 }
 
 sealed class TrashUiEvent {
     data class ShowError(val message: String) : TrashUiEvent()
     data class ShowLinkRestored(val linkId: String) : TrashUiEvent()
     data class ShowLinkDeleted(val linkId: String) : TrashUiEvent()
+    data class ShowAllRestored(val count: Int) : TrashUiEvent()
 }
