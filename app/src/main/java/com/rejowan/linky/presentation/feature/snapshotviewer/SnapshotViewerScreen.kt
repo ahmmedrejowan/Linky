@@ -140,9 +140,11 @@ fun SnapshotViewerScreen(
                     )
                 }
                 state.snapshot != null && state.content != null -> {
+                    val snapshot = requireNotNull(state.snapshot)
+                    val content = requireNotNull(state.content)
                     SnapshotContent(
-                        snapshot = state.snapshot!!,
-                        content = state.content!!,
+                        snapshot = snapshot,
+                        content = content,
                         fontSize = state.fontSize
                     )
                 }

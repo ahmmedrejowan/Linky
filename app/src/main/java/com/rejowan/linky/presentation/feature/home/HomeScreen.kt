@@ -464,11 +464,11 @@ fun HomeScreen(
     }
 
     // Send to Vault Confirmation Dialog
-    if (linkToSendToVault != null) {
+    linkToSendToVault?.let { link ->
         SendToVaultConfirmationSheet(
-            link = linkToSendToVault!!,
+            link = link,
             onConfirm = {
-                viewModel.onEvent(HomeEvent.OnSendToVault(linkToSendToVault!!))
+                viewModel.onEvent(HomeEvent.OnSendToVault(link))
                 linkToSendToVault = null
             },
             onDismiss = { linkToSendToVault = null }

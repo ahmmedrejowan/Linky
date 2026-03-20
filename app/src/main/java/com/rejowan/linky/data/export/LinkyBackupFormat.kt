@@ -149,22 +149,20 @@ object LinkyBackupFormat {
             }
         }
 
-        if (manifest == null) {
-            throw IllegalStateException("Invalid .linky file: missing manifest")
-        }
-        if (dataJson == null) {
-            throw IllegalStateException("Invalid .linky file: missing data")
-        }
+        val validManifest = manifest
+            ?: throw IllegalStateException("Invalid .linky file: missing manifest")
+        val validDataJson = dataJson
+            ?: throw IllegalStateException("Invalid .linky file: missing data")
 
         // Verify checksum
-        val actualChecksum = calculateChecksum(dataJson!!.toByteArray())
-        if (actualChecksum != manifest!!.dataChecksum) {
+        val actualChecksum = calculateChecksum(validDataJson.toByteArray())
+        if (actualChecksum != validManifest.dataChecksum) {
             Timber.w("Checksum mismatch - file may be corrupted")
         }
 
         onProgress(80)
 
-        val exportData = json.decodeFromString<ExportData>(dataJson!!)
+        val exportData = json.decodeFromString<ExportData>(validDataJson)
 
         onProgress(100)
 

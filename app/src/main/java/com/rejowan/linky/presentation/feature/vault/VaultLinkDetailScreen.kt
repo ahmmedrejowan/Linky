@@ -142,25 +142,26 @@ fun VaultLinkDetailScreen(
             }
 
             state.link != null -> {
+                val link = requireNotNull(state.link)
                 VaultLinkDetailContent(
-                    link = state.link!!,
+                    link = link,
                     onBackClick = onNavigateBack,
-                    onEditClick = { onEditClick(state.link!!.id) },
+                    onEditClick = { onEditClick(link.id) },
                     onFavoriteClick = { viewModel.onEvent(VaultLinkDetailEvent.OnToggleFavorite) },
                     onDeleteClick = { showDeleteDialog = true },
                     onOpenClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.link!!.url))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link.url))
                         context.startActivity(intent)
                     },
                     onCopyClick = {
-                        clipboardManager.setText(AnnotatedString(state.link!!.url))
+                        clipboardManager.setText(AnnotatedString(link.url))
                         Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
                     },
                     onShareClick = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, state.link!!.url)
-                            putExtra(Intent.EXTRA_SUBJECT, state.link!!.title)
+                            putExtra(Intent.EXTRA_TEXT, link.url)
+                            putExtra(Intent.EXTRA_SUBJECT, link.title)
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share link"))
                     },

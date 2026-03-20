@@ -522,7 +522,7 @@ private fun ChangePinSheet(
             )
 
             // Error message
-            if (error != null) {
+            error?.let { errorMessage ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
@@ -540,7 +540,7 @@ private fun ChangePinSheet(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = error!!,
+                        text = errorMessage,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )

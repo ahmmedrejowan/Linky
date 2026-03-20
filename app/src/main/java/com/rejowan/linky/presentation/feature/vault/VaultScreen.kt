@@ -304,11 +304,12 @@ fun VaultScreen(
     }
 
     // Delete Confirmation Dialog
-    if (state.showDeleteConfirmDialog && state.linkToDelete != null) {
+    val linkToDelete = state.linkToDelete
+    if (state.showDeleteConfirmDialog && linkToDelete != null) {
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(VaultEvent.OnDismissDeleteConfirm) },
             title = { Text("Delete Link") },
-            text = { Text("Are you sure you want to delete \"${state.linkToDelete!!.title}\" from the vault?") },
+            text = { Text("Are you sure you want to delete \"${linkToDelete.title}\" from the vault?") },
             confirmButton = {
                 Button(onClick = { viewModel.onEvent(VaultEvent.OnConfirmDelete) }) {
                     Text("Delete")

@@ -122,10 +122,10 @@ fun VaultSetupScreen(
                 )
 
                 // Error message
-                if (state.error != null) {
+                state.error?.let { error ->
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = state.error!!,
+                        text = error,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
