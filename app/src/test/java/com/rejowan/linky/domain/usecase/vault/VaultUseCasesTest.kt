@@ -106,6 +106,7 @@ class VaultUseCasesTest {
     fun `unlockVault returns true when pin is correct`() = runTest {
         val pin = "1234"
         coEvery { vaultRepository.unlock(pin) } returns true
+        coEvery { vaultRepository.processPendingVaultLinks() } returns 0
 
         val result = unlockVaultUseCase(pin)
 

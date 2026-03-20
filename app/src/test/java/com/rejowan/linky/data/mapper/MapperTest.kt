@@ -151,7 +151,6 @@ class MapperTest {
             name = "Work",
             color = "#FF5733",
             icon = "work",
-            isFavorite = true,
             sortOrder = 5,
             createdAt = 1000L,
             updatedAt = 2000L
@@ -163,7 +162,6 @@ class MapperTest {
         assertEquals(collection.name, entity.name)
         assertEquals(collection.color, entity.color)
         assertEquals(collection.icon, entity.icon)
-        assertEquals(collection.isFavorite, entity.isFavorite)
         assertEquals(collection.sortOrder, entity.sortOrder)
         assertEquals(collection.createdAt, entity.createdAt)
         assertEquals(collection.updatedAt, entity.updatedAt)
@@ -178,7 +176,6 @@ class MapperTest {
             name = "Work",
             color = "#FF5733",
             icon = "work",
-            isFavorite = true,
             sortOrder = 5,
             createdAt = 1000L,
             updatedAt = 2000L,
@@ -192,7 +189,6 @@ class MapperTest {
         assertEquals(entity.name, collection.name)
         assertEquals(entity.color, collection.color)
         assertEquals(entity.icon, collection.icon)
-        assertEquals(entity.isFavorite, collection.isFavorite)
         assertEquals(entity.sortOrder, collection.sortOrder)
         assertEquals(entity.createdAt, collection.createdAt)
         assertEquals(entity.updatedAt, collection.updatedAt)

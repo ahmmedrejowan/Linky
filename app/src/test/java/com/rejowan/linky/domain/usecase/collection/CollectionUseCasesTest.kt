@@ -31,7 +31,6 @@ class CollectionUseCasesTest {
         name = "Work Links",
         color = "#FF5733",
         icon = "work",
-        isFavorite = false,
         sortOrder = 0,
         createdAt = 1000L,
         updatedAt = 2000L
@@ -42,7 +41,6 @@ class CollectionUseCasesTest {
         name = "Personal Links",
         color = "#3366FF",
         icon = "home",
-        isFavorite = true,
         sortOrder = 1,
         createdAt = 3000L,
         updatedAt = 4000L

@@ -3,6 +3,7 @@ package com.rejowan.linky.data.repository
 import app.cash.turbine.test
 import com.rejowan.linky.data.local.database.dao.CollectionDao
 import com.rejowan.linky.data.local.database.dao.CollectionWithCount
+import com.rejowan.linky.data.local.database.dao.CollectionWithCountAndPreviews
 import com.rejowan.linky.data.local.database.entity.CollectionEntity
 import com.rejowan.linky.domain.model.Collection
 import com.rejowan.linky.util.Result
@@ -39,7 +40,6 @@ class CollectionRepositoryImplTest {
         name = "Work Links",
         color = "#FF5733",
         icon = "work",
-        isFavorite = false,
         sortOrder = 0,
         createdAt = 1000L,
         updatedAt = 2000L
@@ -50,7 +50,6 @@ class CollectionRepositoryImplTest {
         name = "Work Links",
         color = "#FF5733",
         icon = "work",
-        isFavorite = false,
         sortOrder = 0,
         createdAt = 1000L,
         updatedAt = 2000L
@@ -141,12 +140,12 @@ class CollectionRepositoryImplTest {
 
     @Test
     fun `getCollectionsWithLinkCount returns collections with counts`() = runTest {
-        val collectionWithCount = CollectionWithCount(
+        val collectionWithCountAndPreviews = CollectionWithCountAndPreviews(
             collection = testCollectionEntity,
-            linkCount = 5
+            linkCount = 5,
+            previewImages = "preview1.png|preview2.png"
         )
-        every { collectionDao.getCollectionsWithCount() } returns flowOf(listOf(collectionWithCount))
-        coEvery { collectionDao.getPreviewsForCollection(any()) } returns emptyList()
+        every { collectionDao.getCollectionsWithCountAndPreviews() } returns flowOf(listOf(collectionWithCountAndPreviews))
 
         repository.getCollectionsWithLinkCount().test {
             val result = awaitItem()

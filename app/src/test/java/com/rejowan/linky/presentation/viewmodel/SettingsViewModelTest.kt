@@ -70,6 +70,7 @@ class SettingsViewModelTest {
         coEvery { snapshotRepository.getTotalStorageUsed() } returns 1024L * 1024L
         coEvery { fileStorageManager.getTotalStorageUsed() } returns 1024L * 1024L
         every { themePreferences.getTheme() } returns flowOf("System")
+        every { themePreferences.getUpdateCheckInterval() } returns flowOf("WEEKLY")
         every { linkRepository.getTrashedLinks() } returns flowOf(emptyList())
     }
 
