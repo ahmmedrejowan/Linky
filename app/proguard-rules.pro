@@ -19,3 +19,52 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ==================== Jsoup ====================
+# Jsoup optionally uses re2j for regex - not included in this app
+-dontwarn com.google.re2j.**
+
+# ==================== Ktor ====================
+# Ktor client rules
+-dontwarn io.ktor.**
+-keep class io.ktor.** { *; }
+-keepclassmembers class io.ktor.** { *; }
+
+# ==================== Kotlinx Serialization ====================
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.rejowan.linky.**$$serializer { *; }
+-keepclassmembers class com.rejowan.linky.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.rejowan.linky.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# ==================== Room ====================
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.room.paging.**
+
+# ==================== Coil ====================
+-dontwarn coil.**
+
+# ==================== Koin ====================
+-keepnames class * extends org.koin.core.module.Module
+
+# ==================== Coroutines ====================
+-dontwarn kotlinx.coroutines.**
+-keepclassmembers class kotlinx.coroutines.** { *; }
+
+# ==================== OkHttp/Okio (Ktor dependency) ====================
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# ==================== SLF4J (logging facade) ====================
+-dontwarn org.slf4j.**
