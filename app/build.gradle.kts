@@ -224,4 +224,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
 
+    // WorkManager - Background Jobs
+    implementation(libs.androidx.work.runtime.ktx)
+
 }

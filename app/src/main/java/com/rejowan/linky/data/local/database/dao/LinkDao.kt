@@ -90,6 +90,10 @@ interface LinkDao {
     @Query("UPDATE links SET deletedAt = NULL WHERE id = :id")
     suspend fun restore(id: String)
 
+    // Delete expired trash items (older than specified timestamp)
+    @Query("DELETE FROM links WHERE deletedAt IS NOT NULL AND deletedAt < :expiryTimestamp")
+    suspend fun deleteExpiredTrashItems(expiryTimestamp: Long): Int
+
     // Toggle favorite
     @Query("UPDATE links SET isFavorite = :isFavorite, updatedAt = :timestamp WHERE id = :id")
     suspend fun toggleFavorite(id: String, isFavorite: Boolean, timestamp: Long = System.currentTimeMillis())
