@@ -247,14 +247,14 @@ fun BatchImportScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
             // Test Section (for development/testing)
-            TestDataCard(
-                onLoadNormalText = {
-                    pastedText = getRandomNormalTestData()
-                },
-                onLoadLargeText = {
-                    pastedText = getLargeTestData()
-                }
-            )
+            // TestDataCard(
+            //     onLoadNormalText = {
+            //         pastedText = getRandomNormalTestData()
+            //     },
+            //     onLoadLargeText = {
+            //         pastedText = getLargeTestData()
+            //     }
+            // )
 
             // Instructions Card (dismissable)
             if (shouldShowHowItWorks) {
