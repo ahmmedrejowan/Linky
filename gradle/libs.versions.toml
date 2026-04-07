@@ -37,7 +37,7 @@ securityCrypto = "1.1.0"
 ksp = "2.3.6"
 glance = "1.1.1"
 licensy = "1.1.0"
-ktorClientAndroid = "3.4.1"
+ktorClientAndroid = "3.4.2"
 workRuntime = "2.11.1"
 
 [libraries]
